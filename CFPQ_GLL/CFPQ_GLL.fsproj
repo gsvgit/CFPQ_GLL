@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <WarnOn>3390;$(WarnOn)</WarnOn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Common.fs" />
+        <Compile Include="InputGraph.fs" />
+        <Compile Include="RSM.fs" />
+        <Compile Include="GSS.fs" />
+        <Compile Include="GLL.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FSharpx.Collections" Version="3.0.1" />
+    </ItemGroup>
+
+</Project>
