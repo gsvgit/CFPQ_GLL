@@ -51,10 +51,10 @@ type GSS() =
         newGSSVertex, pops 
     member this.Pop (currentGSSVertex:int<gssVertex>) (currentInputPosition:int<graphVertex>) =
         let gssVertexContent = vertices.[currentGSSVertex]
+        gssVertexContent.Popped.Add currentInputPosition
         gssVertexContent.OutputEdges
         |> ResizeArray.map (fun gssEdge ->
             let targetVertex, rsmState =  unpackGSSEdge gssEdge
-            gssVertexContent.Popped.Add currentInputPosition
             targetVertex, rsmState
             )
     

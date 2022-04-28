@@ -41,6 +41,9 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         )
     
     let handleDescriptor descriptor =
+        if not <| handledDescriptors.Add descriptor
+        then failwith "Attempt to handle descriptor twice!"
+        
         let inputPos, gssVertex, rsmState = unpackDescriptor descriptor
         
         if query.IsFinalState rsmState                        
