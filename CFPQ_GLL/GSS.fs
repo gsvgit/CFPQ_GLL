@@ -6,6 +6,12 @@ open FSharpx.Collections
 [<Measure>] type gssVertex
 [<Measure>] type gssEdge
 
+[<Struct>]
+type GSSEdge =
+    val GssVertex : int<gssVertex>
+    val RSMState : int<rsmState>
+    new(gssVertex, rsmState) = {GssVertex = gssVertex; RSMState = rsmState}
+
 let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
 let packGSSEdge (targetGssVertex:int<gssVertex>) (rsmState:int<rsmState>) : int64<gssEdge> =
@@ -13,11 +19,11 @@ let packGSSEdge (targetGssVertex:int<gssVertex>) (rsmState:int<rsmState>) : int6
     let _rsmState = int64 rsmState
     (_targetGssVertex ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
 
-let unpackGSSEdge (gssEdge:int64<gssEdge>) : int<gssVertex> * int<rsmState> =
+let unpackGSSEdge (gssEdge:int64<gssEdge>) =
     let gssEdge = int64 gssEdge
     let gssVertex = int32 (gssEdge &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
     let rsmState = int32 (gssEdge &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
-    gssVertex, rsmState
+    GSSEdge (gssVertex, rsmState)
     
 [<Struct>]
 type GssVertexContent =
@@ -53,8 +59,5 @@ type GSS() =
         let gssVertexContent = vertices.[currentGSSVertex]
         gssVertexContent.Popped.Add currentInputPosition
         gssVertexContent.OutputEdges
-        |> ResizeArray.map (fun gssEdge ->
-            let targetVertex, rsmState =  unpackGSSEdge gssEdge
-            targetVertex, rsmState
-            )
+        |> ResizeArray.map unpackGSSEdge
     

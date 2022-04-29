@@ -13,6 +13,24 @@ type InputGraphEdge =
     | ReturnEdge of int<graphVertex>*int<returnSymbol>*int<graphVertex>
 
 [<Struct>]
+type InputGraphCallEdge =
+    val Vertex : int<graphVertex>
+    val CallSymbol : int<callSymbol>
+    new (vertex, callSymbol) = {Vertex = vertex; CallSymbol = callSymbol}
+
+[<Struct>]
+type InputGraphReturnEdge =
+    val Vertex : int<graphVertex>
+    val ReturnSymbol : int<returnSymbol>
+    new (vertex, returnSymbol) = {Vertex = vertex; ReturnSymbol = returnSymbol}
+
+[<Struct>]
+type InputGraphCallOrReturnEdge =
+    val Vertex : int<graphVertex>
+    val Symbol : int
+    new (vertex, symbol) = {Vertex = vertex; Symbol = symbol}
+
+[<Struct>]
 type InputGraphVertexContent =
     val OutgoingCallEdges : array<int64<inputGraphCallEdge>>
     val OutgoingReturnEdges : array<int64<inputGraphReturnEdge>>
@@ -52,22 +70,22 @@ let packInputGraphCallEdge (targetVertex:int<graphVertex>) (symbol:int<callSymbo
 let packInputGraphReturnEdge (targetVertex:int<graphVertex>) (symbol:int<returnSymbol>) : int64<inputGraphReturnEdge> =
     packInputGraphCallOrReturnEdge targetVertex (int symbol)|> LanguagePrimitives.Int64WithMeasure
    
-let private unpackInputGraphCallOrReturnEdge (edge:int64) : int<graphVertex> * int =    
+let private unpackInputGraphCallOrReturnEdge (edge:int64) =    
     let nextVertex = int32 (edge &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) 
-    nextVertex, symbol
+    InputGraphCallOrReturnEdge(nextVertex, symbol)
 let unpackInputGraphCFGEdge (edge:int64<inputGraphCFGEdge>) : int<graphVertex> =
     let edge = int64 edge
     let nextVertex = int32 (edge &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     nextVertex
     
-let unpackInputGraphCallEdge (edge:int64<inputGraphCallEdge>) : int<graphVertex> * int<callSymbol> =
-    let v,s = unpackInputGraphCallOrReturnEdge (int64 edge)
-    v, s |> LanguagePrimitives.Int32WithMeasure
+let unpackInputGraphCallEdge (edge:int64<inputGraphCallEdge>) =
+    let untypedEdge = unpackInputGraphCallOrReturnEdge (int64 edge)
+    InputGraphCallEdge(untypedEdge.Vertex, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
 
-let unpackInputGraphReturnEdge (edge:int64<inputGraphReturnEdge>) : int<graphVertex> * int<returnSymbol> =
-    let v,s = unpackInputGraphCallOrReturnEdge (int64 edge)
-    v, s |> LanguagePrimitives.Int32WithMeasure
+let unpackInputGraphReturnEdge (edge:int64<inputGraphReturnEdge>) =
+    let untypedEdge = unpackInputGraphCallOrReturnEdge (int64 edge)
+    InputGraphReturnEdge(untypedEdge.Vertex, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
 
 type InputGraph (edges) =
     let vertices = System.Collections.Generic.Dictionary<int<graphVertex>,InputGraphVertexContent>()    
@@ -100,5 +118,6 @@ type InputGraph (edges) =
     member this.OutgoingReturnEdges v =
         vertices.[v].OutgoingReturnEdges
     member this.OutgoingCFGEdges v =
-        vertices.[v].OutgoingCFGEdges    
+        vertices.[v].OutgoingCFGEdges
+    member this.NumberOfVertices () = vertices.Count 
     
