@@ -12,6 +12,25 @@ type RSMEdges =
     | NonTerminalEdge of int<rsmState>*int<rsmState>
 
 [<Struct>]
+type RSMCallEdge =
+    val State : int<rsmState>
+    val CallSymbol : int<callSymbol>
+    new (state, callSymbol) = {State = state; CallSymbol = callSymbol}
+
+[<Struct>]
+type RSMReturnEdge =
+    val State : int<rsmState>
+    val ReturnSymbol : int<returnSymbol>
+    new (state, returnSymbol) = {State = state; ReturnSymbol = returnSymbol}
+
+[<Struct>]
+type RSMCallOrReturnEdge =
+    val State : int<rsmState>
+    val Symbol : int
+    new (state, symbol) = {State = state; Symbol = symbol}
+
+
+[<Struct>]
 type RSMVertexContent =
     val OutgoingCallEdges : array<int64<rsmCallEdge>>
     val OutgoingReturnEdges : array<int64<rsmReturnEdge>>
@@ -65,18 +84,18 @@ let unpackRSMCFGEdge (edge:int64<rsmCFGEdge>) : int<rsmState> =
     let nextState = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
     nextState
     
-let private unpackRSMCallOrReturnEdge (edge:int64) : int<rsmState> * int =    
+let private unpackRSMCallOrReturnEdge (edge:int64) =    
     let nextVertex = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
     let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) 
-    nextVertex, symbol    
+    RSMCallOrReturnEdge(nextVertex, symbol)    
 
-let unpackRSMCallEdge (edge:int64<rsmCallEdge>) : int<rsmState> * int<callSymbol> =
-    let v,s = unpackRSMCallOrReturnEdge (int64 edge)
-    v, s |> LanguagePrimitives.Int32WithMeasure
+let unpackRSMCallEdge (edge:int64<rsmCallEdge>) =
+    let untypedEdge = unpackRSMCallOrReturnEdge (int64 edge)
+    RSMCallEdge (untypedEdge.State, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
 
-let unpackRSMReturnEdge (edge:int64<rsmReturnEdge>) : int<rsmState> * int<returnSymbol> =
-    let v,s = unpackRSMCallOrReturnEdge (int64 edge)
-    v, s |> LanguagePrimitives.Int32WithMeasure
+let unpackRSMReturnEdge (edge:int64<rsmReturnEdge>) =
+    let untypedEdge = unpackRSMCallOrReturnEdge (int64 edge)
+    RSMReturnEdge (untypedEdge.State, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
 
 type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
     let vertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexContent>()

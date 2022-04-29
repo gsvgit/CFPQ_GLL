@@ -85,18 +85,18 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
             outgoingCallEdgesInGraph
             |> Array.iter (fun e2 ->
                 let graphEdge = unpackInputGraphCallEdge e2
-                let nextState, symbol = unpackRSMCallEdge e1
-                if graphEdge.CallSymbol = symbol
-                then packDescriptor graphEdge.Vertex currentDescriptor.GssVertex nextState |> addDescriptor))
+                let rsmEdge = unpackRSMCallEdge e1
+                if graphEdge.CallSymbol = rsmEdge.CallSymbol
+                then packDescriptor graphEdge.Vertex currentDescriptor.GssVertex rsmEdge.State |> addDescriptor))
             
         outgoingReturnEdgesInRSM
         |> Array.iter (fun e1 ->
             outgoingReturnEdgesInGraph
             |> Array.iter (fun e2 ->
                 let graphEdge = unpackInputGraphReturnEdge e2
-                let nextState, symbol = unpackRSMReturnEdge e1
-                if graphEdge.ReturnSymbol = symbol
-                then packDescriptor graphEdge.Vertex currentDescriptor.GssVertex nextState |> addDescriptor))
+                let rsmEdge = unpackRSMReturnEdge e1
+                if graphEdge.ReturnSymbol = rsmEdge.ReturnSymbol
+                then packDescriptor graphEdge.Vertex currentDescriptor.GssVertex rsmEdge.State |> addDescriptor))
         
         outgoingCFGEdgesInRSM
         |> Array.iter (fun e1 ->
