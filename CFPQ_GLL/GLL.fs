@@ -112,6 +112,8 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         descriptorToProcess.Pop()
         |> handleDescriptor
     
+    printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
+    printfn $"Total descriptors handled: %A{handledDescriptors.Count}"
     printfn $"Average throughput: %A{float handledDescriptors.Count / (System.DateTime.Now - startTime).TotalSeconds} descriptors per second."
         
     reachableVertices
