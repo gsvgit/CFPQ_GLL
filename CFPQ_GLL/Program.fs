@@ -131,6 +131,25 @@ let example8 startV =
     printfn "Reachable:"
     reachable |> Seq.iter (printf "%A, ")    
 
+let example9 n startV =
+    let callEdges = [|for i in 0 .. n -> InputGraph.CallEdge(LanguagePrimitives.Int32WithMeasure i,0<callSymbol>,LanguagePrimitives.Int32WithMeasure (i+1)) |]
+    let returnEdges = [|for i in n + 2 .. 2 * n + 2 -> InputGraph.ReturnEdge(LanguagePrimitives.Int32WithMeasure i,0<returnSymbol>,LanguagePrimitives.Int32WithMeasure (i+1)) |]
+    let graph = InputGraph(Array.concat [
+                                         callEdges; returnEdges
+                                         [|InputGraph.CallEdge(LanguagePrimitives.Int32WithMeasure (n+1),0<callSymbol>,LanguagePrimitives.Int32WithMeasure 0)|]
+                                         [|
+                                           InputGraph.ReturnEdge(LanguagePrimitives.Int32WithMeasure 0,0<returnSymbol>,LanguagePrimitives.Int32WithMeasure(n + 2))
+                                           InputGraph.ReturnEdge(LanguagePrimitives.Int32WithMeasure (2*n+3),0<returnSymbol>,LanguagePrimitives.Int32WithMeasure 0)
+                                           |]
+                                         
+                                         ])
+    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
+                [|CFGEdge(0<rsmState>,0<rsmState>)
+                  CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
+                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)|])
+    let reachable = GLL.eval graph startV q
+    printfn $"Reachable: %A{reachable}" 
     
 [<EntryPoint>]
 let main argv =
@@ -143,4 +162,5 @@ let main argv =
     example6 ()
     example7 ()    
     example8 [|0<graphVertex>; 11<graphVertex>; 6<graphVertex>|]
+    example9 3000 [|1<graphVertex>|]
     0 // return an integer exit code

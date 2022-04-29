@@ -41,8 +41,8 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         )
     
     let handleDescriptor descriptor =
-        if not <| handledDescriptors.Add descriptor
-        then failwith "Attempt to handle descriptor twice!"
+        
+        handledDescriptors.Add descriptor |> ignore
         
         let inputPos, gssVertex, rsmState = unpackDescriptor descriptor
         
@@ -99,8 +99,12 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                 let nextState = unpackRSMCFGEdge e1
                 packDescriptor nextPosition gssVertex nextState |> addDescriptor))
     
+    let startTime = System.DateTime.Now    
+    
     while descriptorToProcess.Count > 0 do
         descriptorToProcess.Pop()
-        |> handleDescriptor 
+        |> handleDescriptor
+    
+    printfn $"Average throughput: %A{float handledDescriptors.Count / (System.DateTime.Now - startTime).TotalSeconds} descriptors per second."
         
     reachableVertices
