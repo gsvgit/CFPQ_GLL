@@ -36,19 +36,19 @@ type RSMVertexMutableContent =
     
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES <<< 2 * BITS_FOR_GRAPH_VERTICES)
 let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
-let RSM_VERTEX_MAX_VALUE = System.Int32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
+let RSM_VERTEX_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
 
 let packRSMCFGEdge (targetVertex:int<rsmState>): int64<rsmCFGEdge> =
-    if int targetVertex > RSM_VERTEX_MAX_VALUE
-    then failwithf "Graph vertex should be less then %A" RSM_VERTEX_MAX_VALUE 
+    if uint32 targetVertex > RSM_VERTEX_MAX_VALUE
+    then failwithf $"Graph vertex should be less then %A{RSM_VERTEX_MAX_VALUE}" 
     let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)    
     (_targetGssVertex) |> LanguagePrimitives.Int64WithMeasure
 
 let private packRSMCallOrReturnOrNonTerminalEdge (targetVertex:int<rsmState>) (symbol:int) : int64 =
-    if int targetVertex > RSM_VERTEX_MAX_VALUE
-    then failwithf "Graph vertex should be less then %A" RSM_VERTEX_MAX_VALUE
-    if symbol > RSM_VERTEX_MAX_VALUE
-    then failwithf "Symbol should be less then %A" RSM_VERTEX_MAX_VALUE
+    if uint32 targetVertex > RSM_VERTEX_MAX_VALUE
+    then failwithf $"Graph vertex should be less then %A{RSM_VERTEX_MAX_VALUE}"
+    if uint32 symbol > RSM_VERTEX_MAX_VALUE
+    then failwithf $"Symbol should be less then %A{RSM_VERTEX_MAX_VALUE}"
     let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)
     let _symbol = int64 symbol
     (_targetGssVertex ||| _symbol)

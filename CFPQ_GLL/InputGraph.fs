@@ -28,20 +28,20 @@ type InputGraphVertexMutableContent =
 
 let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)
 let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
-let GRAPH_VERTEX_MAX_VALUE = System.Int32.MaxValue >>> 32 - BITS_FOR_GRAPH_VERTICES
-let SYMBOL_MAX_VALUE = System.Int32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
+let GRAPH_VERTEX_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_GRAPH_VERTICES
+let SYMBOL_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
 
 let packInputGraphCFGEdge (targetVertex:int<graphVertex>): int64<inputGraphCFGEdge> =
-    if int targetVertex > GRAPH_VERTEX_MAX_VALUE
-    then failwithf "Graph vertex should be less then %A" GRAPH_VERTEX_MAX_VALUE 
+    if uint32 targetVertex > GRAPH_VERTEX_MAX_VALUE
+    then failwithf $"Graph vertex should be less then %A{GRAPH_VERTEX_MAX_VALUE}" 
     let _targetGssVertex = (int64 targetVertex) <<< (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)    
     (_targetGssVertex) |> LanguagePrimitives.Int64WithMeasure
 
 let private packInputGraphCallOrReturnEdge (targetVertex:int<graphVertex>) (symbol:int) : int64 =
-    if int targetVertex > GRAPH_VERTEX_MAX_VALUE
-    then failwithf "Graph vertex should be less then %A" GRAPH_VERTEX_MAX_VALUE
-    if symbol > SYMBOL_MAX_VALUE
-    then failwithf "Symbol should be less then %A" SYMBOL_MAX_VALUE
+    if uint32 targetVertex > GRAPH_VERTEX_MAX_VALUE
+    then failwithf $"Graph vertex should be less then %A{GRAPH_VERTEX_MAX_VALUE}"
+    if uint32 symbol > SYMBOL_MAX_VALUE
+    then failwithf $"Symbol should be less then %A{SYMBOL_MAX_VALUE}"
     let _targetGssVertex = (int64 targetVertex) <<< (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)
     let _symbol = int64 symbol
     (_targetGssVertex ||| _symbol)
