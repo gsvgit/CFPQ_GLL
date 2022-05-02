@@ -17,13 +17,13 @@ let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_V
 let MASK_FOR_GSS_VERTEX = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_RSM_STATE)
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
 
-let packDescriptor (inputPos:int<graphVertex>) (gssVertex:int<gssVertex>) (rsmState:int<rsmState>) : int64<descriptor>=
+let inline packDescriptor (inputPos:int<graphVertex>) (gssVertex:int<gssVertex>) (rsmState:int<rsmState>) : int64<descriptor>=
     let _inputPos = (int64 inputPos) <<< (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)
     let _gssVertex = (int64 gssVertex) <<< BITS_FOR_RSM_STATE
     let _rsmState = int64 rsmState
     (_inputPos ||| _gssVertex ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure 
 
-let unpackDescriptor (descriptor:int64<descriptor>) =
+let inline unpackDescriptor (descriptor:int64<descriptor>) =
     let descriptor = int64 descriptor
     let inputPos = int32 (descriptor &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     let gssVertex = int32 (descriptor &&& MASK_FOR_GSS_VERTEX >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
@@ -35,7 +35,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
     let reachableVertices = ResizeArray<_>()
     let descriptorToProcess = System.Collections.Generic.Stack<_>()
     
-    let addDescriptor descriptor =
+    let inline addDescriptor descriptor =
         if not <| handledDescriptors.Contains descriptor
         then descriptorToProcess.Push descriptor 
     

@@ -49,13 +49,13 @@ let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH
 let GRAPH_VERTEX_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_GRAPH_VERTICES
 let SYMBOL_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
 
-let packInputGraphCFGEdge (targetVertex:int<graphVertex>): int64<inputGraphCFGEdge> =
+let inline packInputGraphCFGEdge (targetVertex:int<graphVertex>): int64<inputGraphCFGEdge> =
     if uint32 targetVertex > GRAPH_VERTEX_MAX_VALUE
     then failwithf $"Graph vertex should be less then %A{GRAPH_VERTEX_MAX_VALUE}" 
     let _targetGssVertex = (int64 targetVertex) <<< (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)    
     (_targetGssVertex) |> LanguagePrimitives.Int64WithMeasure
 
-let private packInputGraphCallOrReturnEdge (targetVertex:int<graphVertex>) (symbol:int) : int64 =
+let inline private packInputGraphCallOrReturnEdge (targetVertex:int<graphVertex>) (symbol:int) : int64 =
     if uint32 targetVertex > GRAPH_VERTEX_MAX_VALUE
     then failwithf $"Graph vertex should be less then %A{GRAPH_VERTEX_MAX_VALUE}"
     if uint32 symbol > SYMBOL_MAX_VALUE
@@ -64,31 +64,32 @@ let private packInputGraphCallOrReturnEdge (targetVertex:int<graphVertex>) (symb
     let _symbol = int64 symbol
     (_targetGssVertex ||| _symbol)
 
-let packInputGraphCallEdge (targetVertex:int<graphVertex>) (symbol:int<callSymbol>) : int64<inputGraphCallEdge> =
+let inline packInputGraphCallEdge (targetVertex:int<graphVertex>) (symbol:int<callSymbol>) : int64<inputGraphCallEdge> =
     packInputGraphCallOrReturnEdge targetVertex (int symbol)|> LanguagePrimitives.Int64WithMeasure
 
-let packInputGraphReturnEdge (targetVertex:int<graphVertex>) (symbol:int<returnSymbol>) : int64<inputGraphReturnEdge> =
+let inline packInputGraphReturnEdge (targetVertex:int<graphVertex>) (symbol:int<returnSymbol>) : int64<inputGraphReturnEdge> =
     packInputGraphCallOrReturnEdge targetVertex (int symbol)|> LanguagePrimitives.Int64WithMeasure
    
-let private unpackInputGraphCallOrReturnEdge (edge:int64) =    
+let inline private unpackInputGraphCallOrReturnEdge (edge:int64) =    
     let nextVertex = int32 (edge &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) 
     InputGraphCallOrReturnEdge(nextVertex, symbol)
-let unpackInputGraphCFGEdge (edge:int64<inputGraphCFGEdge>) : int<graphVertex> =
+let inline unpackInputGraphCFGEdge (edge:int64<inputGraphCFGEdge>) : int<graphVertex> =
     let edge = int64 edge
     let nextVertex = int32 (edge &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     nextVertex
     
-let unpackInputGraphCallEdge (edge:int64<inputGraphCallEdge>) =
+let inline unpackInputGraphCallEdge (edge:int64<inputGraphCallEdge>) =
     let untypedEdge = unpackInputGraphCallOrReturnEdge (int64 edge)
     InputGraphCallEdge(untypedEdge.Vertex, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
 
-let unpackInputGraphReturnEdge (edge:int64<inputGraphReturnEdge>) =
+let inline unpackInputGraphReturnEdge (edge:int64<inputGraphReturnEdge>) =
     let untypedEdge = unpackInputGraphCallOrReturnEdge (int64 edge)
     InputGraphReturnEdge(untypedEdge.Vertex, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
 
 type InputGraph (edges) =
-    let vertices = System.Collections.Generic.Dictionary<int<graphVertex>,InputGraphVertexContent>()    
+    let vertices = System.Collections.Generic.Dictionary<int<graphVertex>,InputGraphVertexContent>()
+  
     do
         let mutableVertices = System.Collections.Generic.Dictionary<int<graphVertex>,InputGraphVertexMutableContent>()
         let addVertex v =
@@ -119,5 +120,6 @@ type InputGraph (edges) =
         vertices.[v].OutgoingReturnEdges
     member this.OutgoingCFGEdges v =
         vertices.[v].OutgoingCFGEdges
-    member this.NumberOfVertices () = vertices.Count 
+    member this.NumberOfVertices () = vertices.Count
+    member this.AllVertices() = vertices.Keys |> Array.ofSeq
     

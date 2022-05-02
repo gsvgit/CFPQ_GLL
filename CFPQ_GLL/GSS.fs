@@ -50,11 +50,7 @@ type GSS() =
         if not <| newGSSVertexContent.OutputEdges.Contains newEdge
         then newGSSVertexContent.OutputEdges.Add newEdge
         
-        let pops =
-            newGSSVertexContent.Popped
-            |> ResizeArray.map (fun poppedInputPositions -> poppedInputPositions)
-        
-        newGSSVertex, pops 
+        newGSSVertex, newGSSVertexContent.Popped 
     member this.Pop (currentGSSVertex:int<gssVertex>) (currentInputPosition:int<graphVertex>) =
         let gssVertexContent = vertices.[currentGSSVertex]
         gssVertexContent.Popped.Add currentInputPosition

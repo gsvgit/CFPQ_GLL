@@ -1,6 +1,7 @@
 ﻿// Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
 
 open System
+open System.Collections.Generic
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
@@ -143,13 +144,72 @@ let example9 n startV =
                                            |]
                                          
                                          ])
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
+    let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
                   ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}" 
+    
+let loadGraphFromCSV file (callLabelsMappings:Dictionary<_,_>) =
+    let edges = ResizeArray<_>()
+    System.IO.File.ReadLines file
+    |> Seq.map (fun s -> s.Split " ")
+    |> Seq.iter (fun a ->
+        if callLabelsMappings.ContainsKey a.[2]
+        then
+            edges.Add (InputGraph.CallEdge(a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
+                                               , callLabelsMappings.[a.[2]] |> LanguagePrimitives.Int32WithMeasure
+                                               , a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
+            edges.Add (InputGraph.ReturnEdge(a.[1] |> int |> LanguagePrimitives.Int32WithMeasure
+                                               , callLabelsMappings.[a.[2]] |> LanguagePrimitives.Int32WithMeasure
+                                               , a.[0] |> int |> LanguagePrimitives.Int32WithMeasure))
+        else edges.Add (InputGraph.CFGEdge (a.[0] |> int |> LanguagePrimitives.Int32WithMeasure,
+                                               a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
+            )
+    InputGraph <| edges.ToArray()
+
+let loadNodesFormCSV file =
+    System.IO.File.ReadLines file
+    |> Seq.map (int >> LanguagePrimitives.Int32WithMeasure)
+    |> Array.ofSeq
+
+let defaultMap =
+    let res = Dictionary<_,_>()
+    res.Add("subClassOf",0)
+    res.Add("type",1)
+    res
+let g1 =
+    RSM(0<rsmState>, HashSet([3<rsmState>]),
+                [|ReturnEdge(0<rsmState>,0<returnSymbol>,1<rsmState>)
+                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  CallEdge(1<rsmState>,0<callSymbol>,3<rsmState>)
+                  CallEdge(2<rsmState>,0<callSymbol>,3<rsmState>)
+                  
+                  ReturnEdge(0<rsmState>,1<returnSymbol>,4<rsmState>)
+                  NonTerminalEdge(4<rsmState>,5<rsmState>)
+                  CallEdge(4<rsmState>,1<callSymbol>,3<rsmState>)
+                  CallEdge(5<rsmState>,1<callSymbol>,3<rsmState>)|])
+let example10_go_hierarchy () =
+    let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
+    let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
+    nodes
+    |> Array.iter (fun n ->
+        let reachable = GLL.eval graph [|n|] g1 
+        printfn $"Reachable: %A{reachable}")
+
+let example11_go_allPairs () =
+    let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
+    let reachable = GLL.eval graph (graph.AllVertices()) g1 
+    printfn $"Reachable: %A{reachable.Count}"
+
+let example11_go_singleSourceForAll () =
+    let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
+    for n in graph.AllVertices() do
+        let reachable = GLL.eval graph [|n|] g1 
+        printfn $"Reachable: %A{reachable.Count}"
+    
     
 [<EntryPoint>]
 let main argv =
@@ -162,5 +222,8 @@ let main argv =
     example6 ()
     example7 ()    
     example8 [|0<graphVertex>; 11<graphVertex>; 6<graphVertex>|]
-    example9 3000 [|1<graphVertex>|]
+    //example9 3000 [|1<graphVertex>|]
+    //example10_go_hierarchy ()
+    example11_go_allPairs ()
+    //example11_go_singleSourceForAll ()
     0 // return an integer exit code
