@@ -47,8 +47,11 @@ type GSS() =
         let newGSSVertexContent = vertices.[newGSSVertex]
         let newEdge = packGSSEdge currentGSSVertex rsmStateToReturn
         
-        if not <| newGSSVertexContent.OutputEdges.Contains newEdge
-        then newGSSVertexContent.OutputEdges.Add newEdge
+        // There is no need to check GSS edges duplication.
+        // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova
+        // p.13: "There is at most one call to the create function with the same arguments. Thus no check for duplicate GSS edges is needed."
+        
+        newGSSVertexContent.OutputEdges.Add newEdge
         
         newGSSVertex, newGSSVertexContent.Popped 
     member this.Pop (currentGSSVertex:int<gssVertex>) (currentInputPosition:int<graphVertex>) =
