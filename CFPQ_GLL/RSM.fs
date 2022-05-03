@@ -1,56 +1,45 @@
 module CFPQ_GLL.RSM
 
+open CFPQ_GLL
+
 [<Measure>] type rsmState
-[<Measure>] type rsmCallEdge
-[<Measure>] type rsmReturnEdge
+[<Measure>] type rsmTerminalEdge
 [<Measure>] type rsmCFGEdge
 
 type RSMEdges =
     | CFGEdge of int<rsmState>*int<rsmState>
-    | CallEdge of int<rsmState>*int<callSymbol>*int<rsmState>
-    | ReturnEdge of int<rsmState>*int<returnSymbol>*int<rsmState>
+    | TerminalEdge of int<rsmState>*int<terminalSymbol>*int<rsmState>
     | NonTerminalEdge of int<rsmState>*int<rsmState>
 
 [<Struct>]
-type RSMCallEdge =
+type RSMTerminalEdge =
     val State : int<rsmState>
-    val CallSymbol : int<callSymbol>
-    new (state, callSymbol) = {State = state; CallSymbol = callSymbol}
-
-[<Struct>]
-type RSMReturnEdge =
-    val State : int<rsmState>
-    val ReturnSymbol : int<returnSymbol>
-    new (state, returnSymbol) = {State = state; ReturnSymbol = returnSymbol}
-
-[<Struct>]
-type RSMCallOrReturnEdge =
-    val State : int<rsmState>
-    val Symbol : int
-    new (state, symbol) = {State = state; Symbol = symbol}
-
+    val TerminalSymbol : int<terminalSymbol>
+    new (state, terminalSymbol) = {State = state; TerminalSymbol = terminalSymbol}
 
 [<Struct>]
 type RSMVertexContent =
-    val OutgoingCallEdges : array<int64<rsmCallEdge>>
-    val OutgoingReturnEdges : array<int64<rsmReturnEdge>>
+    val OutgoingTerminalEdges : array<int64<rsmTerminalEdge>>
     val OutgoingCFGEdges : array<int64<rsmCFGEdge>>
     val OutgoingNonTerminalEdge: Option<int<rsmState>>
-    new (_call, _return, _cfg, _nonTerm) = {OutgoingCallEdges = _call
-                                            ; OutgoingReturnEdges = _return
-                                            ; OutgoingCFGEdges = _cfg
-                                            ; OutgoingNonTerminalEdge = _nonTerm}
+    new (terminalEdges, cfgEdges, nonTerminalEdges) =
+        {
+            OutgoingTerminalEdges = terminalEdges
+            ; OutgoingCFGEdges = cfgEdges
+            ; OutgoingNonTerminalEdge = nonTerminalEdges
+        }
     
 [<Struct>]
 type RSMVertexMutableContent =
-    val OutgoingCallEdges : ResizeArray<int64<rsmCallEdge>>
-    val OutgoingReturnEdges : ResizeArray<int64<rsmReturnEdge>>
+    val OutgoingTerminalEdges : ResizeArray<int64<rsmTerminalEdge>>
     val OutgoingCFGEdges : ResizeArray<int64<rsmCFGEdge>>
     val OutgoingNonTerminalEdge: ResizeArray<int<rsmState>>
-    new (_call,_return,_cfg,_nonTerm) = {OutgoingCallEdges = _call
-                                            ; OutgoingReturnEdges = _return
-                                            ; OutgoingCFGEdges = _cfg
-                                            ; OutgoingNonTerminalEdge = _nonTerm}
+    new (terminalEdges, cfgEdges, nonTerminalEdges) =
+        {
+            OutgoingTerminalEdges = terminalEdges
+            ; OutgoingCFGEdges = cfgEdges
+            ; OutgoingNonTerminalEdge = nonTerminalEdges
+        }
     
     
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES <<< 2 * BITS_FOR_GRAPH_VERTICES)
@@ -63,39 +52,25 @@ let inline packRSMCFGEdge (targetVertex:int<rsmState>): int64<rsmCFGEdge> =
     let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)    
     (_targetGssVertex) |> LanguagePrimitives.Int64WithMeasure
 
-let inline private packRSMCallOrReturnOrNonTerminalEdge (targetVertex:int<rsmState>) (symbol:int) : int64 =
+let inline packRSMTerminalEdge (targetVertex:int<rsmState>) (symbol:int<terminalSymbol>) : int64<rsmTerminalEdge> =
     if uint32 targetVertex > RSM_VERTEX_MAX_VALUE
     then failwithf $"Graph vertex should be less then %A{RSM_VERTEX_MAX_VALUE}"
     if uint32 symbol > RSM_VERTEX_MAX_VALUE
     then failwithf $"Symbol should be less then %A{RSM_VERTEX_MAX_VALUE}"
     let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)
     let _symbol = int64 symbol
-    (_targetGssVertex ||| _symbol)
-
-let inline packRSMCallEdge (targetVertex:int<rsmState>) (symbol:int<callSymbol>) : int64<rsmCallEdge> =
-    packRSMCallOrReturnOrNonTerminalEdge targetVertex (int symbol)|> LanguagePrimitives.Int64WithMeasure
-
-let inline packRSMReturnEdge (targetVertex:int<rsmState>) (symbol:int<returnSymbol>) : int64<rsmReturnEdge> =
-    packRSMCallOrReturnOrNonTerminalEdge targetVertex (int symbol)|> LanguagePrimitives.Int64WithMeasure
-
+    (_targetGssVertex ||| _symbol) |> LanguagePrimitives.Int64WithMeasure
 
 let inline unpackRSMCFGEdge (edge:int64<rsmCFGEdge>) : int<rsmState> =
     let edge = int64 edge
     let nextState = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
     nextState
     
-let inline private unpackRSMCallOrReturnEdge (edge:int64) =    
+let inline unpackRSMTerminalEdge (edge:int64<rsmTerminalEdge>) =
+    let edge = int64 edge
     let nextVertex = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
-    let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) 
-    RSMCallOrReturnEdge(nextVertex, symbol)    
-
-let inline unpackRSMCallEdge (edge:int64<rsmCallEdge>) =
-    let untypedEdge = unpackRSMCallOrReturnEdge (int64 edge)
-    RSMCallEdge (untypedEdge.State, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
-
-let inline unpackRSMReturnEdge (edge:int64<rsmReturnEdge>) =
-    let untypedEdge = unpackRSMCallOrReturnEdge (int64 edge)
-    RSMReturnEdge (untypedEdge.State, untypedEdge.Symbol |> LanguagePrimitives.Int32WithMeasure)
+    let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) |> LanguagePrimitives.Int32WithMeasure
+    RSMTerminalEdge(nextVertex, symbol)    
 
 type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
     let vertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexContent>()
@@ -103,7 +78,7 @@ type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSe
         let mutableVertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexMutableContent>()
         let addVertex v =
             if not <| mutableVertices.ContainsKey v
-            then mutableVertices.Add(v,RSMVertexMutableContent(ResizeArray<_>(),ResizeArray<_>(),ResizeArray<_>(),ResizeArray<_>()))
+            then mutableVertices.Add(v,RSMVertexMutableContent(ResizeArray<_>(),ResizeArray<_>(),ResizeArray<_>()))
             mutableVertices.[v]
         transitions
         |> Array.iter (function
@@ -111,21 +86,16 @@ type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSe
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
                             packRSMCFGEdge _to |> vertexContent.OutgoingCFGEdges.Add
-                        | CallEdge (_from, smb, _to) ->
+                        | TerminalEdge (_from, smb, _to) ->
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
-                            packRSMCallEdge _to smb |> vertexContent.OutgoingCallEdges.Add
-                        | ReturnEdge (_from, smb, _to) ->
-                            let vertexContent = addVertex _from
-                            addVertex _to |> ignore
-                            packRSMReturnEdge _to smb |> vertexContent.OutgoingReturnEdges.Add
+                            packRSMTerminalEdge _to smb |> vertexContent.OutgoingTerminalEdges.Add
                         | NonTerminalEdge (_from, _to) ->
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
                             vertexContent.OutgoingNonTerminalEdge.Add _to)
         mutableVertices
-        |> Seq.iter (fun kvp -> vertices.Add(kvp.Key, RSMVertexContent(kvp.Value.OutgoingCallEdges.ToArray()
-                                                                              , kvp.Value.OutgoingReturnEdges.ToArray()
+        |> Seq.iter (fun kvp -> vertices.Add(kvp.Key, RSMVertexContent(kvp.Value.OutgoingTerminalEdges.ToArray()
                                                                               , kvp.Value.OutgoingCFGEdges.ToArray()
                                                                               , if kvp.Value.OutgoingNonTerminalEdge.Count = 0
                                                                                 then None
@@ -133,10 +103,8 @@ type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSe
     member this.StartState = startState
     member this.IsStartState state = startState = state
     member this.IsFinalState state = finalStates.Contains state
-    member this.OutgoingCallEdges v =
-        vertices.[v].OutgoingCallEdges
-    member this.OutgoingReturnEdges v =
-        vertices.[v].OutgoingReturnEdges
+    member this.OutgoingTerminalEdges v =
+        vertices.[v].OutgoingTerminalEdges
     member this.OutgoingCFGEdges v =
         vertices.[v].OutgoingCFGEdges
     member this.OutgoingNonTerminalEdge v =

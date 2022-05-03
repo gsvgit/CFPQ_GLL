@@ -32,55 +32,58 @@ let example3 () =
     printfn $"Reachable: %A{reachable}"
     
 let example4 () =
-    let graph = InputGraph([|InputGraph.CallEdge(0<graphVertex>,0<callSymbol>,1<graphVertex>)
-                             InputGraph.ReturnEdge(1<graphVertex>,0<returnSymbol>,2<graphVertex>) |])
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,2<graphVertex>) |])
     let startV = [|0<graphVertex>|]
     let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
-                  CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
-                  ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)|])
+                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
 
 let example5 startV =
-    let graph = InputGraph([|InputGraph.CallEdge(0<graphVertex>,0<callSymbol>,1<graphVertex>)
-                             InputGraph.CallEdge(1<graphVertex>,0<callSymbol>,2<graphVertex>)
-                             InputGraph.CallEdge(2<graphVertex>,0<callSymbol>,0<graphVertex>)
-                             InputGraph.ReturnEdge(0<graphVertex>,0<returnSymbol>,3<graphVertex>)
-                             InputGraph.ReturnEdge(3<graphVertex>,0<returnSymbol>,0<graphVertex>) |])
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+                             InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,0<graphVertex>)
+                             
+                             InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,3<graphVertex>)
+                             InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
     let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
-                  CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
-                  ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)|])
+                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
 
 let example6 () =
-    let graph = InputGraph([|InputGraph.CallEdge(0<graphVertex>,0<callSymbol>,1<graphVertex>)
-                             InputGraph.CallEdge(1<graphVertex>,0<callSymbol>,2<graphVertex>)
-                             InputGraph.ReturnEdge(2<graphVertex>,0<returnSymbol>,3<graphVertex>)
-                             InputGraph.ReturnEdge(3<graphVertex>,0<returnSymbol>,4<graphVertex>) |])
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+                             
+                             InputGraph.TerminalEdge(2<graphVertex>,1<terminalSymbol>,3<graphVertex>)
+                             InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,4<graphVertex>) |])
     let startV = [|0<graphVertex>|]
     let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
-                  CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
-                  ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)|])
+                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
 
 let example7 () =
-    let graph = InputGraph([|InputGraph.CallEdge(0<graphVertex>,0<callSymbol>,0<graphVertex>)
-                             InputGraph.ReturnEdge(0<graphVertex>,0<returnSymbol>,1<graphVertex>)
-                             InputGraph.ReturnEdge(1<graphVertex>,0<returnSymbol>,0<graphVertex>) |])
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)
+                             
+                             InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
     let startV = [|0<graphVertex>|]
     let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
-                  CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
-                  ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)|])
+                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
 
@@ -91,64 +94,64 @@ let example8 startV =
                              InputGraph.CFGEdge(2<graphVertex>,1<graphVertex>)
                              InputGraph.CFGEdge(2<graphVertex>,3<graphVertex>)
                              InputGraph.CFGEdge(5<graphVertex>,2<graphVertex>)
-                             InputGraph.CallEdge(4<graphVertex>,0<callSymbol>,6<graphVertex>)
-                             InputGraph.ReturnEdge(10<graphVertex>,0<returnSymbol>,5<graphVertex>)
+                             InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,6<graphVertex>)
+                             InputGraph.TerminalEdge(10<graphVertex>,1<terminalSymbol>,5<graphVertex>)
                              
                              InputGraph.CFGEdge(6<graphVertex>,7<graphVertex>)
                              InputGraph.CFGEdge(7<graphVertex>,9<graphVertex>)
                              InputGraph.CFGEdge(8<graphVertex>,9<graphVertex>)
                              InputGraph.CFGEdge(9<graphVertex>,10<graphVertex>)
-                             InputGraph.CallEdge(7<graphVertex>,1<callSymbol>,6<graphVertex>)
-                             InputGraph.ReturnEdge(10<graphVertex>,1<returnSymbol>,8<graphVertex>)
+                             InputGraph.TerminalEdge(7<graphVertex>,2<terminalSymbol>,6<graphVertex>)
+                             InputGraph.TerminalEdge(10<graphVertex>,3<terminalSymbol>,8<graphVertex>)
                              
                              InputGraph.CFGEdge(11<graphVertex>,12<graphVertex>)
                              InputGraph.CFGEdge(12<graphVertex>,13<graphVertex>)
                              InputGraph.CFGEdge(14<graphVertex>,12<graphVertex>)
                              InputGraph.CFGEdge(14<graphVertex>,15<graphVertex>)
-                             InputGraph.CallEdge(13<graphVertex>,2<callSymbol>,6<graphVertex>)
-                             InputGraph.ReturnEdge(10<graphVertex>,2<returnSymbol>,14<graphVertex>)
+                             InputGraph.TerminalEdge(13<graphVertex>,4<terminalSymbol>,6<graphVertex>)
+                             InputGraph.TerminalEdge(10<graphVertex>,5<terminalSymbol>,14<graphVertex>)
                              
                              |])
     
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
+    let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
-                  CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
-                  ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)
+                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
                   
-                  CallEdge(0<rsmState>,1<callSymbol>,3<rsmState>)
+                  TerminalEdge(0<rsmState>,2<terminalSymbol>,3<rsmState>)
                   NonTerminalEdge(3<rsmState>,4<rsmState>)
-                  ReturnEdge(4<rsmState>,1<returnSymbol>,0<rsmState>)
+                  TerminalEdge(4<rsmState>,3<terminalSymbol>,0<rsmState>)
                   
-                  CallEdge(0<rsmState>,2<callSymbol>,5<rsmState>)
+                  TerminalEdge(0<rsmState>,4<terminalSymbol>,5<rsmState>)
                   NonTerminalEdge(5<rsmState>,6<rsmState>)
-                  ReturnEdge(6<rsmState>,2<returnSymbol>,0<rsmState>)
+                  TerminalEdge(6<rsmState>,5<terminalSymbol>,0<rsmState>)
                   
-                  CallEdge(0<rsmState>,0<callSymbol>,0<rsmState>)
-                  CallEdge(0<rsmState>,1<callSymbol>,0<rsmState>)
-                  CallEdge(0<rsmState>,2<callSymbol>,0<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)
+                  TerminalEdge(0<rsmState>,2<terminalSymbol>,0<rsmState>)
+                  TerminalEdge(0<rsmState>,4<terminalSymbol>,0<rsmState>)
                   |])
     let reachable = GLL.eval graph startV q
     printfn "Reachable:"
     reachable |> Seq.iter (printf "%A, ")    
 
 let example9 n startV =
-    let callEdges = [|for i in 0 .. n -> InputGraph.CallEdge(LanguagePrimitives.Int32WithMeasure i,0<callSymbol>,LanguagePrimitives.Int32WithMeasure (i+1)) |]
-    let returnEdges = [|for i in n + 2 .. 2 * n + 2 -> InputGraph.ReturnEdge(LanguagePrimitives.Int32WithMeasure i,0<returnSymbol>,LanguagePrimitives.Int32WithMeasure (i+1)) |]
+    let callEdges = [|for i in 0 .. n -> InputGraph.TerminalEdge(LanguagePrimitives.Int32WithMeasure i,0<terminalSymbol>,LanguagePrimitives.Int32WithMeasure (i+1)) |]
+    let returnEdges = [|for i in n + 2 .. 2 * n + 2 -> InputGraph.TerminalEdge(LanguagePrimitives.Int32WithMeasure i,1<terminalSymbol>,LanguagePrimitives.Int32WithMeasure (i+1)) |]
     let graph = InputGraph(Array.concat [
                                          callEdges; returnEdges
-                                         [|InputGraph.CallEdge(LanguagePrimitives.Int32WithMeasure (n+1),0<callSymbol>,LanguagePrimitives.Int32WithMeasure 0)|]
+                                         [|InputGraph.TerminalEdge(LanguagePrimitives.Int32WithMeasure (n+1),0<terminalSymbol>,LanguagePrimitives.Int32WithMeasure 0)|]
                                          [|
-                                           InputGraph.ReturnEdge(LanguagePrimitives.Int32WithMeasure 0,0<returnSymbol>,LanguagePrimitives.Int32WithMeasure(n + 2))
-                                           InputGraph.ReturnEdge(LanguagePrimitives.Int32WithMeasure (2*n+3),0<returnSymbol>,LanguagePrimitives.Int32WithMeasure 0)
+                                           InputGraph.TerminalEdge(LanguagePrimitives.Int32WithMeasure 0,1<terminalSymbol>,LanguagePrimitives.Int32WithMeasure(n + 2))
+                                           InputGraph.TerminalEdge(LanguagePrimitives.Int32WithMeasure (2*n+3),1<terminalSymbol>,LanguagePrimitives.Int32WithMeasure 0)
                                            |]
                                          
                                          ])
     let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
-                  CallEdge(0<rsmState>,0<callSymbol>,1<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
-                  ReturnEdge(2<rsmState>,0<returnSymbol>,0<rsmState>)|])
+                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}" 
     
@@ -159,11 +162,11 @@ let loadGraphFromCSV file (callLabelsMappings:Dictionary<_,_>) =
     |> Seq.iter (fun a ->
         if callLabelsMappings.ContainsKey a.[2]
         then
-            edges.Add (InputGraph.CallEdge(a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
-                                               , callLabelsMappings.[a.[2]] |> LanguagePrimitives.Int32WithMeasure
+            edges.Add (InputGraph.TerminalEdge(a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
+                                               , callLabelsMappings.[a.[2]] |> fst |> LanguagePrimitives.Int32WithMeasure
                                                , a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
-            edges.Add (InputGraph.ReturnEdge(a.[1] |> int |> LanguagePrimitives.Int32WithMeasure
-                                               , callLabelsMappings.[a.[2]] |> LanguagePrimitives.Int32WithMeasure
+            edges.Add (InputGraph.TerminalEdge(a.[1] |> int |> LanguagePrimitives.Int32WithMeasure
+                                               , callLabelsMappings.[a.[2]] |> snd |> LanguagePrimitives.Int32WithMeasure
                                                , a.[0] |> int |> LanguagePrimitives.Int32WithMeasure))
         else edges.Add (InputGraph.CFGEdge (a.[0] |> int |> LanguagePrimitives.Int32WithMeasure,
                                                a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
@@ -177,20 +180,20 @@ let loadNodesFormCSV file =
 
 let defaultMap =
     let res = Dictionary<_,_>()
-    res.Add("subClassOf",0)
-    res.Add("type",1)
+    res.Add("subClassOf",(0,1))
+    res.Add("type",(2,3))
     res
 let g1 =
     RSM(0<rsmState>, HashSet([3<rsmState>]),
-                [|ReturnEdge(0<rsmState>,0<returnSymbol>,1<rsmState>)
+                [|TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,2<rsmState>)
-                  CallEdge(1<rsmState>,0<callSymbol>,3<rsmState>)
-                  CallEdge(2<rsmState>,0<callSymbol>,3<rsmState>)
+                  TerminalEdge(1<rsmState>,0<terminalSymbol>,3<rsmState>)
+                  TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)
                   
-                  ReturnEdge(0<rsmState>,1<returnSymbol>,4<rsmState>)
+                  TerminalEdge(0<rsmState>,3<terminalSymbol>,4<rsmState>)
                   NonTerminalEdge(4<rsmState>,5<rsmState>)
-                  CallEdge(4<rsmState>,1<callSymbol>,3<rsmState>)
-                  CallEdge(5<rsmState>,1<callSymbol>,3<rsmState>)|])
+                  TerminalEdge(4<rsmState>,2<terminalSymbol>,3<rsmState>)
+                  TerminalEdge(5<rsmState>,2<terminalSymbol>,3<rsmState>)|])
 let example10_go_hierarchy () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
@@ -209,7 +212,17 @@ let example11_go_singleSourceForAll () =
     for n in graph.AllVertices() do
         let reachable = GLL.eval graph [|n|] g1 
         printfn $"Reachable: %A{reachable.Count}"
+        
+let example12_go_hierarchy_singleSourceForAll () =
+    let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
+    for n in graph.AllVertices() do
+        let reachable = GLL.eval graph [|n|] g1 
+        printfn $"Reachable: %A{reachable.Count}"
     
+let example12_go_hierarchy_allPairs () =
+    let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
+    let reachable = GLL.eval graph (graph.AllVertices()) g1 
+    printfn $"Reachable: %A{reachable.Count}"
     
 [<EntryPoint>]
 let main argv =
@@ -225,5 +238,7 @@ let main argv =
     //example9 3000 [|1<graphVertex>|]
     //example10_go_hierarchy ()
     example11_go_allPairs ()
+    //example12_go_hierarchy_singleSourceForAll ()
     //example11_go_singleSourceForAll ()
+    //example12_go_hierarchy_allPairs()
     0 // return an integer exit code

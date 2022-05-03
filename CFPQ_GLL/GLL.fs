@@ -62,13 +62,11 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
             gss.Pop currentDescriptor.GssVertex currentDescriptor.InputPosition
             |> ResizeArray.iter (fun gssEdge -> packDescriptor currentDescriptor.InputPosition gssEdge.GssVertex gssEdge.RSMState |> addDescriptor)
             
-        let outgoingCallEdgesInGraph = graph.OutgoingCallEdges currentDescriptor.InputPosition
-        let outgoingReturnEdgesInGraph = graph.OutgoingReturnEdges currentDescriptor.InputPosition
+        let outgoingTerminalEdgesInGraph = graph.OutgoingTerminalEdges currentDescriptor.InputPosition
         let outgoingCFGEdgesInGraph = graph.OutgoingCFGEdges currentDescriptor.InputPosition
             
         let outgoingNonTerminalEdgeInRSM = query.OutgoingNonTerminalEdge currentDescriptor.RsmState
-        let outgoingCallEdgesInRSM = query.OutgoingCallEdges currentDescriptor.RsmState
-        let outgoingReturnEdgesInRSM = query.OutgoingReturnEdges currentDescriptor.RsmState
+        let outgoingTerminalEdgesInRSM = query.OutgoingTerminalEdges currentDescriptor.RsmState
         let outgoingCFGEdgesInRSM = query.OutgoingCFGEdges currentDescriptor.RsmState
         
         match outgoingNonTerminalEdgeInRSM with
@@ -80,24 +78,15 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                |> ResizeArray.iter (fun pos -> packDescriptor pos currentDescriptor.GssVertex nextRSMState |> addDescriptor)
         | None -> ()
         
-        outgoingCallEdgesInRSM
+        outgoingTerminalEdgesInRSM
         |> Array.iter (fun e1 ->
-            outgoingCallEdgesInGraph
+            outgoingTerminalEdgesInGraph
             |> Array.iter (fun e2 ->
-                let graphEdge = unpackInputGraphCallEdge e2
-                let rsmEdge = unpackRSMCallEdge e1
-                if graphEdge.CallSymbol = rsmEdge.CallSymbol
+                let graphEdge = unpackInputGraphTerminalEdge e2
+                let rsmEdge = unpackRSMTerminalEdge e1
+                if graphEdge.TerminalSymbol = rsmEdge.TerminalSymbol
                 then packDescriptor graphEdge.Vertex currentDescriptor.GssVertex rsmEdge.State |> addDescriptor))
             
-        outgoingReturnEdgesInRSM
-        |> Array.iter (fun e1 ->
-            outgoingReturnEdgesInGraph
-            |> Array.iter (fun e2 ->
-                let graphEdge = unpackInputGraphReturnEdge e2
-                let rsmEdge = unpackRSMReturnEdge e1
-                if graphEdge.ReturnSymbol = rsmEdge.ReturnSymbol
-                then packDescriptor graphEdge.Vertex currentDescriptor.GssVertex rsmEdge.State |> addDescriptor))
-        
         outgoingCFGEdgesInRSM
         |> Array.iter (fun e1 ->
             outgoingCFGEdgesInGraph
@@ -113,7 +102,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         |> handleDescriptor
     
     printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
-    printfn $"Total descriptors handled: %A{handledDescriptors.Count}"
-    printfn $"Average throughput: %A{float handledDescriptors.Count / (System.DateTime.Now - startTime).TotalSeconds} descriptors per second."
+    //printfn $"Total descriptors handled: %A{handledDescriptors.Count}"
+    //printfn $"Average throughput: %A{float handledDescriptors.Count / (System.DateTime.Now - startTime).TotalSeconds} descriptors per second."
         
     reachableVertices
