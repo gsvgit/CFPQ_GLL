@@ -6,10 +6,6 @@ open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 
-// Define a function to construct a message to print
-let from whom =
-    $"from %s{whom}"
-
 let example1 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
@@ -225,10 +221,9 @@ let example12_go_hierarchy_allPairs () =
     printfn $"Reachable: %A{reachable.Count}"
     
 [<EntryPoint>]
-let main argv =
-    let message = from "F#" // Call the function
-    //example1 ()
-    //example2 ()
+let main argv =   
+    example1 ()
+    example2 ()
     example3 ()
     example4 ()
     example5 [|1<graphVertex>|]

@@ -17,7 +17,8 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
         
     startVertices
     |> Array.iter (fun v ->        
-        startStates |> Array.iter (fun startState ->
+        startStates
+        |> Array.iter (fun startState ->
             let gssVertex = gss.AddNewVertex(v, startState)
             Descriptor(v, gssVertex, startState)
             |> descriptorToProcess.Push
@@ -78,7 +79,5 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
         |> handleDescriptor
     
     printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
-    //printfn $"Total descriptors handled: %A{handledDescriptors.Count}"
-    //printfn $"Average throughput: %A{float handledDescriptors.Count / (System.DateTime.Now - startTime).TotalSeconds} descriptors per second."
         
     reachableVertices
