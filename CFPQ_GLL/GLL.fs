@@ -30,7 +30,7 @@ let inline unpackDescriptor (descriptor:int64<descriptor>) =
     let rsmState = int32 (descriptor &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     Descriptor(inputPos, gssVertex, rsmState)
     
-let eval (graph:InputGraph) startVertices (query:RSM) =
+let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsmState>>) =
     let handledDescriptors = System.Collections.Generic.HashSet<_>()
     let reachableVertices = ResizeArray<_>()
     let descriptorToProcess = System.Collections.Generic.Stack<_>()
@@ -43,8 +43,10 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
     startVertices
     |> Array.iter (fun v ->
         let gssVertex = gss.AddNewVertex v
-        packDescriptor v gssVertex query.StartState
+        startStates |> Array.iter (fun startState -> 
+        packDescriptor v gssVertex startState
         |> descriptorToProcess.Push
+        )
         )
     
     let handleDescriptor descriptor =

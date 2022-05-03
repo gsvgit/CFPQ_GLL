@@ -92,7 +92,7 @@ let inline unpackRSMTerminalEdge (edge:int64<rsmTerminalEdge>) =
 let inline unpackRSMNonTerminalEdge (edge:int64<rsmNonTerminalEdge>) =
     let nextVertex, symbol = unpackRSMTerminalOrNonTerminalEdge (int64 edge)
     RSMNonTerminalEdge(nextVertex, symbol)    
-type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
+type RSM(startStates:System.Collections.Generic.HashSet<int<rsmState>>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
     let vertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexContent>()
     do
         let mutableVertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexMutableContent>()
@@ -118,8 +118,8 @@ type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSe
         |> Seq.iter (fun kvp -> vertices.Add(kvp.Key, RSMVertexContent(kvp.Value.OutgoingTerminalEdges.ToArray()
                                                                               , kvp.Value.OutgoingCFGEdges.ToArray()
                                                                               , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
-    member this.StartState = startState
-    member this.IsStartState state = startState = state
+    member this.StartStates = startStates
+    member this.IsStartState state = startStates.Contains state
     member this.IsFinalState state = finalStates.Contains state
     member this.OutgoingTerminalEdges v =
         vertices.[v].OutgoingTerminalEdges

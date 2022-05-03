@@ -13,34 +13,34 @@ let from whom =
 let example1 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([1<rsmState>]),[|CFGEdge(0<rsmState>,1<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let q = RSM(HashSet<_>([|0<rsmState>|]), System.Collections.Generic.HashSet([1<rsmState>]),[|CFGEdge(0<rsmState>,1<rsmState>)|])
+    let reachable = GLL.eval graph startV q [|0<rsmState>|] 
     printfn $"Reachable: %A{reachable}"
     
 let example2 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let q = RSM(HashSet<_>([0<rsmState>]), System.Collections.Generic.HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"
 
 let example3 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,0<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let q = RSM(HashSet<_>([0<rsmState>]), System.Collections.Generic.HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"
     
 let example4 () =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
                              InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,2<graphVertex>) |])
     let startV = [|0<graphVertex>|]
-    let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"    
 
 let example5 startV =
@@ -50,12 +50,12 @@ let example5 startV =
                              
                              InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,3<graphVertex>)
                              InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"    
 
 let example6 () =
@@ -65,12 +65,12 @@ let example6 () =
                              InputGraph.TerminalEdge(2<graphVertex>,1<terminalSymbol>,3<graphVertex>)
                              InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,4<graphVertex>) |])
     let startV = [|0<graphVertex>|]
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"    
 
 let example7 () =
@@ -79,12 +79,12 @@ let example7 () =
                              InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,1<graphVertex>)
                              InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
     let startV = [|0<graphVertex>|]
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"    
 
 
@@ -113,7 +113,7 @@ let example8 startV =
                              
                              |])
     
-    let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
@@ -131,7 +131,7 @@ let example8 startV =
                   TerminalEdge(0<rsmState>,2<terminalSymbol>,0<rsmState>)
                   TerminalEdge(0<rsmState>,4<terminalSymbol>,0<rsmState>)
                   |])
-    let reachable = GLL.eval graph startV q
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn "Reachable:"
     reachable |> Seq.iter (printf "%A, ")    
 
@@ -147,12 +147,12 @@ let example9 n startV =
                                            |]
                                          
                                          ])
-    let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q
+    let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}" 
     
 let loadGraphFromCSV file (callLabelsMappings:Dictionary<_,_>) =
@@ -184,7 +184,7 @@ let defaultMap =
     res.Add("type",(2,3))
     res
 let g1 =
-    RSM(0<rsmState>, HashSet([3<rsmState>]),
+    RSM(HashSet<_>([0<rsmState>]), HashSet([3<rsmState>]),
                 [|TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(1<rsmState>,0<terminalSymbol>,3<rsmState>)
@@ -199,29 +199,29 @@ let example10_go_hierarchy () =
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
     nodes
     |> Array.iter (fun n ->
-        let reachable = GLL.eval graph [|n|] g1 
+        let reachable = GLL.eval graph [|n|] g1 [|0<rsmState>|]
         printfn $"Reachable: %A{reachable}")
 
 let example11_go_allPairs () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
-    let reachable = GLL.eval graph (graph.AllVertices()) g1 
+    let reachable = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
     printfn $"Reachable: %A{reachable.Count}"
 
 let example11_go_singleSourceForAll () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
     for n in graph.AllVertices() do
-        let reachable = GLL.eval graph [|n|] g1 
+        let reachable = GLL.eval graph [|n|] g1 [|0<rsmState>|]
         printfn $"Reachable: %A{reachable.Count}"
         
 let example12_go_hierarchy_singleSourceForAll () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     for n in graph.AllVertices() do
-        let reachable = GLL.eval graph [|n|] g1 
+        let reachable = GLL.eval graph [|n|] g1 [|0<rsmState>|]
         printfn $"Reachable: %A{reachable.Count}"
     
 let example12_go_hierarchy_allPairs () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
-    let reachable = GLL.eval graph (graph.AllVertices()) g1 
+    let reachable = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
     printfn $"Reachable: %A{reachable.Count}"
     
 [<EntryPoint>]
