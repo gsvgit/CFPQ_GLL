@@ -35,10 +35,10 @@ let example4 () =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
                              InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,2<graphVertex>) |])
     let startV = [|0<graphVertex>|]
-    let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
+    let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
@@ -53,7 +53,7 @@ let example5 startV =
     let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
@@ -68,7 +68,7 @@ let example6 () =
     let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
@@ -82,7 +82,7 @@ let example7 () =
     let q = RSM(0<rsmState>, System.Collections.Generic.HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}"    
@@ -116,15 +116,15 @@ let example8 startV =
     let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
                   
                   TerminalEdge(0<rsmState>,2<terminalSymbol>,3<rsmState>)
-                  NonTerminalEdge(3<rsmState>,4<rsmState>)
+                  NonTerminalEdge(3<rsmState>,0<rsmState>,4<rsmState>)
                   TerminalEdge(4<rsmState>,3<terminalSymbol>,0<rsmState>)
                   
                   TerminalEdge(0<rsmState>,4<terminalSymbol>,5<rsmState>)
-                  NonTerminalEdge(5<rsmState>,6<rsmState>)
+                  NonTerminalEdge(5<rsmState>,0<rsmState>,6<rsmState>)
                   TerminalEdge(6<rsmState>,5<terminalSymbol>,0<rsmState>)
                   
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)
@@ -150,7 +150,7 @@ let example9 n startV =
     let q = RSM(0<rsmState>, HashSet([0<rsmState>]),
                 [|CFGEdge(0<rsmState>,0<rsmState>)
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q
     printfn $"Reachable: %A{reachable}" 
@@ -186,12 +186,12 @@ let defaultMap =
 let g1 =
     RSM(0<rsmState>, HashSet([3<rsmState>]),
                 [|TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,2<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(1<rsmState>,0<terminalSymbol>,3<rsmState>)
                   TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)
                   
                   TerminalEdge(0<rsmState>,3<terminalSymbol>,4<rsmState>)
-                  NonTerminalEdge(4<rsmState>,5<rsmState>)
+                  NonTerminalEdge(4<rsmState>,0<rsmState>,5<rsmState>)
                   TerminalEdge(4<rsmState>,2<terminalSymbol>,3<rsmState>)
                   TerminalEdge(5<rsmState>,2<terminalSymbol>,3<rsmState>)|])
 let example10_go_hierarchy () =

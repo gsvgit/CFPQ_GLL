@@ -5,11 +5,12 @@ open CFPQ_GLL
 [<Measure>] type rsmState
 [<Measure>] type rsmTerminalEdge
 [<Measure>] type rsmCFGEdge
+[<Measure>] type rsmNonTerminalEdge
 
 type RSMEdges =
     | CFGEdge of int<rsmState>*int<rsmState>
     | TerminalEdge of int<rsmState>*int<terminalSymbol>*int<rsmState>
-    | NonTerminalEdge of int<rsmState>*int<rsmState>
+    | NonTerminalEdge of _from:int<rsmState>*_nonTerminalSymbolStartState:int<rsmState>*_to:int<rsmState>
 
 [<Struct>]
 type RSMTerminalEdge =
@@ -18,27 +19,33 @@ type RSMTerminalEdge =
     new (state, terminalSymbol) = {State = state; TerminalSymbol = terminalSymbol}
 
 [<Struct>]
+type RSMNonTerminalEdge =
+    val State : int<rsmState>
+    val NonTerminalSymbolStartState : int<rsmState>
+    new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}
+
+[<Struct>]
 type RSMVertexContent =
     val OutgoingTerminalEdges : array<int64<rsmTerminalEdge>>
     val OutgoingCFGEdges : array<int64<rsmCFGEdge>>
-    val OutgoingNonTerminalEdge: Option<int<rsmState>>
+    val OutgoingNonTerminalEdges: array<int64<rsmNonTerminalEdge>>
     new (terminalEdges, cfgEdges, nonTerminalEdges) =
         {
             OutgoingTerminalEdges = terminalEdges
             ; OutgoingCFGEdges = cfgEdges
-            ; OutgoingNonTerminalEdge = nonTerminalEdges
+            ; OutgoingNonTerminalEdges = nonTerminalEdges
         }
     
 [<Struct>]
 type RSMVertexMutableContent =
     val OutgoingTerminalEdges : ResizeArray<int64<rsmTerminalEdge>>
     val OutgoingCFGEdges : ResizeArray<int64<rsmCFGEdge>>
-    val OutgoingNonTerminalEdge: ResizeArray<int<rsmState>>
+    val OutgoingNonTerminalEdges: ResizeArray<int64<rsmNonTerminalEdge>>
     new (terminalEdges, cfgEdges, nonTerminalEdges) =
         {
             OutgoingTerminalEdges = terminalEdges
             ; OutgoingCFGEdges = cfgEdges
-            ; OutgoingNonTerminalEdge = nonTerminalEdges
+            ; OutgoingNonTerminalEdges = nonTerminalEdges
         }
     
     
@@ -52,26 +59,39 @@ let inline packRSMCFGEdge (targetVertex:int<rsmState>): int64<rsmCFGEdge> =
     let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)    
     (_targetGssVertex) |> LanguagePrimitives.Int64WithMeasure
 
-let inline packRSMTerminalEdge (targetVertex:int<rsmState>) (symbol:int<terminalSymbol>) : int64<rsmTerminalEdge> =
+let inline private packRSMTerminalOrNonTerminalEdge (targetVertex:int<rsmState>) (symbol:int) : int64 =
     if uint32 targetVertex > RSM_VERTEX_MAX_VALUE
-    then failwithf $"Graph vertex should be less then %A{RSM_VERTEX_MAX_VALUE}"
+    then failwithf $"RSM vertex should be less then %A{RSM_VERTEX_MAX_VALUE}"
     if uint32 symbol > RSM_VERTEX_MAX_VALUE
     then failwithf $"Symbol should be less then %A{RSM_VERTEX_MAX_VALUE}"
     let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)
     let _symbol = int64 symbol
-    (_targetGssVertex ||| _symbol) |> LanguagePrimitives.Int64WithMeasure
+    (_targetGssVertex ||| _symbol)
+
+
+let inline packRSMTerminalEdge (targetVertex:int<rsmState>) (symbol:int<terminalSymbol>) : int64<rsmTerminalEdge> =
+    packRSMTerminalOrNonTerminalEdge targetVertex (int symbol) |> LanguagePrimitives.Int64WithMeasure
+
+let inline packRSMNonTerminalEdge (targetVertex:int<rsmState>) (nonTerminalSymbolStartState:int<rsmState>) : int64<rsmNonTerminalEdge> =
+    packRSMTerminalOrNonTerminalEdge targetVertex (int nonTerminalSymbolStartState) |> LanguagePrimitives.Int64WithMeasure
 
 let inline unpackRSMCFGEdge (edge:int64<rsmCFGEdge>) : int<rsmState> =
     let edge = int64 edge
     let nextState = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
     nextState
     
-let inline unpackRSMTerminalEdge (edge:int64<rsmTerminalEdge>) =
-    let edge = int64 edge
+let inline unpackRSMTerminalOrNonTerminalEdge (edge:int64) =
     let nextVertex = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
     let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) |> LanguagePrimitives.Int32WithMeasure
-    RSMTerminalEdge(nextVertex, symbol)    
+    nextVertex, symbol
 
+let inline unpackRSMTerminalEdge (edge:int64<rsmTerminalEdge>) =
+    let nextVertex, symbol = unpackRSMTerminalOrNonTerminalEdge (int64 edge)
+    RSMTerminalEdge(nextVertex, symbol)
+    
+let inline unpackRSMNonTerminalEdge (edge:int64<rsmNonTerminalEdge>) =
+    let nextVertex, symbol = unpackRSMTerminalOrNonTerminalEdge (int64 edge)
+    RSMNonTerminalEdge(nextVertex, symbol)    
 type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
     let vertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexContent>()
     do
@@ -90,16 +110,14 @@ type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSe
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
                             packRSMTerminalEdge _to smb |> vertexContent.OutgoingTerminalEdges.Add
-                        | NonTerminalEdge (_from, _to) ->
+                        | NonTerminalEdge (_from, _nonTerminalStartState, _to) ->
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
-                            vertexContent.OutgoingNonTerminalEdge.Add _to)
+                            packRSMNonTerminalEdge _to _nonTerminalStartState |> vertexContent.OutgoingNonTerminalEdges.Add)
         mutableVertices
         |> Seq.iter (fun kvp -> vertices.Add(kvp.Key, RSMVertexContent(kvp.Value.OutgoingTerminalEdges.ToArray()
                                                                               , kvp.Value.OutgoingCFGEdges.ToArray()
-                                                                              , if kvp.Value.OutgoingNonTerminalEdge.Count = 0
-                                                                                then None
-                                                                                else Some (kvp.Value.OutgoingNonTerminalEdge.[0]))))
+                                                                              , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
     member this.StartState = startState
     member this.IsStartState state = startState = state
     member this.IsFinalState state = finalStates.Contains state
@@ -107,5 +125,5 @@ type RSM(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSe
         vertices.[v].OutgoingTerminalEdges
     member this.OutgoingCFGEdges v =
         vertices.[v].OutgoingCFGEdges
-    member this.OutgoingNonTerminalEdge v =
-        vertices.[v].OutgoingNonTerminalEdge
+    member this.OutgoingNonTerminalEdges v =
+        vertices.[v].OutgoingNonTerminalEdges

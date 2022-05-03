@@ -65,18 +65,19 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         let outgoingTerminalEdgesInGraph = graph.OutgoingTerminalEdges currentDescriptor.InputPosition
         let outgoingCFGEdgesInGraph = graph.OutgoingCFGEdges currentDescriptor.InputPosition
             
-        let outgoingNonTerminalEdgeInRSM = query.OutgoingNonTerminalEdge currentDescriptor.RsmState
+        let outgoingNonTerminalEdgesInRSM = query.OutgoingNonTerminalEdges currentDescriptor.RsmState
         let outgoingTerminalEdgesInRSM = query.OutgoingTerminalEdges currentDescriptor.RsmState
         let outgoingCFGEdgesInRSM = query.OutgoingCFGEdges currentDescriptor.RsmState
         
-        match outgoingNonTerminalEdgeInRSM with
-        | Some nextRSMState ->
-               let newGSSVertex, positionsForPops = gss.AddEdge(currentDescriptor.GssVertex, nextRSMState, currentDescriptor.InputPosition)
-               packDescriptor currentDescriptor.InputPosition newGSSVertex query.StartState
+        outgoingNonTerminalEdgesInRSM
+        |> Array.iter (fun edge ->
+               let edge = unpackRSMNonTerminalEdge edge
+               let newGSSVertex, positionsForPops = gss.AddEdge(currentDescriptor.GssVertex, edge.State, currentDescriptor.InputPosition)
+               packDescriptor currentDescriptor.InputPosition newGSSVertex edge.NonTerminalSymbolStartState
                |> addDescriptor
                positionsForPops
-               |> ResizeArray.iter (fun pos -> packDescriptor pos currentDescriptor.GssVertex nextRSMState |> addDescriptor)
-        | None -> ()
+               |> ResizeArray.iter (fun pos -> packDescriptor pos currentDescriptor.GssVertex edge.State |> addDescriptor)
+        )
         
         outgoingTerminalEdgesInRSM
         |> Array.iter (fun e1 ->
