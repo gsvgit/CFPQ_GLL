@@ -20,14 +20,14 @@ let example1 () =
 let example2 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), System.Collections.Generic.HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"
 
 let example3 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,0<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), System.Collections.Generic.HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}"
     
@@ -227,8 +227,8 @@ let example12_go_hierarchy_allPairs () =
 [<EntryPoint>]
 let main argv =
     let message = from "F#" // Call the function
-    example1 ()
-    example2 ()
+    //example1 ()
+    //example2 ()
     example3 ()
     example4 ()
     example5 [|1<graphVertex>|]
