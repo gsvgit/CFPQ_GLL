@@ -2,11 +2,14 @@ module CFPQ_GLL.GSS
 open System.Collections.Generic
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
+open CFPQ_GLL.SPPF
 open FSharpx.Collections
 
 [<Measure>] type gssVertex
 [<Measure>] type gssEdge
 [<Measure>] type descriptorWithoutGSSVertex
+
+[<Measure>] type gssEdgeContent
 
 [<Struct>]
 type GSSVertex =
@@ -19,13 +22,24 @@ type Descriptor =
     val InputPosition: int<graphVertex>
     val GSSVertex: GSSVertex
     val RSMState: int<rsmState>
-    new(inputPosition, gssVertex, rsmState) = {InputPosition = inputPosition; GSSVertex = gssVertex; RSMState = rsmState}
+    val MatchedRange: Option<MatchedRange>
+    new(inputPosition, gssVertex, rsmState, matchedRange) =
+        {
+            InputPosition = inputPosition
+            GSSVertex = gssVertex
+            RSMState = rsmState
+            MatchedRange = matchedRange
+        }
 
 [<Struct>]
 type GSSEdge =
     val GSSVertex : GSSVertex
     val RSMState : int<rsmState>
-    new(gssVertex, rsmState) = {GSSVertex = gssVertex; RSMState = rsmState}
+    new(gssVertex, rsmState) =
+        {
+            GSSVertex = gssVertex
+            RSMState = rsmState
+        }
 
 // gssEdge = |gssVertex|rsmState|
 // gssVertex = |...|InputPosition|rsmState|
@@ -90,9 +104,9 @@ type GSS() =
         newGSSVertexContent.OutputEdges.Add newEdge        
         newGSSVertex, newGSSVertexContent.Popped
         
-    member this.Pop (currentGSSVertex:GSSVertex) (currentInputPosition:int<graphVertex>) =
-        let gssVertexContent = vertices.[packGSSVertex currentGSSVertex]
-        gssVertexContent.Popped.Add currentInputPosition
+    member this.Pop (currentDescriptor:Descriptor) =
+        let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]
+        gssVertexContent.Popped.Add currentDescriptor.InputPosition
         gssVertexContent.OutputEdges
         |> ResizeArray.map unpackGSSEdge
         
