@@ -5,12 +5,15 @@ open System.Collections.Generic
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
+open CFPQ_GLL.SPPF
 
 let example1 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([|0<rsmState>|]), System.Collections.Generic.HashSet([1<rsmState>]),[|CFGEdge(0<rsmState>,1<rsmState>)|])
-    let reachable = GLL.eval graph startV q [|0<rsmState>|] 
+    let q = RSM(HashSet<_>([|0<rsmState>|]), HashSet([1<rsmState>]),[|CFGEdge(0<rsmState>,1<rsmState>)|])
+    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
+    let sppf = matched.ToSPPF()
+    printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
     
 let example2 () =
@@ -24,7 +27,9 @@ let example3 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,0<graphVertex>)|])
     let startV = [|0<graphVertex>|]
     let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q [|0<rsmState>|]
+    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
+    let sppf = matched.ToSPPF()
+    printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
     
 let example4 () =
@@ -224,11 +229,11 @@ let example12_go_hierarchy_allPairs () =
     
 [<EntryPoint>]
 let main argv =   
-    example1 ()
-    example2 ()
+    //example1 ()
+    //example2 ()
     example3 ()
-    example4 ()
-    example5 [|1<graphVertex>|]
+    //example4 ()
+    //example5 [|1<graphVertex>|]
     (*example6 ()
     example7 ()    
     example8 [|0<graphVertex>; 11<graphVertex>; 6<graphVertex>|]

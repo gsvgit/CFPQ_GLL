@@ -10,40 +10,13 @@ open FSharpx.Collections
 [<Measure>] type rsmRange
 [<Measure>] type inputRange
 [<Measure>] type rangeIntermediatePoint
-
-type IntermediateNode' (rsmState, inputPosition, leftSubtree, rightSubtree) =
-    member this.RSMState = rsmState
-    member this.InputPosition = inputPosition
-    member this.LeftSubtree = leftSubtree
-    member this.RightSubtree = rightSubtree
-
-and RangeNode (inputStartPosition, inputEndPosition, rsmStartPosition, rsmEndPosition, intermediateNodes) =
-    member this.InputStartPosition = inputStartPosition
-    member this.InputEndPosition = inputEndPosition
-    member this.RSMStartPosition = rsmStartPosition
-    member this.RSMEndPosition = rsmEndPosition
-    member this.IntermediateNodes = intermediateNodes    
   
-[<Struct>]
-type IntermediatePoint =
-    val RSMState : int<rsmState>
-    val InputPosition : int<graphVertex>
-    new (rsmState, inputPosition) = {RSMState = rsmState; InputPosition = inputPosition}
-
-[<Struct>]
-type RangeInfo =
-    val IntermediatePoints : HashSet<int64<rangeIntermediatePoint>>
-    val Terminals : HashSet<int<terminalSymbol>>
-    val IsCFG : bool 
-    val NonTerminals :  HashSet<int<rsmState>>
-    
-    new (intermediatePoints, terminals, isCFG, nonTerminals) =
-        {
-            IntermediatePoints = intermediatePoints
-            Terminals = terminals
-            NonTerminals = nonTerminals
-            IsCFG = isCFG
-        }
+[<RequireQualifiedAccess>]
+type RangeType =
+    | CFG
+    | Terminal of int<terminalSymbol>
+    | NonTerminal of int<rsmState>
+    | Intermediate
     
 [<Struct>]
 type TerminalNode =
@@ -66,82 +39,60 @@ type CFGEdgeNode =
             LeftPosition = leftPosition
             RightPosition = rightPosition
         }
+type IntermediateNode (rsmState, inputPosition, leftSubtree, rightSubtree) =
+    member this.RSMState = rsmState
+    member this.InputPosition = inputPosition
+    member this.LeftSubtree = leftSubtree
+    member this.RightSubtree = rightSubtree
 
-[<Struct>]       
-type  NonTerminalNode =
+and RangeNode (inputStartPosition, inputEndPosition, rsmStartPosition, rsmEndPosition, intermediateNodes) =
+    member this.InputStartPosition = inputStartPosition
+    member this.InputEndPosition = inputEndPosition
+    member this.RSMStartPosition = rsmStartPosition
+    member this.RSMEndPosition = rsmEndPosition
+    member this.IntermediateNodes = intermediateNodes    
+  
+
+and [<Struct>] IntermediatePoint =
+    val RSMState : int<rsmState>
+    val InputPosition : int<graphVertex>
+    new (rsmState, inputPosition) = {RSMState = rsmState; InputPosition = inputPosition}
+
+
+and [<Struct>] RangeInfo =
+    val IntermediatePoints : HashSet<int64<rangeIntermediatePoint>>
+    val Terminals : HashSet<int<terminalSymbol>>     
+    val NonTerminals :  HashSet<int<rsmState>>
+    val IsCFG : ref<bool>
+    
+    new (intermediatePoints, terminals, nonTerminals, isCFG) =
+        {
+            IntermediatePoints = intermediatePoints
+            Terminals = terminals
+            IsCFG = isCFG
+            NonTerminals = nonTerminals            
+        }
+      
+and [<Struct>] NonTerminalNode =
     val NonTerminalStartState : int<rsmState>
     val LeftPosition : int<graphVertex>
     val RightPosition : int<graphVertex>
-    val PackedNodes : ResizeArray<PackedNode>
+    //val PackedNodes : ResizeArray<PackedNode>
     new (nonTerminalStartState, leftPosition, rightPosition, packedNodes)  =
         {
             NonTerminalStartState = nonTerminalStartState
             LeftPosition = leftPosition
             RightPosition = rightPosition
-            PackedNodes = packedNodes
+            //PackedNodes = packedNodes
         }
-        
-and [<Struct>] PackedNode =
-    val CurrentRSMState : int<rsmState>
-    val RightEndOfLeftChild : int<graphVertex>
-    val LeftChild : Option<NonPackedNode>
-    val RightChild : Option<NonPackedNode>
-    new (currentRSMState, rightEndOfLeftChild, leftChild, rightChild) =
-        {
-            CurrentRSMState = currentRSMState
-            RightEndOfLeftChild = rightEndOfLeftChild
-            LeftChild = leftChild
-            RightChild = rightChild
-        }
-        
-and [<Struct>] IntermediateNode =
-    val CurrentRSMState : int<rsmState>
-    val LeftPosition : int<graphVertex>
-    val RightPosition : int<graphVertex>
-    val PackedNodes : ResizeArray<PackedNode>
-    new (currentRSMState, leftPosition, rightPosition, packedNodes)  =
-        {
-            CurrentRSMState = currentRSMState
-            LeftPosition = leftPosition
-            RightPosition = rightPosition
-            PackedNodes = packedNodes
-        }
-and [<RequireQualifiedAccess>]NonPackedNode =
+                
+and [<RequireQualifiedAccess>]NonRangeNode =
     | TerminalNode of TerminalNode
     | CFGEdgeNode of CFGEdgeNode
     | NonTerminalNode of NonTerminalNode
     | IntermediateNode of IntermediateNode
-
-type SPPF () =
-    //let nonTerminalNodes =
-    let terminalNodes = Dictionary<_,_> ()
-    let cfgEdgeNodes = Dictionary<_,_> ()
-    member this.GetTerminalNode (currentInputPosition, graphEdge:InputGraphTerminalEdge) =
-        let packedTerminalNode = ()
-        if terminalNodes.ContainsKey(packedTerminalNode)
-        then terminalNodes.[packedTerminalNode]
-        else
-            let newNode = TerminalNode(graphEdge.TerminalSymbol, currentInputPosition, graphEdge.Vertex)
-            terminalNodes.Add(packedTerminalNode, newNode)
-            newNode
-        
-    member this.GetCFGEdgeNode (currentInputPosition, nextInputPosition) =
-        let packedCFGEdgeNode = ()
-        if cfgEdgeNodes.ContainsKey(packedCFGEdgeNode)
-        then cfgEdgeNodes.[packedCFGEdgeNode]
-        else
-            let newNode = CFGEdgeNode(currentInputPosition, nextInputPosition)
-            cfgEdgeNodes.Add(packedCFGEdgeNode, newNode)
-            newNode
-            
-    member this.GetIntermediateNode () = ()
     
-    member this.GetCFGEdgeNode () = ()
-
-
-
-[<Struct>]
-type Range<'position> =
+and [<Struct>] Range<'position> =
     val StartPosition: 'position
     val EndPosition: 'position
     new (startPosition, endPosition) = {StartPosition = startPosition; EndPosition = endPosition}
@@ -150,8 +101,9 @@ type Range<'position> =
 type MatchedRange =
     val InputRange : Range<int<graphVertex>>
     val RSMRange : Range<int<rsmState>>
-    new (inputRange, rsmRange) = {InputRange = inputRange; RSMRange = rsmRange}
-    new (inputFrom, inputTo, rsmFrom, rsmTo) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo)}
+    val RangeType: RangeType
+    new (inputRange, rsmRange, rangeType) = {InputRange = inputRange; RSMRange = rsmRange; RangeType = rangeType}
+    new (inputFrom, inputTo, rsmFrom, rsmTo, rangeType) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo); RangeType = rangeType}
 
 let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_RSM_STATE)
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
@@ -178,32 +130,41 @@ let inline private unpackRange (range:int64<'t>) =
     let _rangeEnd = int32 range |> LanguagePrimitives.Int32WithMeasure
     Range(_rangeStart, _rangeEnd)    
 type MatchedRanges () =
-    let ranges : Dictionary<int64<rsmRange>,Dictionary<int64<inputRange>,HashSet<int64<rangeIntermediatePoint>>>> =
+    let ranges : Dictionary<int64<rsmRange>,Dictionary<int64<inputRange>,RangeInfo>> =
         Dictionary<_,_>()
     member this.AddMatchedRange (matchedRange: MatchedRange) =
         let rsmRange = packRange matchedRange.RSMRange.StartPosition matchedRange.RSMRange.EndPosition
         let inputRange = packRange matchedRange.InputRange.StartPosition matchedRange.InputRange.EndPosition
-        if not <| ranges.ContainsKey rsmRange
-        then
-            let newInputRangesDict = Dictionary<_,_>()
-            let newIntermediatePoints = HashSet<_>()
-            newInputRangesDict.Add(inputRange, newIntermediatePoints)
-            ranges.Add(rsmRange,newInputRangesDict)
-            newIntermediatePoints
-        elif not <| ranges.[rsmRange].ContainsKey inputRange
-        then
-            let newIntermediatePoints = HashSet<_>()
-            ranges.[rsmRange].Add(inputRange, newIntermediatePoints)
-            newIntermediatePoints
-        else ranges.[rsmRange].[inputRange]
+        let rangeInfo = 
+            if not <| ranges.ContainsKey rsmRange
+            then
+                let newInputRangesDict = Dictionary<_,_>()
+                let newRangeInfo = RangeInfo(HashSet<_>(),HashSet<_>(),HashSet<_>(),ref false)
+                newInputRangesDict.Add(inputRange, newRangeInfo)
+                ranges.Add(rsmRange,newInputRangesDict)
+                newRangeInfo
+            elif not <| ranges.[rsmRange].ContainsKey inputRange
+            then
+                let newRangeInfo = RangeInfo(HashSet<_>(),HashSet<_>(),HashSet<_>(),ref false)
+                ranges.[rsmRange].Add(inputRange, newRangeInfo)
+                newRangeInfo
+            else ranges.[rsmRange].[inputRange]
+        match matchedRange.RangeType with
+        | RangeType.Terminal t   -> rangeInfo.Terminals.Add t |> ignore
+        | RangeType.CFG -> rangeInfo.IsCFG.Value <- true
+        | RangeType.NonTerminal n -> rangeInfo.NonTerminals.Add n |> ignore
+        | RangeType.Intermediate -> ()
+            
+        rangeInfo
     member this.AddMatchedRange (leftSubRange: MatchedRange, rightSubRange: MatchedRange) =
         let newRange = MatchedRange(leftSubRange.InputRange.StartPosition
                                     , rightSubRange.InputRange.EndPosition
                                     , leftSubRange.RSMRange.StartPosition
-                                    , rightSubRange.RSMRange.EndPosition)
+                                    , rightSubRange.RSMRange.EndPosition
+                                    , RangeType.Intermediate)
         let intermediatePoints = this.AddMatchedRange newRange
         let intermediatePoint = packIntermediatePoint leftSubRange.RSMRange.EndPosition leftSubRange.InputRange.EndPosition
-        intermediatePoints.Add intermediatePoint |> ignore
+        intermediatePoints.IntermediatePoints.Add intermediatePoint |> ignore
         newRange
         
     member this.ToSPPF() =
@@ -226,18 +187,31 @@ type MatchedRanges () =
             let rsmRange = unpackRange kvp.Key
             for kvp in kvp.Value do
                 let inputRange = unpackRange kvp.Key
+                let terminalNodes =
+                    [
+                        for terminal in kvp.Value.Terminals ->
+                           NonRangeNode.TerminalNode <| TerminalNode (terminal,inputRange.StartPosition,inputRange.EndPosition) 
+                    ]                                
                 let intermediateNodes = 
                     [
-                     for packedIntermediatePoint in kvp.Value ->
+                     for packedIntermediatePoint in kvp.Value.IntermediatePoints ->
                         let intermediatePoint = unpackIntermediatePoint packedIntermediatePoint                                                        
                         let leftNode = getRangeNode inputRange.StartPosition intermediatePoint.InputPosition rsmRange.StartPosition intermediatePoint.RSMState                                
                         let rightNode = getRangeNode intermediatePoint.InputPosition inputRange.EndPosition intermediatePoint.RSMState rsmRange.EndPosition
                         
-                        IntermediateNode'(intermediatePoint.RSMState, intermediatePoint.InputPosition, leftNode, rightNode)
+                        NonRangeNode.IntermediateNode <| IntermediateNode(intermediatePoint.RSMState, intermediatePoint.InputPosition, leftNode, rightNode)
                     ]
                 let rangeNode = getRangeNode inputRange.StartPosition inputRange.EndPosition rsmRange.StartPosition rsmRange.EndPosition
-                rangeNode.IntermediateNodes.AddRange intermediateNodes
                 
+                if kvp.Value.IsCFG.Value
+                then
+                    CFGEdgeNode (inputRange.StartPosition,inputRange.EndPosition)
+                    |> NonRangeNode.CFGEdgeNode
+                    |> rangeNode.IntermediateNodes.Add
+                
+                rangeNode.IntermediateNodes.AddRange intermediateNodes
+                rangeNode.IntermediateNodes.AddRange terminalNodes
+
         rangeNodes
                     
                 

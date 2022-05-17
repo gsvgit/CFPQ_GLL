@@ -84,7 +84,7 @@ let unpackGSSEdge (gssEdgesInfo:Dictionary<_,_>) (gssEdge:int64<gssEdge>) =
 [<Struct>]
 type GssVertexContent =
     val OutputEdges : ResizeArray<int64<gssEdge>>
-    val Popped : ResizeArray<PoppedPosition>
+    val Popped : ResizeArray<MatchedRange>
     val HandledDescriptors : HashSet<int64<descriptorWithoutGSSVertex>>
     new (outputEdges, popped, handledDescriptors) = {OutputEdges = outputEdges; Popped = popped; HandledDescriptors = handledDescriptors}
 
@@ -113,9 +113,10 @@ type GSS() =
         newGSSVertex, newGSSVertexContent.Popped
         
     member this.Pop (currentDescriptor:Descriptor) =
-        let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]
-        PoppedPosition(currentDescriptor.InputPosition, currentDescriptor.RSMState)
-        |> gssVertexContent.Popped.Add
+        let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]        
+        match currentDescriptor.MatchedRange with
+        | Some range -> gssVertexContent.Popped.Add range
+        | None -> ()
         gssVertexContent.OutputEdges
         |> ResizeArray.map (unpackGSSEdge edgesInfo)
         
