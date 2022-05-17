@@ -12,6 +12,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
     
     let gss = GSS()
     let matchedRanges = MatchedRanges()
+    //let sppf = SPPF()
     
     let inline addDescriptor (descriptor:Descriptor) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
@@ -38,11 +39,24 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
             then reachableVertices.Add (startPosition, currentDescriptor.InputPosition)
             
             gss.Pop currentDescriptor
-            |> ResizeArray.iter (fun gssEdge ->
-                let newMatchedRange =
-                    let leftSubRange = 
-                    let rightSubRange = 
-                Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState) |> addDescriptor)
+            |> ResizeArray.iter (
+                fun gssEdge ->                
+                    let leftSubRange = gssEdge.Info ///!!!!
+                    let rightSubRange =
+                        match currentDescriptor.MatchedRange with
+                        | None -> MatchedRange(currentDescriptor.InputPosition, currentDescriptor.InputPosition, currentDescriptor.RSMState, currentDescriptor.RSMState)
+                        | Some range -> range
+                        
+                    let newRange =
+                       match leftSubRange with
+                       | Some leftSubRange -> matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                       | None ->
+                           matchedRanges.AddMatchedRange rightSubRange |> ignore
+                           rightSubRange
+                           
+                    Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, Some newRange)
+                    |> addDescriptor
+                )
             
         let outgoingTerminalEdgesInGraph = graph.OutgoingTerminalEdges currentDescriptor.InputPosition
         let outgoingCFGEdgesInGraph = graph.OutgoingCFGEdges currentDescriptor.InputPosition
@@ -54,7 +68,8 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
         outgoingNonTerminalEdgesInRSM
         |> Array.iter (fun edge ->
                let edge = unpackRSMNonTerminalEdge edge
-               let newGSSVertex, positionsForPops = gss.AddEdge(currentDescriptor.GSSVertex, edge.State, currentDescriptor.InputPosition, edge.NonTerminalSymbolStartState)
+               let newGSSVertex, positionsForPops =
+                    gss.AddEdge(currentDescriptor.GSSVertex, edge.State, currentDescriptor.InputPosition, edge.NonTerminalSymbolStartState, currentDescriptor.MatchedRange)
                Descriptor(currentDescriptor.InputPosition, newGSSVertex, edge.NonTerminalSymbolStartState, None)
                |> addDescriptor
                positionsForPops
@@ -107,4 +122,4 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
     
     printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
         
-    reachableVertices
+    reachableVertices, matchedRanges

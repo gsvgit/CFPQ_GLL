@@ -36,7 +36,9 @@ let example4 () =
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q [|0<rsmState>|]
+    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
+    let sppf = matched.ToSPPF()
+    printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"    
 
 let example5 startV =
@@ -127,7 +129,7 @@ let example8 startV =
                   TerminalEdge(0<rsmState>,2<terminalSymbol>,0<rsmState>)
                   TerminalEdge(0<rsmState>,4<terminalSymbol>,0<rsmState>)
                   |])
-    let reachable = GLL.eval graph startV q [|0<rsmState>|]
+    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
     printfn "Reachable:"
     reachable |> Seq.iter (printf "%A, ")    
 
@@ -200,24 +202,24 @@ let example10_go_hierarchy () =
 
 let example11_go_allPairs () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
-    let reachable = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
+    let reachable,matched = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
     printfn $"Reachable: %A{reachable.Count}"
 
 let example11_go_singleSourceForAll () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
     for n in graph.AllVertices() do
-        let reachable = GLL.eval graph [|n|] g1 [|0<rsmState>|]
+        let reachable,matched = GLL.eval graph [|n|] g1 [|0<rsmState>|]
         printfn $"Reachable: %A{reachable.Count}"
         
 let example12_go_hierarchy_singleSourceForAll () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     for n in graph.AllVertices() do
-        let reachable = GLL.eval graph [|n|] g1 [|0<rsmState>|]
+        let reachable,matched = GLL.eval graph [|n|] g1 [|0<rsmState>|]
         printfn $"Reachable: %A{reachable.Count}"
     
 let example12_go_hierarchy_allPairs () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
-    let reachable = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
+    let reachable,matched = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
     printfn $"Reachable: %A{reachable.Count}"
     
 [<EntryPoint>]
@@ -227,13 +229,13 @@ let main argv =
     example3 ()
     example4 ()
     example5 [|1<graphVertex>|]
-    example6 ()
+    (*example6 ()
     example7 ()    
     example8 [|0<graphVertex>; 11<graphVertex>; 6<graphVertex>|]
-    //example9 3000 [|1<graphVertex>|]
+    *)//example9 3000 [|1<graphVertex>|]
     //example10_go_hierarchy ()
-    example11_go_allPairs ()
-    //example12_go_hierarchy_singleSourceForAll ()
+    (*example11_go_allPairs ()
+    *)//example12_go_hierarchy_singleSourceForAll ()
     //example11_go_singleSourceForAll ()
     //example12_go_hierarchy_allPairs()
     0 // return an integer exit code
