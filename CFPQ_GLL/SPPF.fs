@@ -1,8 +1,68 @@
 module CFPQ_GLL.SPPF
 
 open System.Collections.Generic
+open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
+open Microsoft.FSharp.Core
+
+
+[<Struct>]
+type TerminalNode =
+    val Terminal : int<terminalSymbol>
+    val LeftPosition : int<graphVertex>
+    val RightPosition : int<graphVertex>
+    new (terminal, leftPosition, rightPosition)  =
+        {
+            Terminal = terminal
+            LeftPosition = leftPosition
+            RightPosition = rightPosition
+        }
+
+[<Struct>]       
+type  NonTerminalNode =
+    val NonTerminalStartState : int<rsmState>
+    val LeftPosition : int<graphVertex>
+    val RightPosition : int<graphVertex>
+    val PackedNodes : ResizeArray<PackedNode>
+    new (nonTerminalStartState, leftPosition, rightPosition, packedNodes)  =
+        {
+            NonTerminalStartState = nonTerminalStartState
+            LeftPosition = leftPosition
+            RightPosition = rightPosition
+            PackedNodes = packedNodes
+        }
+        
+and [<Struct>] PackedNode =
+    val CurrentRSMState : int<rsmState>
+    val RightEndOfLeftChild : int<graphVertex>
+    val LeftChild : Option<NonPackedNode>
+    val RightChild : Option<NonPackedNode>
+    new (currentRSMState, rightEndOfLeftChild, leftChild, rightChild) =
+        {
+            CurrentRSMState = currentRSMState
+            RightEndOfLeftChild = rightEndOfLeftChild
+            LeftChild = leftChild
+            RightChild = rightChild
+        }
+        
+and [<Struct>] IntermediateNode =
+    val CurrentRSMState : int<rsmState>
+    val LeftPosition : int<graphVertex>
+    val RightPosition : int<graphVertex>
+    val PackedNodes : ResizeArray<PackedNode>
+    new (currentRSMState, leftPosition, rightPosition, packedNodes)  =
+        {
+            CurrentRSMState = currentRSMState
+            LeftPosition = leftPosition
+            RightPosition = rightPosition
+            PackedNodes = packedNodes
+        }
+and [<RequireQualifiedAccess>]NonPackedNode =
+    | Terminal of TerminalNode
+    | NonTerminal of NonTerminalNode
+    | Intermediate of IntermediateNode
+
 
 [<Measure>] type rsmRange
 [<Measure>] type inputRange
