@@ -38,7 +38,11 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
             then reachableVertices.Add (startPosition, currentDescriptor.InputPosition)
             
             gss.Pop currentDescriptor
-            |> ResizeArray.iter (fun gssEdge -> Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState) |> addDescriptor)
+            |> ResizeArray.iter (fun gssEdge ->
+                let newMatchedRange =
+                    let leftSubRange = 
+                    let rightSubRange = 
+                Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState) |> addDescriptor)
             
         let outgoingTerminalEdgesInGraph = graph.OutgoingTerminalEdges currentDescriptor.InputPosition
         let outgoingCFGEdgesInGraph = graph.OutgoingCFGEdges currentDescriptor.InputPosition
@@ -57,8 +61,13 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                |> ResizeArray.iter (fun pos ->
                    let rightSubRange = MatchedRange(currentDescriptor.InputPosition, pos.InputPosition, currentDescriptor.RSMState, pos.RSMState)
                    let leftSubRange = currentDescriptor.MatchedRange
-                   let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
-                   Descriptor(pos, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
+                   let newRange =
+                       match leftSubRange with
+                       | Some leftSubRange -> matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                       | None ->
+                           matchedRanges.AddMatchedRange rightSubRange |> ignore
+                           rightSubRange
+                   Descriptor(pos.InputPosition, currentDescriptor.GSSVertex, edge.State, Some newRange) |> addDescriptor)
         )
         
         outgoingTerminalEdgesInRSM

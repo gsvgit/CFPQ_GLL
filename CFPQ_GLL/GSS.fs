@@ -8,8 +8,13 @@ open FSharpx.Collections
 [<Measure>] type gssVertex
 [<Measure>] type gssEdge
 [<Measure>] type descriptorWithoutGSSVertex
-
 [<Measure>] type gssEdgeContent
+
+[<Struct>]
+type PoppedPosition =
+    val InputPosition: int<graphVertex>
+    val RSMState: int<rsmState>
+    new (inputPosition, rsmState) = {InputPosition = inputPosition; RSMState = rsmState}
 
 [<Struct>]
 type GSSVertex =
@@ -58,9 +63,9 @@ let packGSSEdge (targetGSSVertex:int64<gssVertex>) (rsmState:int<rsmState>) : in
     (_targetGSSVertex ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
 
 let packGSSVertex (gssVertex:GSSVertex) : int64<gssVertex> =
-    let _targetGSSVertex = (int64 gssVertex.InputPosition) <<< BITS_FOR_RSM_STATE
+    let _inputPosition = (int64 gssVertex.InputPosition) <<< BITS_FOR_RSM_STATE
     let _rsmState = int64 gssVertex.RSMState
-    (_targetGSSVertex ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
+    (_inputPosition ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
 
 let unpackGSSVertex (gssVertex:int64<gssVertex>) =
     let gssVertex = int64 gssVertex
@@ -77,7 +82,7 @@ let unpackGSSEdge (gssEdge:int64<gssEdge>) =
 [<Struct>]
 type GssVertexContent =
     val OutputEdges : ResizeArray<int64<gssEdge>>
-    val Popped : ResizeArray<int<graphVertex>>
+    val Popped : ResizeArray<PoppedPosition>
     val HandledDescriptors : HashSet<int64<descriptorWithoutGSSVertex>>
     new (outputEdges, popped, handledDescriptors) = {OutputEdges = outputEdges; Popped = popped; HandledDescriptors = handledDescriptors}
 
@@ -106,7 +111,8 @@ type GSS() =
         
     member this.Pop (currentDescriptor:Descriptor) =
         let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]
-        gssVertexContent.Popped.Add currentDescriptor.InputPosition
+        PoppedPosition(currentDescriptor.InputPosition, currentDescriptor.RSMState)
+        |> gssVertexContent.Popped.Add
         gssVertexContent.OutputEdges
         |> ResizeArray.map unpackGSSEdge
         
