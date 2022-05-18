@@ -116,7 +116,15 @@ type GSS() =
         let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]        
         match currentDescriptor.MatchedRange with
         | Some range -> gssVertexContent.Popped.Add range
-        | None -> ()
+        | None ->
+            let range = 
+                MatchedRange(
+                    currentDescriptor.InputPosition
+                    ,currentDescriptor.InputPosition
+                    ,currentDescriptor.RSMState
+                    ,currentDescriptor.RSMState
+                    ,RangeType.NonTerminal(0<rsmState>))
+            range |> gssVertexContent.Popped.Add 
         gssVertexContent.OutputEdges
         |> ResizeArray.map (unpackGSSEdge edgesInfo)
         

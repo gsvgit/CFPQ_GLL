@@ -119,6 +119,7 @@ type RSM(startStates:System.Collections.Generic.HashSet<int<rsmState>>, finalSta
                                                                               , kvp.Value.OutgoingCFGEdges.ToArray()
                                                                               , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
     member this.StartStates = startStates
+    member this.FinalStates = finalStates
     member this.IsStartState state = startStates.Contains state
     member this.IsFinalState state = finalStates.Contains state
     member this.OutgoingTerminalEdges v =

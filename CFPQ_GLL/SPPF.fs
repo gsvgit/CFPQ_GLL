@@ -77,13 +77,13 @@ and [<Struct>] NonTerminalNode =
     val NonTerminalStartState : int<rsmState>
     val LeftPosition : int<graphVertex>
     val RightPosition : int<graphVertex>
-    //val PackedNodes : ResizeArray<PackedNode>
-    new (nonTerminalStartState, leftPosition, rightPosition, packedNodes)  =
+    val RangeNodes : array<RangeNode>
+    new (nonTerminalStartState, leftPosition, rightPosition, rangeNodes)  =
         {
             NonTerminalStartState = nonTerminalStartState
             LeftPosition = leftPosition
             RightPosition = rightPosition
-            //PackedNodes = packedNodes
+            RangeNodes = rangeNodes
         }
                 
 and [<RequireQualifiedAccess>]NonRangeNode =
@@ -167,7 +167,7 @@ type MatchedRanges () =
         intermediatePoints.IntermediatePoints.Add intermediatePoint |> ignore
         newRange
         
-    member this.ToSPPF() =
+    member this.ToSPPF(query:RSM) =
         let rangeNodes = ResizeArray<RangeNode>()
         let getRangeNode inputStart inputEnd rsmStart rsmEnd =
             let n =
@@ -187,6 +187,13 @@ type MatchedRanges () =
             let rsmRange = unpackRange kvp.Key
             for kvp in kvp.Value do
                 let inputRange = unpackRange kvp.Key
+                let nonTerminalNodes =
+                    [
+                        for nonTerminal in kvp.Value.NonTerminals ->
+                            let rangeNodes = [|for finalState in query.FinalStates -> getRangeNode inputRange.StartPosition inputRange.EndPosition nonTerminal finalState|]                            
+                            NonRangeNode.NonTerminalNode <| NonTerminalNode(nonTerminal,inputRange.StartPosition,inputRange.EndPosition,rangeNodes)
+                            
+                    ]
                 let terminalNodes =
                     [
                         for terminal in kvp.Value.Terminals ->
@@ -211,6 +218,7 @@ type MatchedRanges () =
                 
                 rangeNode.IntermediateNodes.AddRange intermediateNodes
                 rangeNode.IntermediateNodes.AddRange terminalNodes
+                rangeNode.IntermediateNodes.AddRange nonTerminalNodes
 
         rangeNodes
                     

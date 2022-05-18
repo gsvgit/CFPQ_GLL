@@ -12,7 +12,7 @@ let example1 () =
     let startV = [|0<graphVertex>|]
     let q = RSM(HashSet<_>([|0<rsmState>|]), HashSet([1<rsmState>]),[|CFGEdge(0<rsmState>,1<rsmState>)|])
     let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    let sppf = matched.ToSPPF()
+    let sppf = matched.ToSPPF(q)
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
     
@@ -28,9 +28,24 @@ let example3 () =
     let startV = [|0<graphVertex>|]
     let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
     let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    let sppf = matched.ToSPPF()
+    let sppf = matched.ToSPPF(q)
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
+
+let example3_5 () =
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>) |])
+    let startV = [|0<graphVertex>|]
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([2<rsmState>]),
+                [|
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,2<rsmState>)|])
+    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
+    let sppf = matched.ToSPPF(q)
+    printfn $"SPPF: %A{sppf}"
+    printfn $"Reachable: %A{reachable}"    
+
     
 let example4 () =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
@@ -42,7 +57,7 @@ let example4 () =
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    let sppf = matched.ToSPPF()
+    let sppf = matched.ToSPPF(q)
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"    
 
@@ -231,7 +246,8 @@ let example12_go_hierarchy_allPairs () =
 let main argv =   
     //example1 ()
     //example2 ()
-    example3 ()
+    //example3 ()
+    example3_5 ()
     //example4 ()
     //example5 [|1<graphVertex>|]
     (*example6 ()

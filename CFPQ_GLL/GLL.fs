@@ -39,9 +39,9 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
             then reachableVertices.Add (startPosition, currentDescriptor.InputPosition)
             
             //!!!
-            match currentDescriptor.MatchedRange with
-            | Some range -> matchedRanges.AddMatchedRange range |> ignore 
-            | None -> ()
+            //match currentDescriptor.MatchedRange with
+            //| Some range -> matchedRanges.AddMatchedRange range |> ignore 
+            //| None -> ()
             
             gss.Pop currentDescriptor
             |> ResizeArray.iter (
@@ -50,16 +50,15 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                     let rightSubRange = 
                         MatchedRange(currentDescriptor.GSSVertex.InputPosition
                                          , currentDescriptor.InputPosition
-                                         , gssEdge.GSSVertex.RSMState
+                                         , gssEdge.Info.Value.RSMRange.EndPosition
                                          , gssEdge.RSMState
                                          , RangeType.NonTerminal 0<rsmState>)
-                        
+                       
+                    matchedRanges.AddMatchedRange rightSubRange |> ignore
                     let newRange =
                        match leftSubRange with
                        | Some leftSubRange -> matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
-                       | None ->
-                           matchedRanges.AddMatchedRange rightSubRange |> ignore
-                           rightSubRange
+                       | None -> rightSubRange
                            
                     Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, Some newRange)
                     |> addDescriptor
