@@ -27,7 +27,7 @@ type Descriptor =
     val InputPosition: int<graphVertex>
     val GSSVertex: GSSVertex
     val RSMState: int<rsmState>
-    val MatchedRange: Option<MatchedRange>
+    val     MatchedRange: MatchedRange
     new(inputPosition, gssVertex, rsmState, matchedRange) =
         {
             InputPosition = inputPosition
@@ -100,7 +100,7 @@ type GSS() =
             vertices.Add(packedGSSVertex, GssVertexContent(ResizeArray<_>(),ResizeArray<_>(), HashSet<_>()))
             gssVertex
    
-    member this.AddEdge (currentGSSVertex:GSSVertex, rsmStateToReturn:int<rsmState>, inputPositionToContinue:int<graphVertex>, rsmStateToContinue:int<rsmState>, matchedRange: Option<MatchedRange>) =
+    member this.AddEdge (currentGSSVertex:GSSVertex, rsmStateToReturn:int<rsmState>, inputPositionToContinue:int<graphVertex>, rsmStateToContinue:int<rsmState>, matchedRange: MatchedRange) =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue)
         let newGSSVertexContent = vertices.[packGSSVertex newGSSVertex]
         let newEdge = packGSSEdge (packGSSVertex currentGSSVertex) rsmStateToReturn
@@ -112,19 +112,9 @@ type GSS() =
         edgesInfo.Add(newEdge,matchedRange)
         newGSSVertex, newGSSVertexContent.Popped
         
-    member this.Pop (currentDescriptor:Descriptor) =
-        let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]        
-        match currentDescriptor.MatchedRange with
-        | Some range -> gssVertexContent.Popped.Add range
-        | None ->
-            let range = 
-                MatchedRange(
-                    currentDescriptor.InputPosition
-                    ,currentDescriptor.InputPosition
-                    ,currentDescriptor.RSMState
-                    ,currentDescriptor.RSMState
-                    ,RangeType.NonTerminal(0<rsmState>))
-            range |> gssVertexContent.Popped.Add 
+    member this.Pop (currentDescriptor:Descriptor, matchedRange) =
+        let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]                
+        gssVertexContent.Popped.Add matchedRange         
         gssVertexContent.OutputEdges
         |> ResizeArray.map (unpackGSSEdge edgesInfo)
         

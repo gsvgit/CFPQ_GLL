@@ -23,7 +23,8 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
         startStates
         |> Array.iter (fun startState ->
             let gssVertex = gss.AddNewVertex(v, startState)
-            Descriptor(v, gssVertex, startState, None)
+            let matchedRange = MatchedRange(v,v,startState,startState, RangeType.Epsilon startState)
+            Descriptor(v, gssVertex, startState, matchedRange)
             |> descriptorToProcess.Push
             )
         )
@@ -38,29 +39,41 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
             if Array.contains startPosition startVertices
             then reachableVertices.Add (startPosition, currentDescriptor.InputPosition)
             
-            //!!!
-            //match currentDescriptor.MatchedRange with
-            //| Some range -> matchedRanges.AddMatchedRange range |> ignore 
-            //| None -> ()
             
-            gss.Pop currentDescriptor
+            let matchedRange = currentDescriptor.MatchedRange
+                (*match currentDescriptor.MatchedRange with             
+                | None ->
+                    MatchedRange(
+                           currentDescriptor.InputPosition
+                         , currentDescriptor.InputPosition
+                         , currentDescriptor.RSMState
+                         , currentDescriptor.RSMState
+                         , RangeType.Epsilon 0<rsmState>)
+                    
+                | Some range -> range
+            
+            matchedRange
+            |> matchedRanges.AddMatchedRange
+            |> ignore
+            *)
+            gss.Pop(currentDescriptor, matchedRange)
             |> ResizeArray.iter (
                 fun gssEdge ->                
-                    let leftSubRange = gssEdge.Info //!!!!
-                    let rightSubRange = 
+                    let leftSubRange = gssEdge.Info
+                    let rightSubRange =                        
                         MatchedRange(currentDescriptor.GSSVertex.InputPosition
                                          , currentDescriptor.InputPosition
-                                         , gssEdge.Info.Value.RSMRange.EndPosition
+                                         , gssEdge.Info.RSMRange.EndPosition
                                          , gssEdge.RSMState
                                          , RangeType.NonTerminal 0<rsmState>)
                        
                     matchedRanges.AddMatchedRange rightSubRange |> ignore
-                    let newRange =
-                       match leftSubRange with
+                    let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                      (*match leftSubRange with
                        | Some leftSubRange -> matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
                        | None -> rightSubRange
-                           
-                    Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, Some newRange)
+                        *)   
+                    Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, newRange)
                     |> addDescriptor
                 )
             
@@ -80,21 +93,28 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                                 , currentDescriptor.InputPosition
                                 , edge.NonTerminalSymbolStartState
                                 , currentDescriptor.MatchedRange)
-               Descriptor(currentDescriptor.InputPosition, newGSSVertex, edge.NonTerminalSymbolStartState, None)
+               let newRange = MatchedRange (currentDescriptor.InputPosition, currentDescriptor.InputPosition, newGSSVertex.RSMState,newGSSVertex.RSMState,RangeType.Empty)
+               Descriptor(currentDescriptor.InputPosition, newGSSVertex, edge.NonTerminalSymbolStartState, newRange)
                |> addDescriptor
                positionsForPops
                |> ResizeArray.iter (fun matchedRange ->
                    ///!!!!
-                   let rightSubRange = matchedRange                       
-                   //matchedRanges.AddMatchedRange rightSubRange |> ignore
+                   let rightSubRange =
+                       MatchedRange(matchedRange.InputRange.StartPosition
+                                         , matchedRange.InputRange.EndPosition
+                                         , currentDescriptor.RSMState
+                                         , edge.State
+                                         , RangeType.NonTerminal 0<rsmState>)
+                                                                
+                   matchedRanges.AddMatchedRange rightSubRange |> ignore
                    let leftSubRange = currentDescriptor.MatchedRange
-                   let newRange =
-                       match leftSubRange with
+                   let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                       (*match leftSubRange with
                        | Some leftSubRange -> matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
                        | None ->
-                           matchedRanges.AddMatchedRange(rightSubRange) |> ignore
-                           rightSubRange
-                   Descriptor(matchedRange.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, Some newRange) |> addDescriptor)
+                           //matchedRanges.AddMatchedRange(rightSubRange) |> ignore
+                           rightSubRange*)
+                   Descriptor(matchedRange.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
         )
         
         outgoingTerminalEdgesInRSM
@@ -107,11 +127,11 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                 then
                     let currentlyMatchedRange = MatchedRange(currentDescriptor.InputPosition, graphEdge.Vertex, currentDescriptor.RSMState, rsmEdge.State, RangeType.Terminal rsmEdge.TerminalSymbol)
                     matchedRanges.AddMatchedRange currentlyMatchedRange |> ignore
-                    let newMatchedRange =
-                        match currentDescriptor.MatchedRange with
+                    let newMatchedRange = matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
+                        (*match currentDescriptor.MatchedRange with
                         Some range -> matchedRanges.AddMatchedRange (range, currentlyMatchedRange)
-                        | None -> currentlyMatchedRange
-                    Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, Some newMatchedRange) |> addDescriptor))
+                        | None -> currentlyMatchedRange*)
+                    Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor))
             
         outgoingCFGEdgesInRSM
         |> Array.iter (fun e1 ->
@@ -121,11 +141,11 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                 let nextState = unpackRSMCFGEdge e1
                 let currentlyMatchedRange = MatchedRange(currentDescriptor.InputPosition, nextPosition, currentDescriptor.RSMState, nextState, RangeType.CFG)
                 matchedRanges.AddMatchedRange currentlyMatchedRange |> ignore
-                let newMatchedRange =
-                    match currentDescriptor.MatchedRange with
+                let newMatchedRange = matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
+                   (*match currentDescriptor.MatchedRange with
                     Some range -> matchedRanges.AddMatchedRange (range, currentlyMatchedRange)
-                    | None -> currentlyMatchedRange
-                Descriptor(nextPosition, currentDescriptor.GSSVertex, nextState, Some newMatchedRange) |> addDescriptor))
+                    | None -> currentlyMatchedRange*)
+                Descriptor(nextPosition, currentDescriptor.GSSVertex, nextState, newMatchedRange) |> addDescriptor))
     
     let startTime = System.DateTime.Now    
     

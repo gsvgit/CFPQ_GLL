@@ -16,6 +16,8 @@ type RangeType =
     | CFG
     | Terminal of int<terminalSymbol>
     | NonTerminal of int<rsmState>
+    | Epsilon of int<rsmState>
+    | Empty 
     | Intermediate
     
 [<Struct>]
@@ -29,6 +31,19 @@ type TerminalNode =
             LeftPosition = leftPosition
             RightPosition = rightPosition
         }
+
+[<Struct>]
+type EpsilonNonTerminalNode =
+    val NonTerminalStartState : int<rsmState>
+    val LeftPosition : int<graphVertex>
+    val RightPosition : int<graphVertex>
+    new (nonTerminalStartState, leftPosition, rightPosition)  =
+        {
+            NonTerminalStartState = nonTerminalStartState
+            LeftPosition = leftPosition
+            RightPosition = rightPosition
+        }
+
 
 [<Struct>]
 type CFGEdgeNode =    
@@ -63,14 +78,16 @@ and [<Struct>] RangeInfo =
     val IntermediatePoints : HashSet<int64<rangeIntermediatePoint>>
     val Terminals : HashSet<int<terminalSymbol>>     
     val NonTerminals :  HashSet<int<rsmState>>
+    val EpsilonNonTerminals :  HashSet<int<rsmState>>
     val IsCFG : ref<bool>
     
-    new (intermediatePoints, terminals, nonTerminals, isCFG) =
+    new (intermediatePoints, terminals, nonTerminals, epsilonNonTerminals, isCFG) =
         {
             IntermediatePoints = intermediatePoints
             Terminals = terminals
+            NonTerminals = nonTerminals
+            EpsilonNonTerminals = epsilonNonTerminals
             IsCFG = isCFG
-            NonTerminals = nonTerminals            
         }
       
 and [<Struct>] NonTerminalNode =
@@ -90,6 +107,7 @@ and [<RequireQualifiedAccess>]NonRangeNode =
     | TerminalNode of TerminalNode
     | CFGEdgeNode of CFGEdgeNode
     | NonTerminalNode of NonTerminalNode
+    | EpsilonNonTerminalNode of EpsilonNonTerminalNode
     | IntermediateNode of IntermediateNode
     
 and [<Struct>] Range<'position> =
@@ -139,13 +157,13 @@ type MatchedRanges () =
             if not <| ranges.ContainsKey rsmRange
             then
                 let newInputRangesDict = Dictionary<_,_>()
-                let newRangeInfo = RangeInfo(HashSet<_>(),HashSet<_>(),HashSet<_>(),ref false)
+                let newRangeInfo = RangeInfo(HashSet<_>(),HashSet<_>(),HashSet<_>(),HashSet<_>(),ref false)
                 newInputRangesDict.Add(inputRange, newRangeInfo)
                 ranges.Add(rsmRange,newInputRangesDict)
                 newRangeInfo
             elif not <| ranges.[rsmRange].ContainsKey inputRange
             then
-                let newRangeInfo = RangeInfo(HashSet<_>(),HashSet<_>(),HashSet<_>(),ref false)
+                let newRangeInfo = RangeInfo(HashSet<_>(),HashSet<_>(),HashSet<_>(),HashSet<_>(),ref false)
                 ranges.[rsmRange].Add(inputRange, newRangeInfo)
                 newRangeInfo
             else ranges.[rsmRange].[inputRange]
@@ -153,22 +171,30 @@ type MatchedRanges () =
         | RangeType.Terminal t   -> rangeInfo.Terminals.Add t |> ignore
         | RangeType.CFG -> rangeInfo.IsCFG.Value <- true
         | RangeType.NonTerminal n -> rangeInfo.NonTerminals.Add n |> ignore
+        | RangeType.Epsilon n -> rangeInfo.EpsilonNonTerminals.Add n |> ignore
         | RangeType.Intermediate -> ()
+        | RangeType.Empty -> printfn "Empty range"
             
         rangeInfo
     member this.AddMatchedRange (leftSubRange: MatchedRange, rightSubRange: MatchedRange) =
-        let newRange = MatchedRange(leftSubRange.InputRange.StartPosition
-                                    , rightSubRange.InputRange.EndPosition
-                                    , leftSubRange.RSMRange.StartPosition
-                                    , rightSubRange.RSMRange.EndPosition
-                                    , RangeType.Intermediate)
-        let intermediatePoints = this.AddMatchedRange newRange
-        let intermediatePoint = packIntermediatePoint leftSubRange.RSMRange.EndPosition leftSubRange.InputRange.EndPosition
-        intermediatePoints.IntermediatePoints.Add intermediatePoint |> ignore
-        newRange
+        match leftSubRange.RangeType with
+        | RangeType.Empty -> rightSubRange
+        | _ -> 
+            let newRange = MatchedRange(leftSubRange.InputRange.StartPosition
+                                        , rightSubRange.InputRange.EndPosition
+                                        , leftSubRange.RSMRange.StartPosition
+                                        , rightSubRange.RSMRange.EndPosition
+                                        , RangeType.Intermediate)
+            let intermediatePoints = this.AddMatchedRange newRange
+            let intermediatePoint = packIntermediatePoint leftSubRange.RSMRange.EndPosition leftSubRange.InputRange.EndPosition
+            intermediatePoints.IntermediatePoints.Add intermediatePoint |> ignore
+            newRange
         
     member this.ToSPPF(query:RSM) =
         let rangeNodes = ResizeArray<RangeNode>()
+        let isValidRange inputStart inputEnd rsmStart rsmEnd =
+            let rsmRange = packRange rsmStart rsmEnd
+            ranges.ContainsKey rsmRange && ranges.[rsmRange].ContainsKey(packRange inputStart inputEnd)
         let getRangeNode inputStart inputEnd rsmStart rsmEnd =
             let n =
                 rangeNodes
@@ -190,7 +216,12 @@ type MatchedRanges () =
                 let nonTerminalNodes =
                     [
                         for nonTerminal in kvp.Value.NonTerminals ->
-                            let rangeNodes = [|for finalState in query.FinalStates -> getRangeNode inputRange.StartPosition inputRange.EndPosition nonTerminal finalState|]                            
+                            let rangeNodes =
+                                [|
+                                  for finalState in query.FinalStates do
+                                    if isValidRange inputRange.StartPosition inputRange.EndPosition nonTerminal finalState
+                                    then getRangeNode inputRange.StartPosition inputRange.EndPosition nonTerminal finalState
+                                |]                            
                             NonRangeNode.NonTerminalNode <| NonTerminalNode(nonTerminal,inputRange.StartPosition,inputRange.EndPosition,rangeNodes)
                             
                     ]
@@ -198,7 +229,13 @@ type MatchedRanges () =
                     [
                         for terminal in kvp.Value.Terminals ->
                            NonRangeNode.TerminalNode <| TerminalNode (terminal,inputRange.StartPosition,inputRange.EndPosition) 
-                    ]                                
+                    ]
+                    
+                let epsilonNonTerminalNodes =
+                    [
+                        for nonTerminal in kvp.Value.EpsilonNonTerminals ->
+                           NonRangeNode.EpsilonNonTerminalNode <| EpsilonNonTerminalNode (nonTerminal,inputRange.StartPosition,inputRange.EndPosition) 
+                    ]                      
                 let intermediateNodes = 
                     [
                      for packedIntermediatePoint in kvp.Value.IntermediatePoints ->
@@ -218,7 +255,9 @@ type MatchedRanges () =
                 
                 rangeNode.IntermediateNodes.AddRange intermediateNodes
                 rangeNode.IntermediateNodes.AddRange terminalNodes
-                rangeNode.IntermediateNodes.AddRange nonTerminalNodes
+                rangeNode.IntermediateNodes.AddRange epsilonNonTerminalNodes
+                rangeNode.IntermediateNodes.AddRange nonTerminalNodes                
+                
 
         rangeNodes
                     
