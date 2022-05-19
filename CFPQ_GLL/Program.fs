@@ -24,9 +24,9 @@ let example2 () =
     printfn $"Reachable: %A{reachable}"
 
 let example3 () =
-    let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,0<graphVertex>)|])
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),[|CFGEdge(0<rsmState>,0<rsmState>)|])
+    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|])
     let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
     let sppf = matched.ToSPPF(q)
     printfn $"SPPF: %A{sppf}"
@@ -273,10 +273,10 @@ let example12_go_hierarchy_allPairs () =
 let main argv =   
     //example1 ()
     //example2 ()
-    example3 ()
+    //example3 ()
     //example3_5 ()
     //example3_5_2 ()
-    //example3_5_1 ()
+    example3_5_1 ()
     //example4 ()
     //example5 [|1<graphVertex>|]
     (*example6 ()

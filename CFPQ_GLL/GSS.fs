@@ -27,7 +27,7 @@ type Descriptor =
     val InputPosition: int<graphVertex>
     val GSSVertex: GSSVertex
     val RSMState: int<rsmState>
-    val     MatchedRange: MatchedRange
+    val     MatchedRange: Option<MatchedRange>
     new(inputPosition, gssVertex, rsmState, matchedRange) =
         {
             InputPosition = inputPosition
@@ -100,7 +100,11 @@ type GSS() =
             vertices.Add(packedGSSVertex, GssVertexContent(ResizeArray<_>(),ResizeArray<_>(), HashSet<_>()))
             gssVertex
    
-    member this.AddEdge (currentGSSVertex:GSSVertex, rsmStateToReturn:int<rsmState>, inputPositionToContinue:int<graphVertex>, rsmStateToContinue:int<rsmState>, matchedRange: MatchedRange) =
+    member this.AddEdge (currentGSSVertex:GSSVertex
+                         , rsmStateToReturn:int<rsmState>
+                         , inputPositionToContinue:int<graphVertex>
+                         , rsmStateToContinue:int<rsmState>
+                         , matchedRange: Option<MatchedRange>) =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue)
         let newGSSVertexContent = vertices.[packGSSVertex newGSSVertex]
         let newEdge = packGSSEdge (packGSSVertex currentGSSVertex) rsmStateToReturn
