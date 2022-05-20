@@ -7,7 +7,7 @@ open CFPQ_GLL.InputGraph
 open CFPQ_GLL.SPPF
 open FSharpx.Collections
     
-let private eval (graph:InputGraph) startVertices (query:RSM) =    
+let eval (graph:InputGraph) startVertices (query:RSM) =    
     let reachableVertices = ResizeArray<_>()
     let descriptorToProcess = Stack<_>()
     

@@ -41,13 +41,20 @@ type EpsilonNode =
             Position = position            
         }
 
-type IntermediateNode (rsmState, inputPosition, leftSubtree, rightSubtree) =
+type IntermediateNode (rsmState:int<rsmState>
+                       , inputPosition:int<graphVertex>
+                       , leftSubtree
+                       , rightSubtree) =
     member this.RSMState = rsmState
     member this.InputPosition = inputPosition
     member this.LeftSubtree = leftSubtree
     member this.RightSubtree = rightSubtree
 
-and RangeNode (inputStartPosition, inputEndPosition, rsmStartPosition, rsmEndPosition, intermediateNodes) =
+and RangeNode (inputStartPosition:int<graphVertex>
+               , inputEndPosition:int<graphVertex>
+               , rsmStartPosition:int<rsmState>
+               , rsmEndPosition:int<rsmState>
+               , intermediateNodes) =
     member this.InputStartPosition = inputStartPosition
     member this.InputEndPosition = inputEndPosition
     member this.RSMStartPosition = rsmStartPosition
@@ -92,15 +99,15 @@ and [<RequireQualifiedAccess>]NonRangeNode =
     | EpsilonNode of EpsilonNode
     | IntermediateNode of IntermediateNode
     
-and [<Struct>] Range<'position> =
-    val StartPosition: 'position
-    val EndPosition: 'position
+and [<Struct>] Range<[<Measure>]'position> =
+    val StartPosition: int<'position>
+    val EndPosition: int<'position>
     new (startPosition, endPosition) = {StartPosition = startPosition; EndPosition = endPosition}
 
 [<Struct>]
 type MatchedRange =
-    val InputRange : Range<int<graphVertex>>
-    val RSMRange : Range<int<rsmState>>
+    val InputRange : Range<graphVertex>
+    val RSMRange : Range<rsmState>
     val RangeType: RangeType
     new (inputRange, rsmRange, rangeType) = {InputRange = inputRange; RSMRange = rsmRange; RangeType = rangeType}
     new (inputFrom, inputTo, rsmFrom, rsmTo, rangeType) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo); RangeType = rangeType}
@@ -124,15 +131,15 @@ let inline packIntermediatePoint (rsmIntermediatePoint:int<rsmState>) (inputInte
 
 let inline unpackIntermediatePoint (inputIntermediatePoint : int64<rangeIntermediatePoint>) =
     let inputIntermediatePoint = int64 inputIntermediatePoint
-    let _rsmIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
-    let _inputIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
+    let _inputIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
+    let _rsmIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     IntermediatePoint(_rsmIntermediatePoint, _inputIntermediatePoint)
 
 let inline private unpackRange (range:int64<'t>) =
     let range = int64 range
     let _rangeStart = int32 (range >>> 32) |> LanguagePrimitives.Int32WithMeasure
     let _rangeEnd = int32 range |> LanguagePrimitives.Int32WithMeasure
-    Range(_rangeStart, _rangeEnd)    
+    Range<'position>(_rangeStart, _rangeEnd)    
 
 //|rangeType|rangeData|
 // rangeType: two bits 
@@ -160,6 +167,7 @@ let inline unpackMatchedRange (rsmRange:int64<rsmRange>) (inputRange:int64<input
         elif rangeInfo &&& IS_NON_TERMINAL = IS_NON_TERMINAL
         then int32 (rangeInfo &&& ~~~IS_NON_TERMINAL) |> LanguagePrimitives.Int32WithMeasure |> RangeType.NonTerminal
         else RangeType.Epsilon
+    printfn $"Unpack: input start: %A{inputRange.StartPosition}, input end: %A{inputRange.EndPosition}"
     MatchedRange(inputRange, rsmRange, rangeType)
 type MatchedRanges () =
     let ranges : Dictionary<int64<rsmRange>,Dictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
@@ -207,6 +215,7 @@ type MatchedRanges () =
             let rsmRange = packRange rsmStart rsmEnd
             ranges.ContainsKey rsmRange && ranges.[rsmRange].ContainsKey(packRange inputStart inputEnd)
         let getRangeNode inputStart inputEnd rsmStart rsmEnd =
+            printfn $"input start: %A{inputStart}, input end: %A{inputEnd}"
             let n =
                 rangeNodes
                 |> ResizeArray.tryFind (fun node -> node.InputStartPosition = inputStart
@@ -273,7 +282,6 @@ type MatchedRanges () =
                                 intermediatePoint.RSMState
                                 range.RSMRange.EndPosition                                
                         IntermediateNode(intermediatePoint.RSMState, intermediatePoint.InputPosition, leftNode, rightNode)
-                        
                         |> NonRangeNode.IntermediateNode
                     |> rangeNode.IntermediateNodes.Add                
 

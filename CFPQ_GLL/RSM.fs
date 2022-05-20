@@ -91,7 +91,7 @@ let inline unpackRSMNonTerminalEdge (edge:int64<rsmNonTerminalEdge>) =
     let nextVertex, symbol = unpackRSMTerminalOrNonTerminalEdge (int64 edge)
     RSMNonTerminalEdge(nextVertex, symbol)    
 
-type RSMBox(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
+type RSMBox(startState:int<rsmState>, finalStates:HashSet<int<rsmState>>, transitions) =
     member this.StartState = startState
     member this.FinalStates = finalStates
     member this.Transitions = transitions

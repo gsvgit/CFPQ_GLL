@@ -7,7 +7,7 @@ open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
 
-let example1 () =
+(*let example1 () =
     let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
     let q = RSM(HashSet<_>([|0<rsmState>|]), HashSet([1<rsmState>]),[|CFGEdge(0<rsmState>,1<rsmState>)|])
@@ -268,19 +268,18 @@ let example12_go_hierarchy_allPairs () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     let reachable,matched = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
     printfn $"Reachable: %A{reachable.Count}"
-
+*)
 let example13 () =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,10<terminalSymbol>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([|0<rsmState>; 2<rsmState>|])
-                , HashSet([0<rsmState>; 4<rsmState>])
-                , [|
-                    TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
-                    NonTerminalEdge(2<rsmState>,0<rsmState>,3<rsmState>)
-                    TerminalEdge(3<rsmState>,10<terminalSymbol>,4<rsmState>)
-                  |]
-                )
-    let reachable,matched = GLL.eval graph startV q [|2<rsmState>|]
+    let box1 = RSMBox (2<rsmState>, HashSet([4<rsmState>])
+                    , [|
+                        NonTerminalEdge(2<rsmState>,0<rsmState>,5<rsmState>)
+                        TerminalEdge(5<rsmState>,10<terminalSymbol>,4<rsmState>)
+                    |])
+    let box2 = RSMBox (0<rsmState>, HashSet([0<rsmState>]), [||])    
+    let q = RSM([|box1; box2|], box1)
+    let reachable,matched = GLL.eval graph startV q
     let sppf = matched.ToSPPF(q)
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
