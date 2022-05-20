@@ -1,14 +1,15 @@
 module CFPQ_GLL.GLL
 
+open System.Collections.Generic
 open CFPQ_GLL.RSM
 open CFPQ_GLL.GSS
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.SPPF
 open FSharpx.Collections
     
-let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsmState>>) =    
+let private eval (graph:InputGraph) startVertices (query:RSM) =    
     let reachableVertices = ResizeArray<_>()
-    let descriptorToProcess = System.Collections.Generic.Stack<_>()
+    let descriptorToProcess = Stack<_>()
     
     let gss = GSS()
     let matchedRanges = MatchedRanges()    
@@ -19,12 +20,9 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
         
     startVertices
     |> Array.iter (fun v ->        
-        startStates
-        |> Array.iter (fun startState ->
-            let gssVertex = gss.AddNewVertex(v, startState)            
-            Descriptor(v, gssVertex, startState, None)
-            |> descriptorToProcess.Push
-            )
+        let gssVertex = gss.AddNewVertex(v, query.OriginalStartState)            
+        Descriptor(v, gssVertex, query.OriginalStartState, None)
+        |> descriptorToProcess.Push
         )
     
     let handleDescriptor (currentDescriptor:Descriptor) =
@@ -33,9 +31,11 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                 
         if query.IsFinalState currentDescriptor.RSMState                        
         then
-            let startPosition = currentDescriptor.GSSVertex.InputPosition
-            if Array.contains startPosition startVertices
-            then reachableVertices.Add (startPosition, currentDescriptor.InputPosition)
+            if query.IsFinalStateForStartBox currentDescriptor.RSMState
+            then
+                let startPosition = currentDescriptor.GSSVertex.InputPosition
+                if Array.contains startPosition startVertices
+                then reachableVertices.Add (startPosition, currentDescriptor.InputPosition)
             
             let matchedRange =
                 match currentDescriptor.MatchedRange with             
@@ -49,17 +49,17 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                     )                    
                 | Some range -> range
                         
-            gss.Pop(currentDescriptor, matchedRange)
+            gss.Pop(currentDescriptor, matchedRange)            
             |> ResizeArray.iter (
                 fun gssEdge ->                
                     let leftSubRange = gssEdge.Info
-                    let rightSubRange =                        
+                    let rightSubRange =           
                         MatchedRange(
                             currentDescriptor.GSSVertex.InputPosition
                           , currentDescriptor.InputPosition
                           , match gssEdge.Info with None -> gssEdge.RSMState | Some v -> v.RSMRange.EndPosition
                           , gssEdge.RSMState
-                          , RangeType.NonTerminal 0<rsmState>
+                          , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
                         )
                         
                     let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
@@ -92,7 +92,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) (startStates:array<int<rsm
                           , matchedRange.InputRange.EndPosition
                           , currentDescriptor.RSMState
                           , edge.State
-                          , RangeType.NonTerminal 0<rsmState>
+                          , RangeType.NonTerminal edge.NonTerminalSymbolStartState
                        )
                                                                                    
                    let leftSubRange = currentDescriptor.MatchedRange

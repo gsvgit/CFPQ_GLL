@@ -1,14 +1,16 @@
 module CFPQ_GLL.RSM
 
+open System.Collections.Generic
 open CFPQ_GLL
+open CFPQ_GLL.InputGraph
+open FSharpx.Collections
 
 [<Measure>] type rsmState
 [<Measure>] type rsmTerminalEdge
 [<Measure>] type rsmCFGEdge
 [<Measure>] type rsmNonTerminalEdge
 
-type RSMEdges =
-    | CFGEdge of int<rsmState>*int<rsmState>
+type RSMEdges =    
     | TerminalEdge of int<rsmState>*int<terminalSymbol>*int<rsmState>
     | NonTerminalEdge of _from:int<rsmState>*_nonTerminalSymbolStartState:int<rsmState>*_to:int<rsmState>
 
@@ -27,25 +29,21 @@ type RSMNonTerminalEdge =
 [<Struct>]
 type RSMVertexContent =
     val OutgoingTerminalEdges : array<int64<rsmTerminalEdge>>
-    val OutgoingCFGEdges : array<int64<rsmCFGEdge>>
     val OutgoingNonTerminalEdges: array<int64<rsmNonTerminalEdge>>
-    new (terminalEdges, cfgEdges, nonTerminalEdges) =
+    new (terminalEdges, nonTerminalEdges) =
         {
-            OutgoingTerminalEdges = terminalEdges
-            ; OutgoingCFGEdges = cfgEdges
-            ; OutgoingNonTerminalEdges = nonTerminalEdges
+            OutgoingTerminalEdges = terminalEdges            
+            OutgoingNonTerminalEdges = nonTerminalEdges
         }
     
 [<Struct>]
 type RSMVertexMutableContent =
-    val OutgoingTerminalEdges : ResizeArray<int64<rsmTerminalEdge>>
-    val OutgoingCFGEdges : ResizeArray<int64<rsmCFGEdge>>
+    val OutgoingTerminalEdges : ResizeArray<int64<rsmTerminalEdge>>    
     val OutgoingNonTerminalEdges: ResizeArray<int64<rsmNonTerminalEdge>>
-    new (terminalEdges, cfgEdges, nonTerminalEdges) =
+    new (terminalEdges, nonTerminalEdges) =
         {
-            OutgoingTerminalEdges = terminalEdges
-            ; OutgoingCFGEdges = cfgEdges
-            ; OutgoingNonTerminalEdges = nonTerminalEdges
+            OutgoingTerminalEdges = terminalEdges            
+            OutgoingNonTerminalEdges = nonTerminalEdges
         }
     
     
@@ -92,39 +90,69 @@ let inline unpackRSMTerminalEdge (edge:int64<rsmTerminalEdge>) =
 let inline unpackRSMNonTerminalEdge (edge:int64<rsmNonTerminalEdge>) =
     let nextVertex, symbol = unpackRSMTerminalOrNonTerminalEdge (int64 edge)
     RSMNonTerminalEdge(nextVertex, symbol)    
-type RSM(startStates:System.Collections.Generic.HashSet<int<rsmState>>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
+
+type RSMBox(startState:int<rsmState>, finalStates:System.Collections.Generic.HashSet<int<rsmState>>, transitions) =
+    member this.StartState = startState
+    member this.FinalStates = finalStates
+    member this.Transitions = transitions
+    
+type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let vertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexContent>()
-    do
+    let finalStates = HashSet<_>()
+    let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
+    let extensionBox =
+        let originalStartState = startBox.StartState        
+        let finalState = int32 RSM_VERTEX_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
+        let intermediateState = int32 finalState - 1 |> LanguagePrimitives.Int32WithMeasure
+        let startState = int32 finalState - 2 |> LanguagePrimitives.Int32WithMeasure
+        RSMBox(startState
+               , HashSet<_>([|finalState|])
+               , [|
+                    NonTerminalEdge(startState, originalStartState, intermediateState)
+                    RSMEdges.TerminalEdge(intermediateState, EOF, finalState)
+                 |])
+
+    let addBoxes (rsmBoxes: array<RSMBox>) =
         let mutableVertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexMutableContent>()
         let addVertex v =
             if not <| mutableVertices.ContainsKey v
-            then mutableVertices.Add(v,RSMVertexMutableContent(ResizeArray<_>(),ResizeArray<_>(),ResizeArray<_>()))
+            then mutableVertices.Add(v,RSMVertexMutableContent(ResizeArray<_>(),ResizeArray<_>()))
             mutableVertices.[v]
-        transitions
-        |> Array.iter (function
-                         CFGEdge (_from, _to) ->
-                            let vertexContent = addVertex _from
-                            addVertex _to |> ignore
-                            packRSMCFGEdge _to |> vertexContent.OutgoingCFGEdges.Add
-                        | TerminalEdge (_from, smb, _to) ->
-                            let vertexContent = addVertex _from
-                            addVertex _to |> ignore
-                            packRSMTerminalEdge _to smb |> vertexContent.OutgoingTerminalEdges.Add
-                        | NonTerminalEdge (_from, _nonTerminalStartState, _to) ->
-                            let vertexContent = addVertex _from
-                            addVertex _to |> ignore
-                            packRSMNonTerminalEdge _to _nonTerminalStartState |> vertexContent.OutgoingNonTerminalEdges.Add)
+        rsmBoxes        
+        |> Array.iter (fun box ->
+            addVertex box.StartState |> ignore
+            box.FinalStates |> Seq.iter (finalStates.Add >> ignore)
+            box.FinalStates |> Seq.iter (addVertex>>ignore)
+            finalStatesForBox.Add(box.StartState, box.FinalStates |> ResizeArray.ofSeq)
+            box.Transitions
+            |> Array.iter(
+                    function
+                    | TerminalEdge (_from, smb, _to) ->
+                        let vertexContent = addVertex _from
+                        addVertex _to |> ignore
+                        packRSMTerminalEdge _to smb |> vertexContent.OutgoingTerminalEdges.Add
+                    | NonTerminalEdge (_from, _nonTerminalStartState, _to) ->
+                        let vertexContent = addVertex _from
+                        addVertex _to |> ignore
+                        packRSMNonTerminalEdge _to _nonTerminalStartState |> vertexContent.OutgoingNonTerminalEdges.Add
+                        )
+            )
         mutableVertices
-        |> Seq.iter (fun kvp -> vertices.Add(kvp.Key, RSMVertexContent(kvp.Value.OutgoingTerminalEdges.ToArray()
-                                                                              , kvp.Value.OutgoingCFGEdges.ToArray()
+        |> Seq.iter (fun kvp -> vertices.Add(kvp.Key, RSMVertexContent(kvp.Value.OutgoingTerminalEdges.ToArray()                                                                              
                                                                               , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
-    member this.StartStates = startStates
-    member this.FinalStates = finalStates
-    member this.IsStartState state = startStates.Contains state
+        
+    
+    do
+        addBoxes boxes
+        addBoxes [|extensionBox|]
+    //member this.StartStates = startStates
+    //member this.FinalStates = finalStates
+    //member this.IsStartState state = startStates.Contains state
     member this.IsFinalState state = finalStates.Contains state
+    member this.IsFinalStateForStartBox state = startBox.FinalStates.Contains state
+    member this.GetFinalStatesForBoxWithThisStartState startState = finalStatesForBox.[startState]
+    member this.OriginalStartState = startBox.StartState
     member this.OutgoingTerminalEdges v =
-        vertices.[v].OutgoingTerminalEdges
-    member this.OutgoingCFGEdges v =
-        vertices.[v].OutgoingCFGEdges
+        vertices.[v].OutgoingTerminalEdges    
     member this.OutgoingNonTerminalEdges v =
         vertices.[v].OutgoingNonTerminalEdges

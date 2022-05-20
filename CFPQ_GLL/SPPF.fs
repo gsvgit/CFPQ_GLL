@@ -11,7 +11,6 @@ open FSharpx.Collections
 [<Measure>] type rsmRange
 [<Measure>] type inputRange
 [<Measure>] type rangeInfo
-
 [<Measure>] type rangeIntermediatePoint
   
 [<RequireQualifiedAccess>]
@@ -59,7 +58,6 @@ and [<Struct>] IntermediatePoint =
     val RSMState : int<rsmState>
     val InputPosition : int<graphVertex>
     new (rsmState, inputPosition) = {RSMState = rsmState; InputPosition = inputPosition}
-
 
 and [<Struct>] RangeInfo =
     val IntermediatePoints : HashSet<int64<rangeIntermediatePoint>>
@@ -244,7 +242,7 @@ type MatchedRanges () =
                     | RangeType.NonTerminal n ->
                         let rangeNodes =
                             [|
-                                for final in query.FinalStates do
+                                for final in query.GetFinalStatesForBoxWithThisStartState n do
                                     if isValidRange
                                            range.InputRange.StartPosition
                                            range.InputRange.EndPosition
@@ -280,5 +278,4 @@ type MatchedRanges () =
                     |> rangeNode.IntermediateNodes.Add                
 
         rangeNodes
-                    
-                
+                 
