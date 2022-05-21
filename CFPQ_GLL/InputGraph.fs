@@ -25,14 +25,17 @@ type InputGraphVertexMutableContent =
     val OutgoingTerminalEdges : ResizeArray<int64<inputGraphTerminalEdge>>    
     new (terminalEdges) = {OutgoingTerminalEdges = terminalEdges}
 
-let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)
-let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
-let GRAPH_VERTEX_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_GRAPH_VERTICES
-let SYMBOL_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
-let EOF:int<terminalSymbol> = int32 SYMBOL_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
+let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) <<< (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE))
+let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES))
+let GRAPH_VERTEX_MAX_VALUE:int<graphVertex> =
+    System.UInt32.MaxValue >>> (32 - BITS_FOR_GRAPH_VERTICES)
+    |> int32
+    |> LanguagePrimitives.Int32WithMeasure
+let SYMBOL_MAX_VALUE = System.UInt32.MaxValue >>> (32 - BITS_FOR_RSM_STATE)
+let EOF:int<terminalSymbol> = 1000 |> LanguagePrimitives.Int32WithMeasure // int32 SYMBOL_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
 
 let inline private packInputGraphTerminalEdge (targetVertex:int<graphVertex>) (symbol:int<terminalSymbol>) : int64<inputGraphTerminalEdge> =
-    if uint32 targetVertex > GRAPH_VERTEX_MAX_VALUE
+    if targetVertex > GRAPH_VERTEX_MAX_VALUE
     then failwithf $"Graph vertex should be less then %A{GRAPH_VERTEX_MAX_VALUE}"
     if uint32 symbol > SYMBOL_MAX_VALUE
     then failwithf $"Symbol should be less then %A{SYMBOL_MAX_VALUE}"

@@ -49,18 +49,15 @@ type RSMVertexMutableContent =
     
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES <<< 2 * BITS_FOR_GRAPH_VERTICES)
 let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
-let RSM_VERTEX_MAX_VALUE = System.UInt32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
-
-let inline packRSMCFGEdge (targetVertex:int<rsmState>): int64<rsmCFGEdge> =
-    if uint32 targetVertex > RSM_VERTEX_MAX_VALUE
-    then failwithf $"Graph vertex should be less then %A{RSM_VERTEX_MAX_VALUE}" 
-    let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)    
-    (_targetGssVertex) |> LanguagePrimitives.Int64WithMeasure
+let RSM_VERTEX_MAX_VALUE:int<rsmState> =
+    System.UInt32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
+    |> int
+    |> LanguagePrimitives.Int32WithMeasure
 
 let inline private packRSMTerminalOrNonTerminalEdge (targetVertex:int<rsmState>) (symbol:int) : int64 =
-    if uint32 targetVertex > RSM_VERTEX_MAX_VALUE
+    if targetVertex > RSM_VERTEX_MAX_VALUE
     then failwithf $"RSM vertex should be less then %A{RSM_VERTEX_MAX_VALUE}"
-    if uint32 symbol > RSM_VERTEX_MAX_VALUE
+    if symbol > int32 RSM_VERTEX_MAX_VALUE
     then failwithf $"Symbol should be less then %A{RSM_VERTEX_MAX_VALUE}"
     let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)
     let _symbol = int64 symbol
@@ -72,11 +69,6 @@ let inline packRSMTerminalEdge (targetVertex:int<rsmState>) (symbol:int<terminal
 
 let inline packRSMNonTerminalEdge (targetVertex:int<rsmState>) (nonTerminalSymbolStartState:int<rsmState>) : int64<rsmNonTerminalEdge> =
     packRSMTerminalOrNonTerminalEdge targetVertex (int nonTerminalSymbolStartState) |> LanguagePrimitives.Int64WithMeasure
-
-let inline unpackRSMCFGEdge (edge:int64<rsmCFGEdge>) : int<rsmState> =
-    let edge = int64 edge
-    let nextState = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
-    nextState
     
 let inline unpackRSMTerminalOrNonTerminalEdge (edge:int64) =
     let nextVertex = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
@@ -100,11 +92,12 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let vertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexContent>()
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
+    let startStateOfExtendedRSM = 1000 |> LanguagePrimitives.Int32WithMeasure //int32 RSM_VERTEX_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
     let extensionBox =
         let originalStartState = startBox.StartState        
-        let finalState = int32 RSM_VERTEX_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
-        let intermediateState = int32 finalState - 1 |> LanguagePrimitives.Int32WithMeasure
-        let startState = int32 finalState - 2 |> LanguagePrimitives.Int32WithMeasure
+        let finalState = int32 startStateOfExtendedRSM - 2 |> LanguagePrimitives.Int32WithMeasure
+        let intermediateState = int32 startStateOfExtendedRSM - 1 |> LanguagePrimitives.Int32WithMeasure
+        let startState = startStateOfExtendedRSM
         RSMBox(startState
                , HashSet<_>([|finalState|])
                , [|
@@ -113,7 +106,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                  |])
 
     let addBoxes (rsmBoxes: array<RSMBox>) =
-        let mutableVertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexMutableContent>()
+        let mutableVertices = Dictionary<int<rsmState>,RSMVertexMutableContent>()
         let addVertex v =
             if not <| mutableVertices.ContainsKey v
             then mutableVertices.Add(v,RSMVertexMutableContent(ResizeArray<_>(),ResizeArray<_>()))
@@ -145,7 +138,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     do
         addBoxes boxes
         addBoxes [|extensionBox|]
-    //member this.StartStates = startStates
+    member this.StartState = startStateOfExtendedRSM
     //member this.FinalStates = finalStates
     //member this.IsStartState state = startStates.Contains state
     member this.IsFinalState state = finalStates.Contains state

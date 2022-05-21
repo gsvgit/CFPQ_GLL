@@ -20,12 +20,15 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         
     startVertices
     |> Array.iter (fun v ->        
-        let gssVertex = gss.AddNewVertex(v, query.OriginalStartState)            
-        Descriptor(v, gssVertex, query.OriginalStartState, None)
+        let gssVertex = gss.AddNewVertex(v, query.StartState)            
+        Descriptor(v, gssVertex, query.StartState, None)
         |> descriptorToProcess.Push
         )
     
     let handleDescriptor (currentDescriptor:Descriptor) =
+        
+        if currentDescriptor.GSSVertex.InputPosition = -1<graphVertex>
+        then printfn "Fail!"
         
         gss.AddDescriptorToHandled currentDescriptor
                 
@@ -57,7 +60,9 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                         MatchedRange(
                             currentDescriptor.GSSVertex.InputPosition
                           , currentDescriptor.InputPosition
-                          , match gssEdge.Info with None -> gssEdge.RSMState | Some v -> v.RSMRange.EndPosition
+                          , match gssEdge.Info with
+                            | None -> gssEdge.GSSVertex.RSMState
+                            | Some v -> v.RSMRange.EndPosition
                           , gssEdge.RSMState
                           , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
                         )

@@ -20,7 +20,10 @@ type PoppedPosition =
 type GSSVertex =
     val InputPosition: int<graphVertex>
     val RSMState: int<rsmState>
-    new (inputPosition, rsmState) = {InputPosition = inputPosition; RSMState = rsmState}
+    new (inputPosition, rsmState) =
+        if inputPosition = -1<graphVertex>
+        then printfn "fail!"
+        {InputPosition = inputPosition; RSMState = rsmState}
 
 [<Struct>]
 type Descriptor =
@@ -28,7 +31,9 @@ type Descriptor =
     val GSSVertex: GSSVertex
     val RSMState: int<rsmState>
     val     MatchedRange: Option<MatchedRange>
-    new(inputPosition, gssVertex, rsmState, matchedRange) =
+    new(inputPosition, gssVertex:GSSVertex, rsmState, matchedRange) =
+        if gssVertex.InputPosition = -1<graphVertex>
+        then printfn "Fail!"
         {
             InputPosition = inputPosition
             GSSVertex = gssVertex
@@ -52,7 +57,7 @@ type GSSEdge<'info> =
 // gssVertex = |...|InputPosition|rsmState|
 let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_RSM_STATE)
 let MASK_FOR_GSS_VERTEX = int64 (System.UInt64.MaxValue >>> BITS_FOR_RSM_STATE <<< BITS_FOR_RSM_STATE)
-let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
+let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES))
 
 let inline packDescriptorWithoutGSSVertex (inputPos:int<graphVertex>) (rsmState:int<rsmState>) : int64<descriptorWithoutGSSVertex>=
     let _inputPos = (int64 inputPos) <<< BITS_FOR_RSM_STATE    
@@ -71,7 +76,7 @@ let packGSSVertex (gssVertex:GSSVertex) : int64<gssVertex> =
 
 let unpackGSSVertex (gssVertex:int64<gssVertex>) =
     let gssVertex = int64 gssVertex
-    let inputPosition = int32 (gssVertex &&& MASK_FOR_GSS_VERTEX >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
+    let inputPosition = int32 ((gssVertex &&& MASK_FOR_GSS_VERTEX) >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
     let rsmState = int32 (gssVertex &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     GSSVertex (inputPosition, rsmState)
 
