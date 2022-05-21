@@ -116,7 +116,8 @@ type GSS() =
         
         // There is no need to check GSS edges duplication.
         // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova
-        // p.13: "There is at most one call to the create function with the same arguments. Thus no check for duplicate GSS edges is needed."
+        // p.13: "There is at most one call to the create function with the same arguments.
+        // Thus no check for duplicate GSS edges is needed."
         newGSSVertexContent.OutputEdges.Add newEdge
         edgesInfo.Add(newEdge,matchedRange)
         newGSSVertex, newGSSVertexContent.Popped

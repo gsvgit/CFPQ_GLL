@@ -1,7 +1,6 @@
 module CFPQ_GLL.SPPF
 
 open System.Collections.Generic
-open System.Text.RegularExpressions
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
@@ -286,4 +285,66 @@ type MatchedRanges () =
                     |> rangeNode.IntermediateNodes.Add                
 
         rangeNodes
-                 
+        |> ResizeArray.filter (fun node -> node.RSMStartPosition = query.OriginalStartState
+                                           && query.IsFinalStateForOriginalStartBox node.RSMEndPosition)
+        
+let toDot (sppf:ResizeArray<RangeNode>) filePath =
+    let mutable nodesCount = 0
+    let nodes = ResizeArray<_>()
+    let edges = ResizeArray<_>()
+    let visitedRangeNodes = Dictionary<_,_>()
+    let addEdge parentId currentId =
+        match parentId with
+        | Some x -> edges.Add(sprintf $"%i{x}->%i{currentId}")
+        | None -> ()
+    
+    let rec handleIntermediateNode parentId (node:IntermediateNode) =
+        let currentId = nodesCount
+        nodes.Add(sprintf $"%i{currentId} [label = \"Input: %i{node.InputPosition}; RSM: %i{node.RSMState}\", shape = plain]")
+        addEdge parentId currentId
+        nodesCount <- nodesCount + 1
+        handleRangeNode (Some currentId) node.LeftSubtree
+        handleRangeNode (Some currentId) node.RightSubtree
+    
+    and handleTerminalNode parentId (node:TerminalNode) =
+        let currentId = nodesCount
+        nodes.Add(sprintf $"%i{currentId} [label = \"%i{node.LeftPosition}, %i{node.Terminal}, %i{node.RightPosition}\", shape = rectangle]")
+        addEdge parentId currentId
+        nodesCount <- nodesCount + 1
+        
+    and handleEpsilonNode parentId (node:EpsilonNode) =
+        let currentId = nodesCount
+        nodes.Add(sprintf $"%i{currentId} [label = \"%i{node.Position}\", shape = rectangle]")
+        addEdge parentId currentId
+        nodesCount <- nodesCount + 1
+    
+    and handleNonTerminalNode parentId (node:NonTerminalNode) =
+        let currentId = nodesCount
+        nodes.Add(sprintf $"%i{currentId} [label = \"%i{node.LeftPosition}, %i{node.NonTerminalStartState}, %i{node.RightPosition}\", shape = rectangle]")
+        addEdge parentId currentId
+        nodesCount <- nodesCount + 1
+        node.RangeNodes
+        |> Array.iter (handleRangeNode (Some currentId))
+        
+    and handleNonRangeNode parentId node =
+        match node with
+        | NonRangeNode.TerminalNode t -> handleTerminalNode parentId t
+        | NonRangeNode.NonTerminalNode n -> handleNonTerminalNode parentId n
+        | NonRangeNode.EpsilonNode e -> handleEpsilonNode parentId e
+        | NonRangeNode.IntermediateNode p -> handleIntermediateNode parentId p
+        
+    and handleRangeNode parentId (node:RangeNode) =
+        if visitedRangeNodes.ContainsKey node
+        then addEdge parentId visitedRangeNodes.[node]
+        else
+            let currentId = nodesCount
+            visitedRangeNodes.Add(node, currentId)
+            nodes.Add(sprintf $"%i{currentId} [label = \"Input: %i{node.InputStartPosition}, %i{node.InputEndPosition}; RSM: %i{node.RSMStartPosition}, %i{node.RSMEndPosition}\", shape = ellipse]")
+            addEdge parentId currentId
+            nodesCount <- nodesCount + 1
+            node.IntermediateNodes
+            |> ResizeArray.iter (handleNonRangeNode (Some currentId))
+            
+    sppf |> ResizeArray.iter (handleRangeNode None)
+    
+    System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! nodes; yield! edges; "}"])

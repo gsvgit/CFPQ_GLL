@@ -34,7 +34,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                 
         if query.IsFinalState currentDescriptor.RSMState                        
         then
-            if query.IsFinalStateForStartBox currentDescriptor.RSMState
+            if query.IsFinalStateForOriginalStartBox currentDescriptor.RSMState
             then
                 let startPosition = currentDescriptor.GSSVertex.InputPosition
                 if Array.contains startPosition startVertices

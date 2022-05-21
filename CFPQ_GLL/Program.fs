@@ -1,6 +1,4 @@
-﻿// Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
-
-open System
+﻿open System
 open System.Collections.Generic
 open CFPQ_GLL
 open CFPQ_GLL.GSS
@@ -11,18 +9,25 @@ open CFPQ_GLL.SPPF
 let runExample (graph,startV,q) =
     let reachable,matched = GLL.eval graph startV q
     let sppf = matched.ToSPPF(q)
+    toDot sppf "1.dot"
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
 
-let example1 =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)|])
-    let startV = [|0<graphVertex>|]
-    let box = RSMBox(0<rsmState>, HashSet([1<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)|])
-    let q = RSM([|box|],box)
-    graph,startV,q
-
 let example2 =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)|])
+    let startV = [|0<graphVertex>|]
+    let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
+    let q = RSM([|box|], box)
+    graph,startV,q
+
+let example2_1 =
+    let graph = InputGraph([|
+        InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+        InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+        InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
+        InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,4<graphVertex>)
+        InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+    |])
     let startV = [|0<graphVertex>|]
     let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
     let q = RSM([|box|], box)
@@ -100,36 +105,53 @@ let example3_5_2 () =
     let sppf = matched.ToSPPF(q)
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}" 
-    
-let example4 () =
+  *)
+  
+let example6 =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
                              InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,2<graphVertex>) |])
     let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
-                [|CFGEdge(0<rsmState>,0<rsmState>)
+    let box = RSMBox (0<rsmState>, HashSet([0<rsmState>]),
+                [|
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    let sppf = matched.ToSPPF(q)
-    printfn $"SPPF: %A{sppf}"
-    printfn $"Reachable: %A{reachable}"    
+    let q = RSM([|box|],box)
+    graph,startV,q
+        
 
-let example5 startV =
+let example7 =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
                              InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
                              InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,0<graphVertex>)
                              
                              InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,3<graphVertex>)
                              InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
-                [|CFGEdge(0<rsmState>,0<rsmState>)
+    
+    let startV = [|1<graphVertex>|]
+    let box = RSMBox (0<rsmState>, HashSet([0<rsmState>]),
+                [|
                   TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q [|0<rsmState>|]
-    printfn $"Reachable: %A{reachable}"    
+    let q = RSM([|box|],box)
+    graph,startV,q
 
+let example8 =
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,2<graphVertex>)
+                             InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
+                             InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,4<graphVertex>) |])
+    let startV = [|0<graphVertex>|]
+    let box = RSMBox (0<rsmState>, HashSet([0<rsmState>]),
+                [|
+                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
+    let q = RSM([|box|],box)
+    graph,startV,q
+    
+(*
 let example6 () =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
                              InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
@@ -315,9 +337,11 @@ let example13 () =
 let main argv =   
     //runExample example1
     //runExample example2
+    runExample example2_1
     //runExample example3
     //runExample example4
-    runExample example5
+    //runExample example6
+    //runExample example8
     //example2 ()
     //example3 ()
     //example3_5 ()
