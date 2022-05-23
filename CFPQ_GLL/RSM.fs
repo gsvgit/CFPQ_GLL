@@ -50,7 +50,7 @@ type RSMVertexMutableContent =
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES <<< 2 * BITS_FOR_GRAPH_VERTICES)
 let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
 let RSM_VERTEX_MAX_VALUE:int<rsmState> =
-    System.UInt32.MaxValue >>> 32 - BITS_FOR_RSM_STATE
+    System.UInt32.MaxValue >>> (32 - BITS_FOR_RSM_STATE)
     |> int
     |> LanguagePrimitives.Int32WithMeasure
 
@@ -89,10 +89,12 @@ type RSMBox(startState:int<rsmState>, finalStates:HashSet<int<rsmState>>, transi
     member this.Transitions = transitions
     
 type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
-    let vertices = System.Collections.Generic.Dictionary<int<rsmState>,RSMVertexContent>()
+    let vertices = Dictionary<int<rsmState>,RSMVertexContent>()
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM = 1000 |> LanguagePrimitives.Int32WithMeasure //int32 RSM_VERTEX_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
+    let startStateOfExtendedRSM =
+        1000 |> LanguagePrimitives.Int32WithMeasure
+        //int32 RSM_VERTEX_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
     let extensionBox =
         let originalStartState = startBox.StartState        
         let finalState = int32 startStateOfExtendedRSM - 2 |> LanguagePrimitives.Int32WithMeasure

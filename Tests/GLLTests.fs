@@ -421,7 +421,7 @@ let tests =
           (nodes,edges)
         runGLLAndCheckResult graph startV q expected
             
-    ptestCase "Graph with branch, RSM with nonterminal, nodes reusing" <| fun () ->
+    testCase "Graph with branch, RSM with nonterminal, nodes reusing" <| fun () ->
         let graph = InputGraph([|
             InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
             InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
@@ -479,9 +479,9 @@ let tests =
           nodes.Add(36, TriplesStoredSPPFNode.NonTerminalNode (2<graphVertex>,0<rsmState>,3<graphVertex>))
           nodes.Add(37, TriplesStoredSPPFNode.RangeNode (2<graphVertex>,3<graphVertex>,0<rsmState>,2<rsmState>))
           nodes.Add(38, TriplesStoredSPPFNode.TerminalNode (2<graphVertex>,0<terminalSymbol>,3<graphVertex>))
-          nodes.Add(39, TriplesStoredSPPFNode.IntermediateNode (2<graphVertex>,1<rsmState>))
-          nodes.Add(41, TriplesStoredSPPFNode.TerminalNode (1<graphVertex>,0<terminalSymbol>,2<graphVertex>))
+          nodes.Add(39, TriplesStoredSPPFNode.IntermediateNode (2<graphVertex>,1<rsmState>))          
           nodes.Add(40, TriplesStoredSPPFNode.RangeNode (1<graphVertex>,2<graphVertex>,0<rsmState>,1<rsmState>))
+          nodes.Add(41, TriplesStoredSPPFNode.TerminalNode (1<graphVertex>,0<terminalSymbol>,2<graphVertex>))
           let edges = ResizeArray<_>([|(0,1); (2,3); (3,4); (4,5); (3,6); (6,7); (7,8); (8,9); (10,11); (11,4); (11,12)
                                        (12,13); (13,14); (14,15); (14,16); (16,17); (17,18); (16,19); (19,20); (20,21)
                                        (21,22); (23,24); (24,4); (24,25); (25,26); (26,27); (27,28); (28,17); (28,29)
