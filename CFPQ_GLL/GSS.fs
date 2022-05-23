@@ -21,8 +21,6 @@ type GSSVertex =
     val InputPosition: int<graphVertex>
     val RSMState: int<rsmState>
     new (inputPosition, rsmState) =
-        if inputPosition = -1<graphVertex>
-        then printfn "fail!"
         {InputPosition = inputPosition; RSMState = rsmState}
 
 [<Struct>]

@@ -167,8 +167,7 @@ let inline unpackMatchedRange (rsmRange:int64<rsmRange>) (inputRange:int64<input
         then int32 (rangeInfo &&& ~~~IS_TERMINAL) |> LanguagePrimitives.Int32WithMeasure |> RangeType.Terminal
         elif rangeInfo &&& IS_NON_TERMINAL = IS_NON_TERMINAL
         then int32 (rangeInfo &&& ~~~IS_NON_TERMINAL) |> LanguagePrimitives.Int32WithMeasure |> RangeType.NonTerminal
-        else int32 rangeInfo |> LanguagePrimitives.Int32WithMeasure |> RangeType.EpsilonNonTerminal 
-    printfn $"Unpack: input start: %A{inputRange.StartPosition}, input end: %A{inputRange.EndPosition}"
+        else int32 rangeInfo |> LanguagePrimitives.Int32WithMeasure |> RangeType.EpsilonNonTerminal     
     MatchedRange(inputRange, rsmRange, rangeType)
 type MatchedRanges () =
     let ranges : Dictionary<int64<rsmRange>,Dictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
@@ -215,8 +214,7 @@ type MatchedRanges () =
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
             let rsmRange = packRange rsmStart rsmEnd
             ranges.ContainsKey rsmRange && ranges.[rsmRange].ContainsKey(packRange inputStart inputEnd)
-        let getRangeNode inputStart inputEnd rsmStart rsmEnd =
-            printfn $"input start: %A{inputStart}, input end: %A{inputEnd}"
+        let getRangeNode inputStart inputEnd rsmStart rsmEnd =            
             let n =
                 rangeNodes
                 |> ResizeArray.tryFind (fun node -> node.InputStartPosition = inputStart
