@@ -80,22 +80,22 @@ let unpackGSSVertex (gssVertex:int64<gssVertex>) =
     let rsmState = int32 (gssVertex &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     GSSVertex (inputPosition, rsmState)
 
-let unpackGSSEdge (gssEdgesInfo:Dictionary<_,_>) (gssEdge:int64<gssEdge>) =
-    let _gssEdge = int64 gssEdge
+let unpackGSSEdge  (gssEdge:(int64<gssEdge>*Option<MatchedRange>)) =
+    let _gssEdge = int64 <| fst gssEdge
     let gssVertex = int64 (_gssEdge &&& MASK_FOR_GSS_VERTEX >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int64WithMeasure    
     let rsmState = int32 (_gssEdge &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
-    GSSEdge (unpackGSSVertex gssVertex, rsmState, gssEdgesInfo.[gssEdge])
+    GSSEdge (unpackGSSVertex gssVertex, rsmState, snd gssEdge)
     
 [<Struct>]
 type GssVertexContent =
-    val OutputEdges : ResizeArray<int64<gssEdge>>
+    val OutputEdges : ResizeArray<int64<gssEdge>*Option<MatchedRange>>
     val Popped : ResizeArray<MatchedRange>
     val HandledDescriptors : HashSet<int64<descriptorWithoutGSSVertex>>
     new (outputEdges, popped, handledDescriptors) = {OutputEdges = outputEdges; Popped = popped; HandledDescriptors = handledDescriptors}
 
 type GSS() =
     let vertices = Dictionary<int64<gssVertex>,GssVertexContent>()    
-    let edgesInfo = Dictionary<int64<gssEdge>,_>()
+    //let edgesInfo = Dictionary<int64<gssEdge>,_>()
     member this.AddNewVertex (inputPosition:int<graphVertex>, rsmState:int<rsmState>) =
         let gssVertex = GSSVertex(inputPosition, rsmState)
         let packedGSSVertex = packGSSVertex gssVertex
@@ -118,15 +118,15 @@ type GSS() =
         // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova
         // p.13: "There is at most one call to the create function with the same arguments.
         // Thus no check for duplicate GSS edges is needed."
-        newGSSVertexContent.OutputEdges.Add newEdge
-        edgesInfo.Add(newEdge,matchedRange)
+        newGSSVertexContent.OutputEdges.Add (newEdge,matchedRange)
+        //edgesInfo.Add(newEdge,matchedRange)
         newGSSVertex, newGSSVertexContent.Popped
         
     member this.Pop (currentDescriptor:Descriptor, matchedRange) =
         let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]                
         gssVertexContent.Popped.Add matchedRange         
         gssVertexContent.OutputEdges
-        |> ResizeArray.map (unpackGSSEdge edgesInfo)
+        |> ResizeArray.map unpackGSSEdge
         
     member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =
         packDescriptorWithoutGSSVertex descriptor.InputPosition descriptor.RSMState

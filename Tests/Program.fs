@@ -10,9 +10,7 @@ let config = {FsCheckConfig.defaultConfig with maxTest = 10000}
 let properties =
   testList "FsCheck samples" [
     testProperty "unpackGSSEdge - packGSSEdge is identity" <| fun a ->
-      let dummyEdgeInfo = Dictionary<_,_>()
-      dummyEdgeInfo.Add(a, 10)
-      let unpacked = unpackGSSEdge dummyEdgeInfo a
+      let unpacked = unpackGSSEdge (a,None)
       let packedBack = packGSSEdge (packGSSVertex unpacked.GSSVertex) unpacked.RSMState
       a = packedBack
       
@@ -23,10 +21,8 @@ let properties =
          
       then
         
-        let packed = packGSSEdge (packGSSVertex (GSSVertex(inputPosition,rsmStateForGSS))) rsmState
-        let dummyEdgeInfo = Dictionary<_,_>()
-        dummyEdgeInfo.Add(packed, 10)
-        let unpackedBack = unpackGSSEdge dummyEdgeInfo packed
+        let packed = packGSSEdge (packGSSVertex (GSSVertex(inputPosition,rsmStateForGSS))) rsmState        
+        let unpackedBack = unpackGSSEdge (packed,None)
         unpackedBack.GSSVertex.InputPosition = inputPosition
         && unpackedBack.GSSVertex.RSMState = rsmStateForGSS
         && unpackedBack.RSMState = rsmState
@@ -51,5 +47,5 @@ let properties =
   
 [<EntryPoint>]
 let main argv =    
-    Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [properties; GLLTests.properties])
+    Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [properties; GLLTests.tests])
     

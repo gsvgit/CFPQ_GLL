@@ -26,10 +26,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         )
     
     let handleDescriptor (currentDescriptor:Descriptor) =
-        
-        if currentDescriptor.GSSVertex.InputPosition = -1<graphVertex>
-        then printfn "Fail!"
-        
+       
         gss.AddDescriptorToHandled currentDescriptor
                 
         if query.IsFinalState currentDescriptor.RSMState                        
@@ -43,15 +40,18 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
             let matchedRange =
                 match currentDescriptor.MatchedRange with             
                 | None ->
-                    MatchedRange(
-                           currentDescriptor.InputPosition
-                         , currentDescriptor.InputPosition
-                         , currentDescriptor.RSMState
-                         , currentDescriptor.RSMState
-                         , RangeType.Epsilon
-                    )                    
+                    let newRange =
+                        MatchedRange(
+                               currentDescriptor.InputPosition
+                             , currentDescriptor.InputPosition
+                             , currentDescriptor.RSMState
+                             , currentDescriptor.RSMState
+                             , RangeType.EpsilonNonTerminal currentDescriptor.GSSVertex.RSMState
+                        )
+                    matchedRanges.AddMatchedRange(None, newRange) |> ignore
+                    newRange
                 | Some range -> range
-                        
+                                                
             gss.Pop(currentDescriptor, matchedRange)            
             |> ResizeArray.iter (
                 fun gssEdge ->                

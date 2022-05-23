@@ -17,7 +17,7 @@ open FSharpx.Collections
 type RangeType =    
     | Terminal of terminal:int<terminalSymbol>
     | NonTerminal of nonTerminal:int<rsmState>
-    | Epsilon    
+    | EpsilonNonTerminal of epsiolonNonTerminal:int<rsmState>
     | Intermediate of intermediatePoint:int64<rangeIntermediatePoint>
     
 [<Struct>]
@@ -34,10 +34,12 @@ type TerminalNode =
 
 [<Struct>]
 type EpsilonNode =    
-    val Position : int<graphVertex>    
-    new (position)  =
+    val Position : int<graphVertex>
+    val NonTerminalStartState : int<rsmState>
+    new (position, nonTerminalStartState)  =
         {            
-            Position = position            
+            Position = position
+            NonTerminalStartState = nonTerminalStartState
         }
 
 type IntermediateNode (rsmState:int<rsmState>
@@ -144,8 +146,8 @@ let inline private unpackRange (range:int64<'t>) =
 // rangeType: two bits 
 let inline packRangeInfo (range:MatchedRange) : int64<rangeInfo> =
     match range.RangeType with
-    | RangeType.Epsilon ->
-        0L
+    | RangeType.EpsilonNonTerminal n ->
+        int64 n
     | RangeType.Terminal t ->
         (int64 t) ||| IS_TERMINAL
     | RangeType.NonTerminal n ->
@@ -165,7 +167,7 @@ let inline unpackMatchedRange (rsmRange:int64<rsmRange>) (inputRange:int64<input
         then int32 (rangeInfo &&& ~~~IS_TERMINAL) |> LanguagePrimitives.Int32WithMeasure |> RangeType.Terminal
         elif rangeInfo &&& IS_NON_TERMINAL = IS_NON_TERMINAL
         then int32 (rangeInfo &&& ~~~IS_NON_TERMINAL) |> LanguagePrimitives.Int32WithMeasure |> RangeType.NonTerminal
-        else RangeType.Epsilon
+        else int32 rangeInfo |> LanguagePrimitives.Int32WithMeasure |> RangeType.EpsilonNonTerminal 
     printfn $"Unpack: input start: %A{inputRange.StartPosition}, input end: %A{inputRange.EndPosition}"
     MatchedRange(inputRange, rsmRange, rangeType)
 type MatchedRanges () =
@@ -208,7 +210,7 @@ type MatchedRanges () =
             this.AddMatchedRange newRange
             newRange
         
-    member this.ToSPPF(query:RSM) =
+    member this.ToSPPF(startV, query:RSM) =
         let rangeNodes = ResizeArray<RangeNode>()
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
             let rsmRange = packRange rsmStart rsmEnd
@@ -239,8 +241,8 @@ type MatchedRanges () =
                             range.RSMRange.StartPosition
                             range.RSMRange.EndPosition
                     match range.RangeType with
-                    | RangeType.Epsilon ->
-                        EpsilonNode range.InputRange.StartPosition
+                    | RangeType.EpsilonNonTerminal n ->
+                        EpsilonNode (range.InputRange.StartPosition, n)
                         |> NonRangeNode.EpsilonNode
                         
                     | RangeType.Terminal t ->
@@ -286,11 +288,12 @@ type MatchedRanges () =
 
         rangeNodes
         |> ResizeArray.filter (fun node -> node.RSMStartPosition = query.OriginalStartState
-                                           && query.IsFinalStateForOriginalStartBox node.RSMEndPosition)
+                                           && query.IsFinalStateForOriginalStartBox node.RSMEndPosition
+                                           && startV |> Array.contains node.InputStartPosition)
 
 [<RequireQualifiedAccess>]
 type TriplesStoredSPPFNode =
-    | EpsilonNode of int<graphVertex>
+    | EpsilonNode of int<graphVertex> * int<rsmState>
     | TerminalNode of int<graphVertex> * int<terminalSymbol> * int<graphVertex>
     | NonTerminalNode of int<graphVertex> * int<rsmState> * int<graphVertex>
     | IntermediateNode of int<graphVertex> * int<rsmState>
@@ -322,7 +325,7 @@ type TriplesStoredSPPF (sppf:ResizeArray<RangeNode>) =
         
     and handleEpsilonNode parentId (node:EpsilonNode) =
         let currentId = nodesCount
-        nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(node.Position))
+        nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(node.Position, node.NonTerminalStartState))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
     
@@ -363,9 +366,9 @@ type TriplesStoredSPPF (sppf:ResizeArray<RangeNode>) =
         | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState) ->
             sprintf $"%i{nodeId} [label = \"Input: %i{_inputPos}; RSM: %i{_rsmState}\", shape = plain]"
         | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to) ->
-            sprintf $"%i{nodeId} [label = \"%i{_from}, %i{_nonTerminal}, %i{_to}\", shape = rectangle]"
-        | TriplesStoredSPPFNode.EpsilonNode _pos ->
-            sprintf $"%i{nodeId} [label = \"%i{_pos}\", shape = rectangle]"
+            sprintf $"%i{nodeId} [label = \"%i{_from}, %i{_nonTerminal}, %i{_to}\", shape = invtrapezium]"
+        | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal) ->
+            sprintf $"%i{nodeId} [label = \"Input: %i{_pos}; RSM: %i{_nonTerminal}\", shape = invhouse]"
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
             sprintf $"%i{nodeId} [label = \"Input: %i{_inputFrom}, %i{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
             

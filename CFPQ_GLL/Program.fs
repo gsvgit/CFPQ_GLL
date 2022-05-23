@@ -8,29 +8,18 @@ open CFPQ_GLL.SPPF
 
 let runExample (graph,startV,q) =
     let reachable,matched = GLL.eval graph startV q
-    let sppf = matched.ToSPPF(q)
-    TriplesStoredSPPF(sppf).ToDot "1.dot"
+    let sppf = matched.ToSPPF(startV,q)
+    let x = TriplesStoredSPPF(sppf)
+    x.ToDot "1.dot"
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
 
-let example2 =
+let example1 =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)|])
     let startV = [|0<graphVertex>|]
     let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
     let q = RSM([|box|], box)
-    graph,startV,q
-
-let example2_1 =
-    let graph = InputGraph([|
-        InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-        InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-        InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
-        InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,4<graphVertex>)
-        InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-    |])
-    let startV = [|0<graphVertex>|]
-    let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
-    let q = RSM([|box|], box)
+    
     graph,startV,q
 
 let example2_2 =
@@ -42,42 +31,16 @@ let example2_2 =
         InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,2<graphVertex>)
     |])
     let startV = [|0<graphVertex>|]
-    let box = RSMBox(0<rsmState>, HashSet([2<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                                                           NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)|]) 
+    let box = RSMBox(0<rsmState>, HashSet([2<rsmState>]),
+                     [|
+                       TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                       NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                       TerminalEdge(0<rsmState>,0<terminalSymbol>,2<rsmState>)
+                     |]) 
     let q = RSM([|box|], box)
     graph,startV,q
+   
 
-let example3 =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)|])
-    let startV = [|0<graphVertex>|]
-    let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|])
-    let q = RSM([|box|], box)
-    graph,startV,q
-    
-let example4 =
-    let graph =
-        InputGraph(
-            [|
-                InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-            |])
-    let startV = [|0<graphVertex>|]
-    let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|])
-    let q = RSM([|box|], box)
-    graph,startV,q    
-
-let example5 =
-    let graph =
-        InputGraph(
-            [|
-                InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-            |]
-            )
-    let startV = [|0<graphVertex>|]
-    let box1 = RSMBox(0<rsmState>, HashSet([1<rsmState>]),[|NonTerminalEdge(0<rsmState>,2<rsmState>,1<rsmState>)|])
-    let box2 = RSMBox(2<rsmState>, HashSet([3<rsmState>]),[|TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)|])
-    let q = RSM([|box1; box2|], box1)
-    graph,startV,q    
     
 (*
 let example3_5 () =
@@ -345,18 +308,18 @@ let example13 () =
     let box2 = RSMBox (0<rsmState>, HashSet([0<rsmState>]), [||])    
     let q = RSM([|box1; box2|], box1)
     let reachable,matched = GLL.eval graph startV q
-    let sppf = matched.ToSPPF(q)
+    let sppf = matched.ToSPPF(startV,q)
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
     
 [<EntryPoint>]
 let main argv =   
-    //runExample example1
-    //runExample example2
-    runExample example2_2
-    //runExample example3
-    //runExample example4
+    
+    //runExample example2_2
+    
+    runExample example1
     //runExample example6
+    //runExample example7
     //runExample example8
     //example2 ()
     //example3 ()
