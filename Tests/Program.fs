@@ -3,6 +3,7 @@ open CFPQ_GLL.GSS
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open Expecto
+open Tests
 
 let config = {FsCheckConfig.defaultConfig with maxTest = 10000}
 
@@ -46,13 +47,9 @@ let properties =
         && rsmState = unpackedBack.RSMState
       else true
 
-    // you can also override the FsCheck config
-    testPropertyWithConfig config "Product is distributive over addition" <|
-      fun a b c ->
-        a * (b + c) = a * b + a * c
   ]
   
 [<EntryPoint>]
-let main argv =
-    Tests.runTestsWithCLIArgs [] [||] properties
+let main argv =    
+    Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [properties; GLLTests.properties])
     

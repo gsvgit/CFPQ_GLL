@@ -9,7 +9,7 @@ open CFPQ_GLL.SPPF
 let runExample (graph,startV,q) =
     let reachable,matched = GLL.eval graph startV q
     let sppf = matched.ToSPPF(q)
-    toDot sppf "1.dot"
+    TriplesStoredSPPF(sppf).ToDot "1.dot"
     printfn $"SPPF: %A{sppf}"
     printfn $"Reachable: %A{reachable}"
 
@@ -33,6 +33,19 @@ let example2_1 =
     let q = RSM([|box|], box)
     graph,startV,q
 
+let example2_2 =
+    let graph = InputGraph([|
+        InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+        InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+        InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
+        InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,4<graphVertex>)
+        InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+    |])
+    let startV = [|0<graphVertex>|]
+    let box = RSMBox(0<rsmState>, HashSet([2<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                                                           NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)|]) 
+    let q = RSM([|box|], box)
+    graph,startV,q
 
 let example3 =
     let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)|])
@@ -42,21 +55,24 @@ let example3 =
     graph,startV,q
     
 let example4 =
-    let graph = InputGraph(
-        [|
-            InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-            InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-        |])
+    let graph =
+        InputGraph(
+            [|
+                InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+            |])
     let startV = [|0<graphVertex>|]
     let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|])
     let q = RSM([|box|], box)
     graph,startV,q    
 
 let example5 =
-    let graph = InputGraph(
-        [|
-            InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-        |])
+    let graph =
+        InputGraph(
+            [|
+                InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+            |]
+            )
     let startV = [|0<graphVertex>|]
     let box1 = RSMBox(0<rsmState>, HashSet([1<rsmState>]),[|NonTerminalEdge(0<rsmState>,2<rsmState>,1<rsmState>)|])
     let box2 = RSMBox(2<rsmState>, HashSet([3<rsmState>]),[|TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)|])
@@ -337,7 +353,7 @@ let example13 () =
 let main argv =   
     //runExample example1
     //runExample example2
-    runExample example2_1
+    runExample example2_2
     //runExample example3
     //runExample example4
     //runExample example6
@@ -359,11 +375,5 @@ let main argv =
     *)//example12_go_hierarchy_singleSourceForAll ()
     //example11_go_singleSourceForAll ()
     //example12_go_hierarchy_allPairs()
-    
-    let a = 7<graphVertex>
-    let b = 6<rsmState>
-    
-    let packed = CFPQ_GLL.GSS.packGSSVertex (GSSVertex(a, b))
-    let unpackedBack = CFPQ_GLL.GSS.unpackGSSVertex packed
-    printfn $"%A{unpackedBack}"
+ 
     0 // return an integer exit code

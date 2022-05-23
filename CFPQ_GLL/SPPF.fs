@@ -287,20 +287,28 @@ type MatchedRanges () =
         rangeNodes
         |> ResizeArray.filter (fun node -> node.RSMStartPosition = query.OriginalStartState
                                            && query.IsFinalStateForOriginalStartBox node.RSMEndPosition)
-        
-let toDot (sppf:ResizeArray<RangeNode>) filePath =
+
+[<RequireQualifiedAccess>]
+type TriplesStoredSPPFNode =
+    | EpsilonNode of int<graphVertex>
+    | TerminalNode of int<graphVertex> * int<terminalSymbol> * int<graphVertex>
+    | NonTerminalNode of int<graphVertex> * int<rsmState> * int<graphVertex>
+    | IntermediateNode of int<graphVertex> * int<rsmState>
+    | RangeNode of int<graphVertex> * int<graphVertex> * int<rsmState> * int<rsmState> 
+
+type TriplesStoredSPPF (sppf:ResizeArray<RangeNode>) =
     let mutable nodesCount = 0
-    let nodes = ResizeArray<_>()
+    let nodes = Dictionary<_,_>()
     let edges = ResizeArray<_>()
     let visitedRangeNodes = Dictionary<_,_>()
     let addEdge parentId currentId =
         match parentId with
-        | Some x -> edges.Add(sprintf $"%i{x}->%i{currentId}")
+        | Some x -> edges.Add(x,currentId)
         | None -> ()
     
     let rec handleIntermediateNode parentId (node:IntermediateNode) =
         let currentId = nodesCount
-        nodes.Add(sprintf $"%i{currentId} [label = \"Input: %i{node.InputPosition}; RSM: %i{node.RSMState}\", shape = plain]")
+        nodes.Add(currentId, TriplesStoredSPPFNode.IntermediateNode(node.InputPosition, node.RSMState))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
         handleRangeNode (Some currentId) node.LeftSubtree
@@ -308,19 +316,19 @@ let toDot (sppf:ResizeArray<RangeNode>) filePath =
     
     and handleTerminalNode parentId (node:TerminalNode) =
         let currentId = nodesCount
-        nodes.Add(sprintf $"%i{currentId} [label = \"%i{node.LeftPosition}, %i{node.Terminal}, %i{node.RightPosition}\", shape = rectangle]")
+        nodes.Add(currentId, TriplesStoredSPPFNode.TerminalNode(node.LeftPosition, node.Terminal, node.RightPosition))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
         
     and handleEpsilonNode parentId (node:EpsilonNode) =
         let currentId = nodesCount
-        nodes.Add(sprintf $"%i{currentId} [label = \"%i{node.Position}\", shape = rectangle]")
+        nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(node.Position))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
     
     and handleNonTerminalNode parentId (node:NonTerminalNode) =
         let currentId = nodesCount
-        nodes.Add(sprintf $"%i{currentId} [label = \"%i{node.LeftPosition}, %i{node.NonTerminalStartState}, %i{node.RightPosition}\", shape = rectangle]")
+        nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(node.LeftPosition, node.NonTerminalStartState, node.RightPosition))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
         node.RangeNodes
@@ -339,12 +347,30 @@ let toDot (sppf:ResizeArray<RangeNode>) filePath =
         else
             let currentId = nodesCount
             visitedRangeNodes.Add(node, currentId)
-            nodes.Add(sprintf $"%i{currentId} [label = \"Input: %i{node.InputStartPosition}, %i{node.InputEndPosition}; RSM: %i{node.RSMStartPosition}, %i{node.RSMEndPosition}\", shape = ellipse]")
+            nodes.Add(currentId, TriplesStoredSPPFNode.RangeNode(node.InputStartPosition, node.InputEndPosition, node.RSMStartPosition, node.RSMEndPosition))
             addEdge parentId currentId
             nodesCount <- nodesCount + 1
             node.IntermediateNodes
             |> ResizeArray.iter (handleNonRangeNode (Some currentId))
             
-    sppf |> ResizeArray.iter (handleRangeNode None)
+    do  sppf |> ResizeArray.iter (handleRangeNode None)
     
-    System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! nodes; yield! edges; "}"])
+    let printEdge (x,y) = sprintf $"%i{x}->%i{y}"
+    let printNode nodeId node =
+        match node with
+        | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to) ->
+            sprintf $"%i{nodeId} [label = \"%i{_from}, %i{_terminal}, %i{_to}\", shape = rectangle]"
+        | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState) ->
+            sprintf $"%i{nodeId} [label = \"Input: %i{_inputPos}; RSM: %i{_rsmState}\", shape = plain]"
+        | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to) ->
+            sprintf $"%i{nodeId} [label = \"%i{_from}, %i{_nonTerminal}, %i{_to}\", shape = rectangle]"
+        | TriplesStoredSPPFNode.EpsilonNode _pos ->
+            sprintf $"%i{nodeId} [label = \"%i{_pos}\", shape = rectangle]"
+        | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
+            sprintf $"%i{nodeId} [label = \"Input: %i{_inputFrom}, %i{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
+            
+    member this.ToDot filePath =
+        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])
+    
+    member this.Edges with get() = edges
+    member this.Nodes with get () = nodes
