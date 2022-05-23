@@ -29,15 +29,20 @@ let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> (BITS_FOR_GRAPH_
 let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES))
 let GRAPH_VERTEX_MAX_VALUE:int<graphVertex> =
     System.UInt32.MaxValue >>> (32 - BITS_FOR_GRAPH_VERTICES)
-    |> int32
+    |> int
+    |> (fun x -> x - 1)
     |> LanguagePrimitives.Int32WithMeasure
-let SYMBOL_MAX_VALUE = System.UInt32.MaxValue >>> (32 - BITS_FOR_RSM_STATE)
-let EOF:int<terminalSymbol> = int32 SYMBOL_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
+let SYMBOL_MAX_VALUE:int<terminalSymbol>=
+    System.UInt32.MaxValue >>> (32 - BITS_FOR_RSM_STATE)
+    |> int
+    |> fun x -> x - 1
+    |> LanguagePrimitives.Int32WithMeasure
+let EOF:int<terminalSymbol> = SYMBOL_MAX_VALUE
 
 let inline private packInputGraphTerminalEdge (targetVertex:int<graphVertex>) (symbol:int<terminalSymbol>) : int64<inputGraphTerminalEdge> =
     if targetVertex > GRAPH_VERTEX_MAX_VALUE
     then failwithf $"Graph vertex should be less then %A{GRAPH_VERTEX_MAX_VALUE}"
-    if uint32 symbol > SYMBOL_MAX_VALUE
+    if symbol > SYMBOL_MAX_VALUE
     then failwithf $"Symbol should be less then %A{SYMBOL_MAX_VALUE}"
     let _targetGssVertex = (int64 targetVertex) <<< (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)
     let _symbol = int64 symbol

@@ -47,11 +47,12 @@ type RSMVertexMutableContent =
         }
     
     
-let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES <<< 2 * BITS_FOR_GRAPH_VERTICES)
-let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
+let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES) <<< (2 * BITS_FOR_GRAPH_VERTICES))
+let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES))
 let RSM_VERTEX_MAX_VALUE:int<rsmState> =
     System.UInt32.MaxValue >>> (32 - BITS_FOR_RSM_STATE)
     |> int
+    |> fun x -> x - 1
     |> LanguagePrimitives.Int32WithMeasure
 
 let inline private packRSMTerminalOrNonTerminalEdge (targetVertex:int<rsmState>) (symbol:int) : int64 =
@@ -59,9 +60,10 @@ let inline private packRSMTerminalOrNonTerminalEdge (targetVertex:int<rsmState>)
     then failwithf $"RSM vertex should be less then %A{RSM_VERTEX_MAX_VALUE}"
     if symbol > int32 RSM_VERTEX_MAX_VALUE
     then failwithf $"Symbol should be less then %A{RSM_VERTEX_MAX_VALUE}"
-    let _targetGssVertex = (int64 targetVertex) <<< (2 * BITS_FOR_GRAPH_VERTICES)
+    
+    let _targetVertex = (int64 targetVertex) <<< BITS_FOR_RSM_STATE
     let _symbol = int64 symbol
-    (_targetGssVertex ||| _symbol)
+    (_targetVertex ||| _symbol)
 
 
 let inline packRSMTerminalEdge (targetVertex:int<rsmState>) (symbol:int<terminalSymbol>) : int64<rsmTerminalEdge> =
@@ -71,8 +73,8 @@ let inline packRSMNonTerminalEdge (targetVertex:int<rsmState>) (nonTerminalSymbo
     packRSMTerminalOrNonTerminalEdge targetVertex (int nonTerminalSymbolStartState) |> LanguagePrimitives.Int64WithMeasure
     
 let inline unpackRSMTerminalOrNonTerminalEdge (edge:int64) =
-    let nextVertex = int32 (edge &&& MASK_FOR_RSM_STATE >>> 2 * BITS_FOR_GRAPH_VERTICES) |> LanguagePrimitives.Int32WithMeasure
-    let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) |> LanguagePrimitives.Int32WithMeasure
+    let nextVertex = int32 (edge >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
+    let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) |> LanguagePrimitives.Int32WithMeasure   
     nextVertex, symbol
 
 let inline unpackRSMTerminalEdge (edge:int64<rsmTerminalEdge>) =
@@ -92,9 +94,8 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let vertices = Dictionary<int<rsmState>,RSMVertexContent>()
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM =
-        1000 |> LanguagePrimitives.Int32WithMeasure
-        //int32 RSM_VERTEX_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
+    let startStateOfExtendedRSM = RSM_VERTEX_MAX_VALUE
+        
     let extensionBox =
         let originalStartState = startBox.StartState        
         let finalState = int32 startStateOfExtendedRSM - 2 |> LanguagePrimitives.Int32WithMeasure
@@ -141,8 +142,6 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
         addBoxes boxes
         addBoxes [|extensionBox|]
     member this.StartState = startStateOfExtendedRSM
-    //member this.FinalStates = finalStates
-    //member this.IsStartState state = startStates.Contains state
     member this.IsFinalState state = finalStates.Contains state
     member this.IsFinalStateForOriginalStartBox state = startBox.FinalStates.Contains state
     member this.GetFinalStatesForBoxWithThisStartState startState = finalStatesForBox.[startState]
