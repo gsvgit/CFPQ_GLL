@@ -15,11 +15,52 @@ let runExample (graph,startV,q) =
     printfn $"Reachable: %A{reachable}"
 
 let example1 =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)|])
-    let startV = [|0<graphVertex>|]
-    let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
-    let q = RSM([|box|], box)
+    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,4<graphVertex>)
+                             InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                             InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
+                             InputGraph.TerminalEdge(5<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+                             InputGraph.TerminalEdge(4<graphVertex>,1<terminalSymbol>,6<graphVertex>)
+                             InputGraph.TerminalEdge(10<graphVertex>,2<terminalSymbol>,5<graphVertex>)
+                             
+                             InputGraph.TerminalEdge(6<graphVertex>,0<terminalSymbol>,7<graphVertex>)
+                             InputGraph.TerminalEdge(7<graphVertex>,0<terminalSymbol>,9<graphVertex>)
+                             InputGraph.TerminalEdge(8<graphVertex>,0<terminalSymbol>,9<graphVertex>)
+                             InputGraph.TerminalEdge(9<graphVertex>,0<terminalSymbol>,10<graphVertex>)
+                             InputGraph.TerminalEdge(7<graphVertex>,3<terminalSymbol>,6<graphVertex>)
+                             InputGraph.TerminalEdge(10<graphVertex>,4<terminalSymbol>,8<graphVertex>)
+                             
+                             InputGraph.TerminalEdge(11<graphVertex>,0<terminalSymbol>,12<graphVertex>)
+                             InputGraph.TerminalEdge(12<graphVertex>,0<terminalSymbol>,13<graphVertex>)
+                             InputGraph.TerminalEdge(14<graphVertex>,0<terminalSymbol>,12<graphVertex>)
+                             InputGraph.TerminalEdge(14<graphVertex>,0<terminalSymbol>,15<graphVertex>)
+                             InputGraph.TerminalEdge(13<graphVertex>,5<terminalSymbol>,6<graphVertex>)
+                             InputGraph.TerminalEdge(10<graphVertex>,6<terminalSymbol>,14<graphVertex>)
+                             
+                             |])
     
+    let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),
+                [|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)
+                  TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
+                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                  TerminalEdge(2<rsmState>,2<terminalSymbol>,0<rsmState>)
+                  
+                  TerminalEdge(0<rsmState>,3<terminalSymbol>,3<rsmState>)
+                  NonTerminalEdge(3<rsmState>,0<rsmState>,4<rsmState>)
+                  TerminalEdge(4<rsmState>,4<terminalSymbol>,0<rsmState>)
+                  
+                  TerminalEdge(0<rsmState>,5<terminalSymbol>,5<rsmState>)
+                  NonTerminalEdge(5<rsmState>,0<rsmState>,6<rsmState>)
+                  TerminalEdge(6<rsmState>,6<terminalSymbol>,0<rsmState>)
+                  
+                  TerminalEdge(0<rsmState>,1<terminalSymbol>,0<rsmState>)
+                  TerminalEdge(0<rsmState>,3<terminalSymbol>,0<rsmState>)
+                  TerminalEdge(0<rsmState>,5<terminalSymbol>,0<rsmState>)
+                  
+                  |])
+    
+    let q = RSM([|box|],box)
+    let startV = [|0<graphVertex>; 11<graphVertex>|]
     graph,startV,q
 
 let example2_2 =
