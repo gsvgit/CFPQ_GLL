@@ -73,117 +73,10 @@ let example1 =
     let q = RSM([|box|],box)
     let startV = [|0<graphVertex>|]
     graph,startV,q
-
-    
-(*
-let example3_5 () =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                             InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>) |])
-    let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([2<rsmState>]),
-                [|
-                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-                  TerminalEdge(0<rsmState>,0<terminalSymbol>,2<rsmState>)|])
-    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    let sppf = matched.ToSPPF(q)
-    printfn $"SPPF: %A{sppf}"
-    printfn $"Reachable: %A{reachable}"    
-
-let example3_5_1 () =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                             InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>) |])
-    let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>; 2<rsmState>]),
-                [|
-                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-                |])
-    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    let sppf = matched.ToSPPF(q)
-    printfn $"SPPF: %A{sppf}"
-    printfn $"Reachable: %A{reachable}" 
-
-let example3_5_2 () =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                           |])
-    let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>; 2<rsmState>]),
-                [|
-                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-                |])
-    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    let sppf = matched.ToSPPF(q)
-    printfn $"SPPF: %A{sppf}"
-    printfn $"Reachable: %A{reachable}" 
-  *)
-  
-
    
+   
+
 (*
-
-let example7 () =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)
-                             
-                             InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,1<graphVertex>)
-                             InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
-    let startV = [|0<graphVertex>|]
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
-                [|CFGEdge(0<rsmState>,0<rsmState>)
-                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
-    let reachable = GLL.eval graph startV q [|0<rsmState>|]
-    printfn $"Reachable: %A{reachable}"    
-
-
-let example8 startV =
-    let graph = InputGraph([|InputGraph.CFGEdge(0<graphVertex>,1<graphVertex>)
-                             InputGraph.CFGEdge(1<graphVertex>,4<graphVertex>)
-                             InputGraph.CFGEdge(2<graphVertex>,1<graphVertex>)
-                             InputGraph.CFGEdge(2<graphVertex>,3<graphVertex>)
-                             InputGraph.CFGEdge(5<graphVertex>,2<graphVertex>)
-                             InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,6<graphVertex>)
-                             InputGraph.TerminalEdge(10<graphVertex>,1<terminalSymbol>,5<graphVertex>)
-                             
-                             InputGraph.CFGEdge(6<graphVertex>,7<graphVertex>)
-                             InputGraph.CFGEdge(7<graphVertex>,9<graphVertex>)
-                             InputGraph.CFGEdge(8<graphVertex>,9<graphVertex>)
-                             InputGraph.CFGEdge(9<graphVertex>,10<graphVertex>)
-                             InputGraph.TerminalEdge(7<graphVertex>,2<terminalSymbol>,6<graphVertex>)
-                             InputGraph.TerminalEdge(10<graphVertex>,3<terminalSymbol>,8<graphVertex>)
-                             
-                             InputGraph.CFGEdge(11<graphVertex>,12<graphVertex>)
-                             InputGraph.CFGEdge(12<graphVertex>,13<graphVertex>)
-                             InputGraph.CFGEdge(14<graphVertex>,12<graphVertex>)
-                             InputGraph.CFGEdge(14<graphVertex>,15<graphVertex>)
-                             InputGraph.TerminalEdge(13<graphVertex>,4<terminalSymbol>,6<graphVertex>)
-                             InputGraph.TerminalEdge(10<graphVertex>,5<terminalSymbol>,14<graphVertex>)
-                             
-                             |])
-    
-    let q = RSM(HashSet<_>([0<rsmState>]), HashSet([0<rsmState>]),
-                [|CFGEdge(0<rsmState>,0<rsmState>)
-                  TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                  NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-                  TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
-                  
-                  TerminalEdge(0<rsmState>,2<terminalSymbol>,3<rsmState>)
-                  NonTerminalEdge(3<rsmState>,0<rsmState>,4<rsmState>)
-                  TerminalEdge(4<rsmState>,3<terminalSymbol>,0<rsmState>)
-                  
-                  TerminalEdge(0<rsmState>,4<terminalSymbol>,5<rsmState>)
-                  NonTerminalEdge(5<rsmState>,0<rsmState>,6<rsmState>)
-                  TerminalEdge(6<rsmState>,5<terminalSymbol>,0<rsmState>)
-                  
-                  TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)
-                  TerminalEdge(0<rsmState>,2<terminalSymbol>,0<rsmState>)
-                  TerminalEdge(0<rsmState>,4<terminalSymbol>,0<rsmState>)
-                  |])
-    let reachable,matched = GLL.eval graph startV q [|0<rsmState>|]
-    printfn "Reachable:"
-    reachable |> Seq.iter (printf "%A, ")    
 
 let example9 n startV =
     let callEdges = [|for i in 0 .. n -> InputGraph.TerminalEdge(LanguagePrimitives.Int32WithMeasure i,0<terminalSymbol>,LanguagePrimitives.Int32WithMeasure (i+1)) |]
@@ -274,38 +167,14 @@ let example12_go_hierarchy_allPairs () =
     let reachable,matched = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
     printfn $"Reachable: %A{reachable.Count}"
 *)
-let example13 () =
-    let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,10<terminalSymbol>,1<graphVertex>)|])
-    let startV = [|0<graphVertex>|]
-    let box1 = RSMBox (2<rsmState>, HashSet([4<rsmState>])
-                    , [|
-                        NonTerminalEdge(2<rsmState>,0<rsmState>,5<rsmState>)
-                        TerminalEdge(5<rsmState>,10<terminalSymbol>,4<rsmState>)
-                    |])
-    let box2 = RSMBox (0<rsmState>, HashSet([0<rsmState>]), [||])    
-    let q = RSM([|box1; box2|], box1)
-    let reachable,matched = GLL.eval graph startV q
-    let sppf = matched.ToSPPF(startV,q)
-    printfn $"SPPF: %A{sppf}"
-    printfn $"Reachable: %A{reachable}"
     
 [<EntryPoint>]
 let main argv =   
   
-    //runExample example1
-
-    //example2 ()
-    //example3 ()
-    //example3_5 ()
-    //example3_5_2 ()
-    //example3_5_1 ()
-    //example13 ()
-    //example4 ()
-    //example5 [|1<graphVertex>|]
-    (*example6 ()
-    example7 ()    
-    example8 [|0<graphVertex>; 11<graphVertex>; 6<graphVertex>|]
-    *)//example9 3000 [|1<graphVertex>|]
+    runExample example1
+      
+    //example8 [|0<graphVertex>; 11<graphVertex>; 6<graphVertex>|]
+    //example9 3000 [|1<graphVertex>|]
     //example10_go_hierarchy ()
     (*example11_go_allPairs ()
     *)//example12_go_hierarchy_singleSourceForAll ()
