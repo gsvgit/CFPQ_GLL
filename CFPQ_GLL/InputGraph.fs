@@ -32,7 +32,7 @@ let GRAPH_VERTEX_MAX_VALUE:int<graphVertex> =
     |> int32
     |> LanguagePrimitives.Int32WithMeasure
 let SYMBOL_MAX_VALUE = System.UInt32.MaxValue >>> (32 - BITS_FOR_RSM_STATE)
-let EOF:int<terminalSymbol> = 1000 |> LanguagePrimitives.Int32WithMeasure // int32 SYMBOL_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
+let EOF:int<terminalSymbol> = int32 SYMBOL_MAX_VALUE |> LanguagePrimitives.Int32WithMeasure
 
 let inline private packInputGraphTerminalEdge (targetVertex:int<graphVertex>) (symbol:int<terminalSymbol>) : int64<inputGraphTerminalEdge> =
     if targetVertex > GRAPH_VERTEX_MAX_VALUE

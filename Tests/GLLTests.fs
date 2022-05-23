@@ -16,11 +16,15 @@ let runGLLAndCheckResult graph startV q expected =
 
 let tests =
   let simpleLoopRSMForDyckLanguage =
-    let box = RSMBox (0<rsmState>, HashSet([0<rsmState>]),
+    let box =
+        RSMBox (
+            0<rsmState>,
+            HashSet([0<rsmState>]),
             [|
               TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
               NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-              TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
+              TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
+            |])
     RSM([|box|],box)
     
   testList "GLL CFPQ Tests with SPPF" [
