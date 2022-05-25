@@ -1,7 +1,6 @@
-﻿open System
-open System.Collections.Generic
+﻿open System.Collections.Generic
 open CFPQ_GLL
-open CFPQ_GLL.GSS
+open CFPQ_GLL.BTree
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
@@ -97,7 +96,7 @@ let example9 n startV =
                   TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)|])
     let reachable = GLL.eval graph startV q [|0<rsmState>|]
     printfn $"Reachable: %A{reachable}" 
-    
+    *)
 let loadGraphFromCSV file (callLabelsMappings:Dictionary<_,_>) =
     let edges = ResizeArray<_>()
     System.IO.File.ReadLines file
@@ -111,8 +110,9 @@ let loadGraphFromCSV file (callLabelsMappings:Dictionary<_,_>) =
             edges.Add (InputGraph.TerminalEdge(a.[1] |> int |> LanguagePrimitives.Int32WithMeasure
                                                , callLabelsMappings.[a.[2]] |> snd |> LanguagePrimitives.Int32WithMeasure
                                                , a.[0] |> int |> LanguagePrimitives.Int32WithMeasure))
-        else edges.Add (InputGraph.CFGEdge (a.[0] |> int |> LanguagePrimitives.Int32WithMeasure,
-                                               a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
+        else edges.Add (InputGraph.TerminalEdge (a.[0] |> int |> LanguagePrimitives.Int32WithMeasure,
+                                                 4<terminalSymbol>,
+                                                 a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
             )
     InputGraph <| edges.ToArray()
 
@@ -127,7 +127,7 @@ let defaultMap =
     res.Add("type",(2,3))
     res
 let g1 =
-    RSM(HashSet<_>([0<rsmState>]), HashSet([3<rsmState>]),
+    let box = RSMBox(0<rsmState>, HashSet([3<rsmState>]),
                 [|TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(1<rsmState>,0<terminalSymbol>,3<rsmState>)
@@ -137,48 +137,93 @@ let g1 =
                   NonTerminalEdge(4<rsmState>,0<rsmState>,5<rsmState>)
                   TerminalEdge(4<rsmState>,2<terminalSymbol>,3<rsmState>)
                   TerminalEdge(5<rsmState>,2<terminalSymbol>,3<rsmState>)|])
+    RSM([|box|], box)
+
 let example10_go_hierarchy () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
     nodes
     |> Array.iter (fun n ->
-        let reachable = GLL.eval graph [|n|] g1 [|0<rsmState>|]
+        let reachable = GLL.eval graph [|n|] g1
         printfn $"Reachable: %A{reachable}")
 
 let example11_go_allPairs () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
-    let reachable,matched = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
+    let reachable,matched = GLL.eval graph (graph.AllVertices()) g1
+    matched.Statistics () |> printfn "%A"
     printfn $"Reachable: %A{reachable.Count}"
 
 let example11_go_singleSourceForAll () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go.csv" defaultMap
     for n in graph.AllVertices() do
-        let reachable,matched = GLL.eval graph [|n|] g1 [|0<rsmState>|]
+        let reachable,matched = GLL.eval graph [|n|] g1 
         printfn $"Reachable: %A{reachable.Count}"
         
 let example12_go_hierarchy_singleSourceForAll () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     for n in graph.AllVertices() do
-        let reachable,matched = GLL.eval graph [|n|] g1 [|0<rsmState>|]
+        let reachable,matched = GLL.eval graph [|n|] g1 
         printfn $"Reachable: %A{reachable.Count}"
     
 let example12_go_hierarchy_allPairs () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
-    let reachable,matched = GLL.eval graph (graph.AllVertices()) g1 [|0<rsmState>|]
+    let reachable,matched = GLL.eval graph (graph.AllVertices()) g1
+    matched.Statistics ()
+    |> printfn "%A"
     printfn $"Reachable: %A{reachable.Count}"
-*)
+
+let randomFillDictionary n =
+    let dict = Dictionary<_,_>()
+    let random = System.Random()
+    for i in 0..n do
+        let key = int64 <| random.Next()
+        let value = HashSet<int> ()
+        let flg, v = dict.TryGetValue key
+        if not flg
+        then dict.Add(key,value)
+
+
+let randomFillBTree n =
+    let bTree = BTree()
+    let random = System.Random()
+    for i in 0..n do
+        let key = int64 <| random.Next()
+        let value = HashSet<int> ()
+        let v = bTree.TryGetValue key
+        match v with
+        | Some _ -> ()
+        | None -> bTree.Add(key,value)
     
 [<EntryPoint>]
 let main argv =   
   
-    runExample example1
-      
-    //example8 [|0<graphVertex>; 11<graphVertex>; 6<graphVertex>|]
-    //example9 3000 [|1<graphVertex>|]
-    //example10_go_hierarchy ()
-    (*example11_go_allPairs ()
-    *)//example12_go_hierarchy_singleSourceForAll ()
+    //runExample example1
+    //example10_go_hierarchy()
+    //example11_go_allPairs ()
     //example11_go_singleSourceForAll ()
-    //example12_go_hierarchy_allPairs()
- 
+    let tree= BTree()
+    tree.Add(1L,1.0)
+    tree.Add(2L,2.0)
+    tree.Add(6L,3.0)
+    tree.Add(5L,4.0)
+    tree.Add(4L,5.0)
+    tree.Add(7L,6.0)
+    tree.Add(8L,7.0)
+    tree.Add(3L,8.0)
+    tree.Add(9L,9.0)
+    tree.Add(10L,10.0)
+    printfn "%A" tree
+    
+    let start = System.DateTime.Now 
+    randomFillBTree 10000000
+    printfn $"BTree: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
+    
+    //let start = System.DateTime.Now 
+    //randomFillDictionary 10000000
+    //printfn $"Dictionary: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
+    
+    //example12_go_hierarchy_allPairs ()
+    //example12_go_hierarchy_singleSourceForAll ()
+    //example11_go_singleSourceForAll ()
+      
     0 // return an integer exit code

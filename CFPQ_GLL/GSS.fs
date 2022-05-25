@@ -67,23 +67,23 @@ let inline packDescriptorWithoutGSSVertex (inputPos:int<graphVertex>) (rsmState:
     let _rsmState = int64 rsmState
     (_inputPos ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
     
-let packGSSEdge (targetGSSVertex:int64<gssVertex>) (rsmState:int<rsmState>) : int64<gssEdge> =
+let inline packGSSEdge (targetGSSVertex:int64<gssVertex>) (rsmState:int<rsmState>) : int64<gssEdge> =
     let _targetGSSVertex = (int64 targetGSSVertex) <<< BITS_FOR_RSM_STATE
     let _rsmState = int64 rsmState
     (_targetGSSVertex ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
 
-let packGSSVertex (gssVertex:GSSVertex) : int64<gssVertex> =
+let inline packGSSVertex (gssVertex:GSSVertex) : int64<gssVertex> =
     let _inputPosition = (int64 gssVertex.InputPosition) <<< BITS_FOR_RSM_STATE
     let _rsmState = int64 gssVertex.RSMState
     (_inputPosition ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
 
-let unpackGSSVertex (gssVertex:int64<gssVertex>) =
+let inline unpackGSSVertex (gssVertex:int64<gssVertex>) =
     let gssVertex = int64 gssVertex
     let inputPosition = int32 (gssVertex >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
     let rsmState = int32 (gssVertex &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     GSSVertex (inputPosition, rsmState)
 
-let unpackGSSEdge  (gssEdge:int64<gssEdge>*Option<MatchedRange>) =
+let inline unpackGSSEdge  (gssEdge:int64<gssEdge>*Option<MatchedRange>) =
     let _gssEdge = int64 <| fst gssEdge
     let gssVertex = int64 (_gssEdge >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int64WithMeasure    
     let rsmState = int32 (_gssEdge &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure

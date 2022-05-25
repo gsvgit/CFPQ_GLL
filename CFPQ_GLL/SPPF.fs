@@ -17,7 +17,7 @@ open FSharpx.Collections
 type RangeType =    
     | Terminal of terminal:int<terminalSymbol>
     | NonTerminal of nonTerminal:int<rsmState>
-    | EpsilonNonTerminal of epsiolonNonTerminal:int<rsmState>
+    | EpsilonNonTerminal of epsilonNonTerminal:int<rsmState>
     | Intermediate of intermediatePoint:int64<rangeIntermediatePoint>
     
 [<Struct>]
@@ -175,20 +175,23 @@ type MatchedRanges () =
     member private this.AddMatchedRange (matchedRange: MatchedRange) =
         let rsmRange = packRange matchedRange.RSMRange.StartPosition matchedRange.RSMRange.EndPosition
         let inputRange = packRange matchedRange.InputRange.StartPosition matchedRange.InputRange.EndPosition
-        let rangeInfo = 
-            if not <| ranges.ContainsKey rsmRange
+        let rangeInfo =
+            let exists,dataForRSMRange = ranges.TryGetValue rsmRange
+            if not exists
             then
                 let newInputRangesDict = Dictionary<_,_>()
                 let newRangeInfo = HashSet<_>()
                 newInputRangesDict.Add(inputRange, newRangeInfo)
                 ranges.Add(rsmRange, newInputRangesDict)
                 newRangeInfo
-            elif not <| ranges.[rsmRange].ContainsKey inputRange
-            then
-                let newRangeInfo = HashSet<_>()
-                ranges.[rsmRange].Add(inputRange, newRangeInfo)
-                newRangeInfo
-            else ranges.[rsmRange].[inputRange]
+            else
+                let exists, dataForInputRange = dataForRSMRange.TryGetValue inputRange
+                if not exists
+                then
+                    let newRangeInfo = HashSet<_>()
+                    dataForRSMRange.Add(inputRange, newRangeInfo)
+                    newRangeInfo
+                else dataForInputRange
         
         packRangeInfo matchedRange |> rangeInfo.Add |> ignore      
                     
@@ -208,7 +211,17 @@ type MatchedRanges () =
                                         , RangeType.Intermediate intermediatePoint)
             this.AddMatchedRange newRange
             newRange
-        
+     
+    member this.Statistics() =
+        ranges
+        |> Seq.map (fun kvp -> kvp.Value.Count)
+        |> Array.ofSeq
+        |> Array.sortDescending
+        ,
+        [|for kvp in ranges do
+              for kvp in kvp.Value do
+                  kvp.Value.Count|]
+        |> Array.sortDescending
     member this.ToSPPF(startV, query:RSM) =
         let rangeNodes = ResizeArray<RangeNode>()
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
