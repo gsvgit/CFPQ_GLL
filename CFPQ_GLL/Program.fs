@@ -203,19 +203,29 @@ let main argv =
     //example11_go_singleSourceForAll ()
     let tree= BTree()
     tree.Add(1L,1.0)
-    tree.Add(2L,2.0)
-    tree.Add(6L,3.0)
+    tree.Add(20L,2.0)
+    tree.Add(60L,3.0)
     tree.Add(5L,4.0)
     tree.Add(4L,5.0)
-    tree.Add(7L,6.0)
+    tree.Add(70L,6.0)
     tree.Add(8L,7.0)
     tree.Add(3L,8.0)
-    tree.Add(9L,9.0)
+    tree.Add(90L,9.0)
     tree.Add(10L,10.0)
+    tree.Add(11L,1.0)
+    tree.Add(2L,2.0)
+    tree.Add(6L,3.0)
+    tree.Add(50L,4.0)
+    tree.Add(40L,5.0)
+    tree.Add(7L,6.0)
+    tree.Add(80L,7.0)
+    tree.Add(30L,8.0)
+    tree.Add(9L,9.0)
+    tree.Add(100L,10.0)
     printfn "%A" tree
     
     let start = System.DateTime.Now 
-    randomFillBTree 10000000
+    randomFillBTree 2000000
     printfn $"BTree: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
     
     //let start = System.DateTime.Now 
