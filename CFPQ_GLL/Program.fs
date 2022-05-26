@@ -177,10 +177,11 @@ let randomFillDictionary n =
     let random = System.Random()
     for i in 0..n do
         let key = int64 <| random.Next()
-        let value = HashSet<int> ()
+        let value = HashSet<int> (2000)
         let flg, v = dict.TryGetValue key
         if not flg
         then dict.Add(key,value)
+    dict
 
 
 let randomFillBTree n =
@@ -188,19 +189,24 @@ let randomFillBTree n =
     let random = System.Random()
     for i in 0..n do
         let key = int64 <| random.Next()
-        let value = HashSet<int> ()
+        let value = HashSet<int> (2000)
         let v = bTree.TryGetValue key
         match v with
         | Some _ -> ()
         | None -> bTree.Add(key,value)
+    bTree
     
 [<EntryPoint>]
 let main argv =   
   
     //runExample example1
     //example10_go_hierarchy()
-    //example11_go_allPairs ()
+    example11_go_allPairs ()
     //example11_go_singleSourceForAll ()
+    //example12_go_hierarchy_allPairs ()
+    //example12_go_hierarchy_singleSourceForAll ()
+    
+    (*
     let tree= BTree()
     tree.Add(1L,1.0)
     tree.Add(20L,2.0)
@@ -224,16 +230,26 @@ let main argv =
     tree.Add(100L,10.0)
     printfn "%A" tree
     
+    let c = 10000000
+    
     let start = System.DateTime.Now 
-    randomFillBTree 2000000
+    let bTree = randomFillBTree c
     printfn $"BTree: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
     
-    //let start = System.DateTime.Now 
-    //randomFillDictionary 10000000
-    //printfn $"Dictionary: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
+    let r = System.Random()
+    let start = System.DateTime.Now
+    for i in 0..c do
+        bTree.TryGetValue(int64 <| r.Next())
+    printfn $"BTree find: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
     
-    //example12_go_hierarchy_allPairs ()
-    //example12_go_hierarchy_singleSourceForAll ()
-    //example11_go_singleSourceForAll ()
+    let start = System.DateTime.Now 
+    let dict = randomFillDictionary c
+    printfn $"Dictionary: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
+    
+    let start = System.DateTime.Now
+    for i in 0..c do
+        dict.TryGetValue(int64 <| r.Next())
+    printfn $"Dict find: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
+    *)
       
     0 // return an integer exit code

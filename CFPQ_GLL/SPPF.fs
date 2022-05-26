@@ -170,16 +170,16 @@ let inline unpackMatchedRange (rsmRange:int64<rsmRange>) (inputRange:int64<input
         else int32 rangeInfo |> LanguagePrimitives.Int32WithMeasure |> RangeType.EpsilonNonTerminal     
     MatchedRange(inputRange, rsmRange, rangeType)
 type MatchedRanges () =
-    let ranges : Dictionary<int64<rsmRange>,Dictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
-        Dictionary<_,_>()
-    member private this.AddMatchedRange (matchedRange: MatchedRange) =
+    let ranges : SortedDictionary<int64<rsmRange>,SortedDictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
+        SortedDictionary<_,_>()
+    member this.AddMatchedRange (matchedRange: MatchedRange) =
         let rsmRange = packRange matchedRange.RSMRange.StartPosition matchedRange.RSMRange.EndPosition
         let inputRange = packRange matchedRange.InputRange.StartPosition matchedRange.InputRange.EndPosition
         let rangeInfo =
             let exists,dataForRSMRange = ranges.TryGetValue rsmRange
             if not exists
             then
-                let newInputRangesDict = Dictionary<_,_>()
+                let newInputRangesDict = SortedDictionary<_,_>()
                 let newRangeInfo = HashSet<_>()
                 newInputRangesDict.Add(inputRange, newRangeInfo)
                 ranges.Add(rsmRange, newInputRangesDict)
@@ -198,11 +198,11 @@ type MatchedRanges () =
     member this.AddMatchedRange (leftSubRange: Option<MatchedRange>, rightSubRange: MatchedRange) =
         match leftSubRange with
         | None ->         
-            this.AddMatchedRange rightSubRange
+            //this.AddMatchedRange rightSubRange
             rightSubRange
         | Some leftSubRange ->
-            this.AddMatchedRange rightSubRange
-            this.AddMatchedRange leftSubRange
+            //this.AddMatchedRange rightSubRange
+            //this.AddMatchedRange leftSubRange
             let intermediatePoint = packIntermediatePoint leftSubRange.RSMRange.EndPosition leftSubRange.InputRange.EndPosition
             let newRange = MatchedRange(leftSubRange.InputRange.StartPosition
                                         , rightSubRange.InputRange.EndPosition

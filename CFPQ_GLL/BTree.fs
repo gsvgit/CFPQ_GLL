@@ -85,19 +85,19 @@ type BTree4Node<'value> =
             
             Range0 = range0
             Key0 = key0
-            Value0 = Some value0
+            Value0 = value0
             
             Range1 = range1
             Key1 = key1
-            Value1 = Some value1
+            Value1 = value1
             
             Range2 = range2
             Key2 = key2
-            Value2 = Some value2
+            Value2 = value2
             
             Range3 = range3
             Key3 = key3
-            Value3 = Some value3
+            Value3 = value3
             
             Range4 = range4
             Key4 = System.Int64.MaxValue
@@ -124,7 +124,7 @@ type InsertionResult<'value> =
     val Left: BTree4Node<'value>
     val Right: BTree4Node<'value>
     val Key: int64
-    val Value: 'value
+    val Value: Option<'value>
     
     new (splitted, left, right, key, value) =
         {
@@ -173,7 +173,7 @@ type BTree<'value>(defaultValue) =
             _localLeaf.Range2 <- _localLeaf.Range1            
                 
             _localLeaf.Key0 <- key
-            _localLeaf.Value0 <- Some value
+            _localLeaf.Value0 <- value
             _localLeaf.Range0 <- left
             _localLeaf.Range1 <- right
         elif key < _localLeaf.Key1
@@ -203,7 +203,7 @@ type BTree<'value>(defaultValue) =
             _localLeaf.Range3 <- _localLeaf.Range2
                 
             _localLeaf.Key1 <- key
-            _localLeaf.Value1 <- Some value
+            _localLeaf.Value1 <- value
             _localLeaf.Range1 <- left
             _localLeaf.Range2 <- right
         elif key < _localLeaf.Key2
@@ -229,7 +229,7 @@ type BTree<'value>(defaultValue) =
             _localLeaf.Range4 <- _localLeaf.Range3
                                         
             _localLeaf.Key2 <- key
-            _localLeaf.Value2 <- Some value
+            _localLeaf.Value2 <- value
             _localLeaf.Range2 <- left
             _localLeaf.Range3 <- right
         elif key < _localLeaf.Key3
@@ -251,7 +251,7 @@ type BTree<'value>(defaultValue) =
             _localLeaf.Range5 <- _localLeaf.Range4                        
                                         
             _localLeaf.Key3 <- key
-            _localLeaf.Value3 <- Some value
+            _localLeaf.Value3 <- value
             _localLeaf.Range3 <- left
             _localLeaf.Range4 <- right
         elif key < _localLeaf.Key4
@@ -269,7 +269,7 @@ type BTree<'value>(defaultValue) =
             _localLeaf.Range6 <- _localLeaf.Range5
                                         
             _localLeaf.Key4 <- key
-            _localLeaf.Value4 <- Some value
+            _localLeaf.Value4 <- value
             _localLeaf.Range4 <- left
             _localLeaf.Range5 <- right
         elif key < _localLeaf.Key5
@@ -283,7 +283,7 @@ type BTree<'value>(defaultValue) =
             _localLeaf.Range7 <- _localLeaf.Range6
                                         
             _localLeaf.Key5 <- key
-            _localLeaf.Value5 <- Some value
+            _localLeaf.Value5 <- value
             _localLeaf.Range5 <- left
             _localLeaf.Range6 <- right
         elif key < _localLeaf.Key6
@@ -293,12 +293,12 @@ type BTree<'value>(defaultValue) =
             _localLeaf.Range8 <- _localLeaf.Range7
                                         
             _localLeaf.Key6 <- key
-            _localLeaf.Value6 <- Some value
+            _localLeaf.Value6 <- value
             _localLeaf.Range6 <- left
             _localLeaf.Range7 <- right
         else
             _localLeaf.Key7 <- key
-            _localLeaf.Value7 <- Some value
+            _localLeaf.Value7 <- value
             _localLeaf.Range7 <- left
             _localLeaf.Range8 <- right
         
@@ -314,101 +314,101 @@ type BTree<'value>(defaultValue) =
         elif key < storage.Key0
         then
             let newLeft = BTree4Node<_>(left, key, value, right,
-                                        storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, storage.Range3)
-            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4.Value, storage.Range5,
-                                         storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
-            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3.Value)
+                                        storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, storage.Range3)
+            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4, storage.Range5,
+                                         storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, storage.Range8)
+            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3)
         elif key < storage.Key1
         then
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, left,
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, left,
                                         key, value, right,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, storage.Range3)
-            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4.Value, storage.Range5,
-                                         storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
-            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3.Value)
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, storage.Range3)
+            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4, storage.Range5,
+                                         storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, storage.Range8)
+            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3)
         elif key < storage.Key2
         then
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, left,
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, left,
                                         key, value, right,
-                                        storage.Key2, storage.Value2.Value, storage.Range3)
-            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4.Value, storage.Range5,
-                                         storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
-            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3.Value)
+                                        storage.Key2, storage.Value2, storage.Range3)
+            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4, storage.Range5,
+                                         storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, storage.Range8)
+            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3)
         elif key < storage.Key3
         then
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, left,
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, left,
                                         key, value, right)
-            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4.Value, storage.Range5,
-                                         storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
-            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3.Value)
+            let newRight = BTree4Node<_>(storage.Range4, storage.Key4, storage.Value4, storage.Range5,
+                                         storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, storage.Range8)
+            InsertionResult(true, newLeft, newRight, storage.Key3, storage.Value3)
         elif key < storage.Key4
         then
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, storage.Range3,
-                                        storage.Key3, storage.Value3.Value, left)
-            let newRight = BTree4Node<_>(right, storage.Key4, storage.Value4.Value, storage.Range5,
-                                         storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, storage.Range3,
+                                        storage.Key3, storage.Value3, left)
+            let newRight = BTree4Node<_>(right, storage.Key4, storage.Value4, storage.Range5,
+                                         storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, storage.Range8)
             InsertionResult(true, newLeft, newRight, key, value)
         elif key < storage.Key5
         then
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, storage.Range3,
-                                        storage.Key3, storage.Value3.Value, storage.Range4)
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, storage.Range3,
+                                        storage.Key3, storage.Value3, storage.Range4)
             let newRight = BTree4Node<_>(left, key, value, right,
-                                         storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
-            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4.Value)
+                                         storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, storage.Range8)
+            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4)
         elif key < storage.Key6
         then
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, storage.Range3,
-                                        storage.Key3, storage.Value3.Value, storage.Range4)
-            let newRight = BTree4Node<_>(storage.Range5, storage.Key5, storage.Value5.Value, left,
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, storage.Range3,
+                                        storage.Key3, storage.Value3, storage.Range4)
+            let newRight = BTree4Node<_>(storage.Range5, storage.Key5, storage.Value5, left,
                                          key, value, right,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
-            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4.Value)
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, storage.Range8)
+            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4)
         elif key < storage.Key7
         then
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, storage.Range3,
-                                        storage.Key3, storage.Value3.Value, storage.Range4)
-            let newRight = BTree4Node<_>(storage.Range5, storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, left,
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, storage.Range3,
+                                        storage.Key3, storage.Value3, storage.Range4)
+            let newRight = BTree4Node<_>(storage.Range5, storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, left,
                                          key, value, right, 
-                                         storage.Key7, storage.Value7.Value, storage.Range8)
-            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4.Value)
+                                         storage.Key7, storage.Value7, storage.Range8)
+            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4)
         else
-            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0.Value, storage.Range1,
-                                        storage.Key1, storage.Value1.Value, storage.Range2,
-                                        storage.Key2, storage.Value2.Value, storage.Range3,
-                                        storage.Key3, storage.Value3.Value, storage.Range4)
-            let newRight = BTree4Node<_>(storage.Range5, storage.Key5, storage.Value5.Value, storage.Range6,
-                                         storage.Key6, storage.Value6.Value, storage.Range7,
-                                         storage.Key7, storage.Value7.Value, left,
+            let newLeft = BTree4Node<_>(storage.Range0, storage.Key0, storage.Value0, storage.Range1,
+                                        storage.Key1, storage.Value1, storage.Range2,
+                                        storage.Key2, storage.Value2, storage.Range3,
+                                        storage.Key3, storage.Value3, storage.Range4)
+            let newRight = BTree4Node<_>(storage.Range5, storage.Key5, storage.Value5, storage.Range6,
+                                         storage.Key6, storage.Value6, storage.Range7,
+                                         storage.Key7, storage.Value7, left,
                                          key, value, right)
-            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4.Value)
+            InsertionResult(true, newLeft, newRight, storage.Key4, storage.Value4)
                 
     let rec findLeafAndInsert key value (storage:BTree4Node<_>) =
         match storage.Range0 with
@@ -506,10 +506,10 @@ type BTree<'value>(defaultValue) =
         | None ->
             storage <- Some (BTree4Node<_>(None, key, value, None))
         | Some node ->
-            let insertionResult = findLeafAndInsert key value node
+            let insertionResult = findLeafAndInsert key (Some value) node
             if not insertionResult.Splitted
             then storage <-  Some insertionResult.Left
-            else storage <-  Some (BTree4Node<_>(Some insertionResult.Left, insertionResult.Key, insertionResult.Value, Some insertionResult.Right))
+            else storage <-  Some (BTree4Node<_>(Some insertionResult.Left, insertionResult.Key, insertionResult.Value.Value, Some insertionResult.Right))
          
          
     member this.TryGetValue key =

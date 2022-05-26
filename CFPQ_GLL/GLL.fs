@@ -48,7 +48,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                              , currentDescriptor.RSMState
                              , RangeType.EpsilonNonTerminal currentDescriptor.GSSVertex.RSMState
                         )
-                    matchedRanges.AddMatchedRange(None, newRange) |> ignore
+                    matchedRanges.AddMatchedRange(newRange)
                     newRange
                 | Some range -> range
                                                 
@@ -67,7 +67,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                           , gssEdge.RSMState
                           , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
                         )
-                        
+                    matchedRanges.AddMatchedRange(rightSubRange)   
                     let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
                     Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, Some newRange)
                     |> addDescriptor
@@ -100,7 +100,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                           , edge.State
                           , RangeType.NonTerminal edge.NonTerminalSymbolStartState
                        )
-                                                                                   
+                   matchedRanges.AddMatchedRange(rightSubRange)
                    let leftSubRange = currentDescriptor.MatchedRange
                    let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)                       
                    Descriptor(matchedRange.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, Some newRange) |> addDescriptor)
@@ -122,6 +122,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                             , rsmEdge.State
                             , RangeType.Terminal rsmEdge.TerminalSymbol)
                         
+                    matchedRanges.AddMatchedRange(currentlyMatchedRange)    
                     let newMatchedRange = matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)                        
                     Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, Some newMatchedRange) |> addDescriptor))
     
