@@ -1,5 +1,6 @@
 ﻿open System.Collections.Generic
 open CFPQ_GLL
+open CFPQ_GLL.GLL
 open CFPQ_GLL.GSS
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
@@ -111,13 +112,17 @@ let go() =
   let q = RSM([|box|],box)
   let startV = [|0<graphVertex>|]
   
-  let reachable, matchedRanges = GLL.eval graph startV q
-  let sppf = matchedRanges.ToSPPF(startV, q)
-  let actual = TriplesStoredSPPF sppf
+  let result = GLL.eval graph startV q GLL.AllPaths
   
-  actual.ToDot "1.dot"
-  
-  GLLTests.dumpResultToConsole actual
+  match result with
+  | QueryResult.MatchedRanges ranges ->
+      let sppf = ranges.ToSPPF(startV, q)
+      let actual = TriplesStoredSPPF sppf
+      
+      actual.ToDot "1.dot"
+      
+      GLLTests.dumpResultToConsole actual
+    | _ -> failwith "Unexpected result." 
   
 [<EntryPoint>]
 let main argv =    

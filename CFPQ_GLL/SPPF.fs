@@ -208,6 +208,17 @@ type MatchedRanges () =
             this.AddMatchedRange newRange
             newRange
      
+    member private this.Ranges with get () = ranges
+    member this.UnionWith (newRanges:MatchedRanges) =
+        for range in newRanges.Ranges do
+            if not <| ranges.ContainsKey range.Key
+            then ranges.Add (range.Key, range.Value)
+            else
+                for kvp in range.Value do
+                    if not <| ranges.[range.Key].ContainsKey kvp.Key
+                    then ranges.[range.Key].Add(kvp.Key, kvp.Value)
+                    else ranges.[range.Key].[kvp.Key].UnionWith kvp.Value
+                        
     member this.Statistics() =
         ranges
         |> Seq.map (fun kvp -> kvp.Value.Count)

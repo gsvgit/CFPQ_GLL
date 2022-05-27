@@ -6,8 +6,23 @@ open CFPQ_GLL.GSS
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.SPPF
 open FSharpx.Collections
-    
-let eval (graph:InputGraph) startVertices (query:RSM) =    
+
+
+type Mode =
+    | ReachabilityOnly
+    | AllPaths
+
+[<RequireQualifiedAccess>]
+type QueryResult =
+    | ReachabilityFacts of HashSet<int<graphVertex>*int<graphVertex>>
+    | MatchedRanges of MatchedRanges
+
+let eval (graph:InputGraph) startVertices (query:RSM) mode =
+    let buildSppf =
+        match mode with
+        | ReachabilityOnly -> false
+        | AllPaths -> true
+        
     let reachableVertices = ResizeArray<_>()
     let descriptorToProcess = Stack<_>()
     
@@ -31,7 +46,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                 
         if query.IsFinalState currentDescriptor.RSMState                        
         then
-            if query.IsFinalStateForOriginalStartBox currentDescriptor.RSMState
+            if (not buildSppf) && query.IsFinalStateForOriginalStartBox currentDescriptor.RSMState
             then
                 let startPosition = currentDescriptor.GSSVertex.InputPosition
                 if Array.contains startPosition startVertices
@@ -48,7 +63,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                              , currentDescriptor.RSMState
                              , RangeType.EpsilonNonTerminal currentDescriptor.GSSVertex.RSMState
                         )
-                    matchedRanges.AddMatchedRange(newRange)
+                    if buildSppf then matchedRanges.AddMatchedRange(newRange)
                     newRange
                 | Some range -> range
                                                 
@@ -66,9 +81,12 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                           , gssEdge.RSMState
                           , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
                         )
-                    matchedRanges.AddMatchedRange(rightSubRange)   
-                    let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
-                    Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, Some newRange)
+                    if buildSppf then matchedRanges.AddMatchedRange(rightSubRange)   
+                    let newRange =
+                        if buildSppf
+                        then Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                        else None
+                    Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, newRange)
                     |> addDescriptor
                 )
             
@@ -99,10 +117,13 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                           , edge.State
                           , RangeType.NonTerminal edge.NonTerminalSymbolStartState
                        )
-                   matchedRanges.AddMatchedRange(rightSubRange)
+                   if buildSppf then matchedRanges.AddMatchedRange(rightSubRange)
                    let leftSubRange = currentDescriptor.MatchedRange
-                   let newRange = matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)                       
-                   Descriptor(matchedRange.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, Some newRange) |> addDescriptor)
+                   let newRange =
+                       if buildSppf
+                       then Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                       else None 
+                   Descriptor(matchedRange.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
         )
         
         outgoingTerminalEdgesInRSM
@@ -121,9 +142,12 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                             , rsmEdge.State
                             , RangeType.Terminal rsmEdge.TerminalSymbol)
                         
-                    matchedRanges.AddMatchedRange(currentlyMatchedRange)    
-                    let newMatchedRange = matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)                        
-                    Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, Some newMatchedRange) |> addDescriptor))
+                    if buildSppf then matchedRanges.AddMatchedRange(currentlyMatchedRange)    
+                    let newMatchedRange =
+                        if buildSppf
+                        then Some <| matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
+                        else None
+                    Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor))
     
     let startTime = System.DateTime.Now    
     
@@ -132,5 +156,25 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
         |> handleDescriptor
     
     printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
-        
-    reachableVertices, matchedRanges
+
+    match mode with
+    | ReachabilityOnly -> QueryResult.ReachabilityFacts (HashSet reachableVertices)
+    | AllPaths -> QueryResult.MatchedRanges matchedRanges
+
+let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
+    Array.chunkBySize blockSize startVertices
+    |> Array.Parallel.map (fun startVertices -> eval graph startVertices query mode)
+    |> Array.fold
+           (fun state item ->
+            match (state,item) with
+            | QueryResult.ReachabilityFacts s1, QueryResult.ReachabilityFacts s2 ->
+                s1.UnionWith s2
+                QueryResult.ReachabilityFacts s1 
+            | QueryResult.MatchedRanges s1, QueryResult.MatchedRanges s2 ->
+                s1.UnionWith s2
+                QueryResult.MatchedRanges s1
+            | _ -> failwith "Inconsistent query result!"
+            )
+           (match mode with
+            | ReachabilityOnly -> QueryResult.ReachabilityFacts <| HashSet()
+            | AllPaths -> QueryResult.MatchedRanges <| MatchedRanges())

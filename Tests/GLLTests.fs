@@ -2,6 +2,7 @@ module Tests.GLLTests
 
 open System.Collections.Generic
 open CFPQ_GLL
+open CFPQ_GLL.GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
@@ -20,11 +21,14 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF) =
         )
 
 let runGLLAndCheckResult graph startV q expected =
-    let reachable, matchedRanges = GLL.eval graph startV q
-    let sppf = matchedRanges.ToSPPF(startV, q)
-    let actual = TriplesStoredSPPF sppf
-    Expect.sequenceEqual actual.Nodes (fst expected) "Nodes should be equals."
-    Expect.sequenceEqual actual.Edges (snd expected) "Edges should be equals."
+    let result = GLL.eval graph startV q GLL.AllPaths
+    match result with
+    | QueryResult.MatchedRanges ranges -> 
+        let sppf = ranges.ToSPPF(startV, q)
+        let actual = TriplesStoredSPPF sppf
+        Expect.sequenceEqual actual.Nodes (fst expected) "Nodes should be equals."
+        Expect.sequenceEqual actual.Edges (snd expected) "Edges should be equals."
+    | _ -> failwith "Result should be MatchedRanges"
 
 let tests =
   let simpleLoopRSMForDyckLanguage =
