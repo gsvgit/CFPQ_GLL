@@ -30,8 +30,8 @@ type Descriptor =
     val RSMState: int<rsmState>
     val MatchedRange: Option<MatchedRange>
     new(inputPosition, gssVertex:GSSVertex, rsmState, matchedRange) =
-        if gssVertex.InputPosition = -1<graphVertex>
-        then printfn "Fail!"
+        if inputPosition < 0<graphVertex>
+        then failwithf $"Input position can no be negative. Current position: %i{inputPosition}"
         {
             InputPosition = inputPosition
             GSSVertex = gssVertex

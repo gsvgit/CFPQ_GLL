@@ -197,12 +197,8 @@ type MatchedRanges () =
                     
     member this.AddMatchedRange (leftSubRange: Option<MatchedRange>, rightSubRange: MatchedRange) =
         match leftSubRange with
-        | None ->         
-            //this.AddMatchedRange rightSubRange
-            rightSubRange
+        | None -> rightSubRange
         | Some leftSubRange ->
-            //this.AddMatchedRange rightSubRange
-            //this.AddMatchedRange leftSubRange
             let intermediatePoint = packIntermediatePoint leftSubRange.RSMRange.EndPosition leftSubRange.InputRange.EndPosition
             let newRange = MatchedRange(leftSubRange.InputRange.StartPosition
                                         , rightSubRange.InputRange.EndPosition

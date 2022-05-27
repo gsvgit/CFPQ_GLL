@@ -139,6 +139,18 @@ let g1 =
                   TerminalEdge(5<rsmState>,2<terminalSymbol>,3<rsmState>)|])
     RSM([|box|], box)
 
+let allPairs filePath =
+    let graph = loadGraphFromCSV filePath defaultMap
+    let reachable,matched = GLL.eval graph (graph.AllVertices()) g1
+    matched.Statistics () |> printfn "%A"
+    printfn $"Reachable: %A{reachable.Count}"
+    
+let singleSourceForAll filePath =
+    let graph = loadGraphFromCSV filePath defaultMap
+    for n in graph.AllVertices() do
+        let reachable,matched = GLL.eval graph [|n|] g1 
+        printfn $"Reachable: %A{reachable.Count}"    
+    
 let example10_go_hierarchy () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
@@ -199,9 +211,14 @@ let randomFillBTree n =
 [<EntryPoint>]
 let main argv =   
   
+    if argv.[0] = "ss"
+    then singleSourceForAll argv.[1]
+    elif argv.[0] = "ap"
+    then allPairs argv.[1]
+    else printfn "Unexpected parameters."
     //runExample example1
     //example10_go_hierarchy()
-    example11_go_allPairs ()
+    //example11_go_allPairs ()
     //example11_go_singleSourceForAll ()
     //example12_go_hierarchy_allPairs ()
     //example12_go_hierarchy_singleSourceForAll ()

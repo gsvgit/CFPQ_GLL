@@ -60,8 +60,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) =
                         MatchedRange(
                             currentDescriptor.GSSVertex.InputPosition
                           , currentDescriptor.InputPosition
-                          , //gssEdge.GSSVertex.RSMState
-                            match gssEdge.Info with
+                          , match gssEdge.Info with
                             | None -> gssEdge.GSSVertex.RSMState
                             | Some v -> v.RSMRange.EndPosition
                           , gssEdge.RSMState

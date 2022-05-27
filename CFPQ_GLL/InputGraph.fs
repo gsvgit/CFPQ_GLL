@@ -44,13 +44,13 @@ let inline private packInputGraphTerminalEdge (targetVertex:int<graphVertex>) (s
     then failwithf $"Graph vertex should be less then %A{GRAPH_VERTEX_MAX_VALUE}"
     if symbol > SYMBOL_MAX_VALUE
     then failwithf $"Symbol should be less then %A{SYMBOL_MAX_VALUE}"
-    let _targetGssVertex = (int64 targetVertex) <<< (BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE)
+    let _targetGssVertex = (int64 targetVertex) <<< BITS_FOR_RSM_STATE
     let _symbol = int64 symbol
     (_targetGssVertex ||| _symbol) |> LanguagePrimitives.Int64WithMeasure
    
 let inline unpackInputGraphTerminalEdge (edge:int64<inputGraphTerminalEdge>) =
     let edge = int64 edge
-    let nextVertex = int32 (edge &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
+    let nextVertex = int32 (edge >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) |> LanguagePrimitives.Int32WithMeasure
     InputGraphTerminalEdge(nextVertex, symbol)
     
