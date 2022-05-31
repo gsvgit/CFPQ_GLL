@@ -83,7 +83,7 @@ let main argv =
     then allPairs (int argv.[2]) argv.[3] mode
     else
         printfn "Unexpected parameters."
-        printfn "Usage: [ss|sp] [r|p] blocksize? filepath"
+        printfn "Usage: [ss|ap] [r|p] blocksize? filepath"
     //runExample example1
     //example10_go_hierarchy()
     //example11_go_allPairs ()

@@ -14,16 +14,21 @@ type Mode =
 
 [<RequireQualifiedAccess>]
 type QueryResult =
-    | ReachabilityFacts of HashSet<int<graphVertex>*int<graphVertex>>
+    | ReachabilityFacts of Dictionary<int<graphVertex>,HashSet<int<graphVertex>>>
     | MatchedRanges of MatchedRanges
 
-let eval (graph:InputGraph) startVertices (query:RSM) mode =
+let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
     let buildSppf =
         match mode with
         | ReachabilityOnly -> false
         | AllPaths -> true
         
-    let reachableVertices = ResizeArray<_>()
+    let reachableVertices =
+        let d = Dictionary<_,_>(startVertices.Length)
+        startVertices
+        |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
+        d
+        
     let descriptorToProcess = Stack<_>()
     
     let gss = GSS()
@@ -50,7 +55,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) mode =
             then
                 let startPosition = currentDescriptor.GSSVertex.InputPosition
                 if Array.contains startPosition startVertices
-                then reachableVertices.Add (startPosition, currentDescriptor.InputPosition)
+                then reachableVertices.[startPosition].Add(currentDescriptor.InputPosition) |> ignore
             
             let matchedRange =
                 match currentDescriptor.MatchedRange with             
@@ -158,7 +163,7 @@ let eval (graph:InputGraph) startVertices (query:RSM) mode =
     printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
 
     match mode with
-    | ReachabilityOnly -> QueryResult.ReachabilityFacts (HashSet reachableVertices)
+    | ReachabilityOnly -> QueryResult.ReachabilityFacts reachableVertices
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
 
 let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
@@ -168,7 +173,7 @@ let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
            (fun state item ->
             match (state,item) with
             | QueryResult.ReachabilityFacts s1, QueryResult.ReachabilityFacts s2 ->
-                s1.UnionWith s2
+                for kvp in s2 do s1.Add(kvp.Key, kvp.Value)
                 QueryResult.ReachabilityFacts s1 
             | QueryResult.MatchedRanges s1, QueryResult.MatchedRanges s2 ->
                 s1.UnionWith s2
@@ -176,5 +181,5 @@ let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
             | _ -> failwith "Inconsistent query result!"
             )
            (match mode with
-            | ReachabilityOnly -> QueryResult.ReachabilityFacts <| HashSet()
+            | ReachabilityOnly -> QueryResult.ReachabilityFacts <| Dictionary()
             | AllPaths -> QueryResult.MatchedRanges <| MatchedRanges())
