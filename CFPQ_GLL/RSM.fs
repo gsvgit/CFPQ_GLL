@@ -26,9 +26,13 @@ type RSMNonTerminalEdge =
     val NonTerminalSymbolStartState : int<rsmState>
     new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}
 
+type TerminalEdgesStorage =
+    | Small of array<int64<rsmTerminalEdge>>
+    | Big of SortedDictionary<int<terminalSymbol>,int<rsmState>>
+    
 [<Struct>]
 type RSMVertexContent =
-    val OutgoingTerminalEdges : array<int64<rsmTerminalEdge>>
+    val OutgoingTerminalEdges : TerminalEdgesStorage //array<int64<rsmTerminalEdge>>
     val OutgoingNonTerminalEdges: array<int64<rsmNonTerminalEdge>>
     new (terminalEdges, nonTerminalEdges) =
         {
@@ -134,8 +138,20 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                         )
             )
         mutableVertices
-        |> Seq.iter (fun kvp -> vertices.Add(kvp.Key, RSMVertexContent(kvp.Value.OutgoingTerminalEdges.ToArray()                                                                              
-                                                                              , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
+        |> Seq.iter (fun kvp ->
+              let edges = kvp.Value.OutgoingTerminalEdges.ToArray()
+              let storedEdges =
+                  if edges.Length <= 50
+                  then Small edges
+                  else
+                      let dict = SortedDictionary<_,_>()
+                      for e in edges do
+                          let edge = unpackRSMTerminalEdge e
+                          dict.Add(edge.TerminalSymbol, edge.State)
+                      Big dict
+                          
+              vertices.Add(kvp.Key, RSMVertexContent(storedEdges                                                                              
+              , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
         
     
     do

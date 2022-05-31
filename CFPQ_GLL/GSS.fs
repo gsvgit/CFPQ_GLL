@@ -81,15 +81,15 @@ let inline unpackGSSVertex (gssVertex:int64<gssVertex>) =
     let rsmState = int32 (gssVertex &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     GSSVertex (inputPosition, rsmState)
 
-let inline unpackGSSEdge  (gssEdge:int64<gssEdge>*Option<MatchedRange>) =
-    let _gssEdge = int64 <| fst gssEdge
+let inline unpackGSSEdge  ((edge,range):struct(int64<gssEdge>*Option<MatchedRange>)) =    
+    let _gssEdge = int64 <| edge
     let gssVertex = int64 (_gssEdge >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int64WithMeasure    
     let rsmState = int32 (_gssEdge &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
-    GSSEdge (unpackGSSVertex gssVertex, rsmState, snd gssEdge)
+    GSSEdge (unpackGSSVertex gssVertex, rsmState, range)
     
 [<Struct>]
 type GssVertexContent =
-    val OutputEdges : ResizeArray<int64<gssEdge>*Option<MatchedRange>>
+    val OutputEdges : ResizeArray<struct(int64<gssEdge>*Option<MatchedRange>)>
     val Popped : ResizeArray<MatchedRange>
     val HandledDescriptors : HashSet<int64<descriptorWithoutGSSVertex>>
     new (outputEdges, popped, handledDescriptors) = {OutputEdges = outputEdges; Popped = popped; HandledDescriptors = handledDescriptors}
