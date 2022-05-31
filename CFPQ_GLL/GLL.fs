@@ -7,7 +7,6 @@ open CFPQ_GLL.InputGraph
 open CFPQ_GLL.SPPF
 open FSharpx.Collections
 
-
 type Mode =
     | ReachabilityOnly
     | AllPaths
@@ -68,7 +67,7 @@ let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
                              , currentDescriptor.RSMState
                              , RangeType.EpsilonNonTerminal currentDescriptor.GSSVertex.RSMState
                         )
-                    if buildSppf then matchedRanges.AddMatchedRange(newRange)
+                    if buildSppf then matchedRanges.AddMatchedRange newRange
                     newRange
                 | Some range -> range
                                                 
@@ -86,7 +85,7 @@ let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
                           , gssEdge.RSMState
                           , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
                         )
-                    if buildSppf then matchedRanges.AddMatchedRange(rightSubRange)   
+                    if buildSppf then matchedRanges.AddMatchedRange rightSubRange   
                     let newRange =
                         if buildSppf
                         then Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
@@ -113,38 +112,40 @@ let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
                Descriptor(currentDescriptor.InputPosition, newGSSVertex, edge.NonTerminalSymbolStartState, None)
                |> addDescriptor
                positionsForPops
-               |> ResizeArray.iter (fun matchedRange ->                   
-                   let rightSubRange =
-                       MatchedRange(
-                            matchedRange.InputRange.StartPosition
-                          , matchedRange.InputRange.EndPosition
-                          , currentDescriptor.RSMState
-                          , edge.State
-                          , RangeType.NonTerminal edge.NonTerminalSymbolStartState
-                       )
-                   if buildSppf then matchedRanges.AddMatchedRange(rightSubRange)
-                   let leftSubRange = currentDescriptor.MatchedRange
+               |> ResizeArray.iter (fun matchedRange ->
                    let newRange =
                        if buildSppf
-                       then Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                       then 
+                           let rightSubRange =
+                               MatchedRange(
+                                    matchedRange.InputRange.StartPosition
+                                  , matchedRange.InputRange.EndPosition
+                                  , currentDescriptor.RSMState
+                                  , edge.State
+                                  , RangeType.NonTerminal edge.NonTerminalSymbolStartState
+                               )
+                           matchedRanges.AddMatchedRange rightSubRange
+                           let leftSubRange = currentDescriptor.MatchedRange
+                           Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
                        else None 
                    Descriptor(matchedRange.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
         )
         
-        let handleTerminalEdge (graphEdge:InputGraphTerminalEdge) (rsmEdge:RSMTerminalEdge) =
-            let currentlyMatchedRange =
-                MatchedRange(
-                    currentDescriptor.InputPosition
-                    , graphEdge.Vertex
-                    , currentDescriptor.RSMState
-                    , rsmEdge.State
-                    , RangeType.Terminal rsmEdge.TerminalSymbol)
-                
-            if buildSppf then matchedRanges.AddMatchedRange(currentlyMatchedRange)    
-            let newMatchedRange =
+        let inline handleTerminalEdge (graphEdge:InputGraphTerminalEdge) (rsmEdge:RSMTerminalEdge) =
+            let newMatchedRange =                
                 if buildSppf
-                then Some <| matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
-                else None
+                then
+                    let currentlyMatchedRange =
+                        MatchedRange(
+                            currentDescriptor.InputPosition
+                            , graphEdge.Vertex
+                            , currentDescriptor.RSMState
+                            , rsmEdge.State
+                            , RangeType.Terminal rsmEdge.TerminalSymbol)
+                        
+                    matchedRanges.AddMatchedRange currentlyMatchedRange                    
+                    Some <| matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
+                else None                
             Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor
             
         outgoingTerminalEdgesInGraph
@@ -156,7 +157,7 @@ let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
                     let rsmEdge = unpackRSMTerminalEdge e1
                     if graphEdge.TerminalSymbol = rsmEdge.TerminalSymbol
                     then handleTerminalEdge graphEdge rsmEdge
-                        )
+                    )
             | Big d ->
                 let exists, state =  d.TryGetValue graphEdge.TerminalSymbol
                 if exists

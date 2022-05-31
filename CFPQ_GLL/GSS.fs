@@ -89,10 +89,10 @@ let inline unpackGSSEdge  ((edge,range):struct(int64<gssEdge>*Option<MatchedRang
     
 [<Struct>]
 type GssVertexContent =
-    val OutputEdges : ResizeArray<struct(int64<gssEdge>*Option<MatchedRange>)>
+    val OutgoingEdges : ResizeArray<struct(int64<gssEdge>*Option<MatchedRange>)>
     val Popped : ResizeArray<MatchedRange>
     val HandledDescriptors : HashSet<int64<descriptorWithoutGSSVertex>>
-    new (outputEdges, popped, handledDescriptors) = {OutputEdges = outputEdges; Popped = popped; HandledDescriptors = handledDescriptors}
+    new (outputEdges, popped, handledDescriptors) = {OutgoingEdges = outputEdges; Popped = popped; HandledDescriptors = handledDescriptors}
 
 type GSS() =
     let vertices = Dictionary<int64<gssVertex>,GssVertexContent>()    
@@ -102,7 +102,7 @@ type GSS() =
         if vertices.ContainsKey packedGSSVertex
         then gssVertex
         else
-            vertices.Add(packedGSSVertex, GssVertexContent(ResizeArray<_>(),ResizeArray<_>(), HashSet<_>()))
+            vertices.Add(packedGSSVertex, GssVertexContent(ResizeArray<_>(), ResizeArray<_>(), HashSet<_>()))
             gssVertex
    
     member this.AddEdge (currentGSSVertex:GSSVertex
@@ -118,13 +118,13 @@ type GSS() =
         // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova
         // p.13: "There is at most one call to the create function with the same arguments.
         // Thus no check for duplicate GSS edges is needed."
-        newGSSVertexContent.OutputEdges.Add (newEdge,matchedRange)
+        newGSSVertexContent.OutgoingEdges.Add (newEdge,matchedRange)
         newGSSVertex, newGSSVertexContent.Popped
         
     member this.Pop (currentDescriptor:Descriptor, matchedRange) =
         let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]                
         gssVertexContent.Popped.Add matchedRange         
-        gssVertexContent.OutputEdges
+        gssVertexContent.OutgoingEdges
         |> ResizeArray.map unpackGSSEdge
         
     member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =        
