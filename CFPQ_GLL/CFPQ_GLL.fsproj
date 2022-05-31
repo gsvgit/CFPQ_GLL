@@ -13,8 +13,6 @@
         <Compile Include="SPPF.fs" />
         <Compile Include="GSS.fs" />
         <Compile Include="GLL.fs" />
-        <Compile Include="BTree.fs" />
-        <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
