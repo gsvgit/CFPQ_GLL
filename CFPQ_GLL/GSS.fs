@@ -11,12 +11,6 @@ open FSharpx.Collections
 [<Measure>] type gssEdgeContent
 
 [<Struct>]
-type PoppedPosition =
-    val InputPosition: int<graphVertex>
-    val RSMState: int<rsmState>
-    new (inputPosition, rsmState) = {InputPosition = inputPosition; RSMState = rsmState}
-
-[<Struct>]
 type GSSVertex =
     val InputPosition: int<graphVertex>
     val RSMState: int<rsmState>
@@ -38,10 +32,10 @@ type Descriptor =
         }
 
 [<Struct>]
-type GSSEdge<'info> =
+type GSSEdge =
     val GSSVertex : GSSVertex
     val RSMState : int<rsmState>
-    val Info : 'info
+    val Info : Option<MatchedRange>
     new(gssVertex, rsmState, info) =
         {
             GSSVertex = gssVertex
@@ -64,11 +58,6 @@ let inline packDescriptorWithoutGSSVertex (inputPos:int<graphVertex>) (rsmState:
     let _inputPos = (int64 inputPos) <<< BITS_FOR_RSM_STATE    
     let _rsmState = int64 rsmState
     (_inputPos ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
-    
-let inline packGSSEdge (targetGSSVertex:int64<gssVertex>) (rsmState:int<rsmState>) : int64<gssEdge> =
-    let _targetGSSVertex = (int64 targetGSSVertex) <<< BITS_FOR_RSM_STATE
-    let _rsmState = int64 rsmState
-    (_targetGSSVertex ||| _rsmState) |> LanguagePrimitives.Int64WithMeasure
 
 let inline packGSSVertex (gssVertex:GSSVertex) : int64<gssVertex> =
     let _inputPosition = (int64 gssVertex.InputPosition) <<< BITS_FOR_RSM_STATE
@@ -80,16 +69,10 @@ let inline unpackGSSVertex (gssVertex:int64<gssVertex>) =
     let inputPosition = int32 (gssVertex >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
     let rsmState = int32 (gssVertex &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     GSSVertex (inputPosition, rsmState)
-
-let inline unpackGSSEdge  ((edge,range):struct(int64<gssEdge>*Option<MatchedRange>)) =    
-    let _gssEdge = int64 <| edge
-    let gssVertex = int64 (_gssEdge >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int64WithMeasure    
-    let rsmState = int32 (_gssEdge &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
-    GSSEdge (unpackGSSVertex gssVertex, rsmState, range)
     
 [<Struct>]
 type GssVertexContent =
-    val OutgoingEdges : ResizeArray<struct(int64<gssEdge>*Option<MatchedRange>)>
+    val OutgoingEdges : ResizeArray<GSSEdge>
     val Popped : ResizeArray<MatchedRange>
     val HandledDescriptors : HashSet<int64<descriptorWithoutGSSVertex>>
     new (outputEdges, popped, handledDescriptors) = {OutgoingEdges = outputEdges; Popped = popped; HandledDescriptors = handledDescriptors}
@@ -112,20 +95,19 @@ type GSS() =
                          , matchedRange: Option<MatchedRange>) =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue)
         let newGSSVertexContent = vertices.[packGSSVertex newGSSVertex]
-        let newEdge = packGSSEdge (packGSSVertex currentGSSVertex) rsmStateToReturn
+        let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
         
         // There is no need to check GSS edges duplication.
         // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova
         // p.13: "There is at most one call to the create function with the same arguments.
         // Thus no check for duplicate GSS edges is needed."
-        newGSSVertexContent.OutgoingEdges.Add (newEdge,matchedRange)
+        newGSSVertexContent.OutgoingEdges.Add newEdge
         newGSSVertex, newGSSVertexContent.Popped
         
     member this.Pop (currentDescriptor:Descriptor, matchedRange) =
         let gssVertexContent = vertices.[packGSSVertex currentDescriptor.GSSVertex]                
         gssVertexContent.Popped.Add matchedRange         
         gssVertexContent.OutgoingEdges
-        |> ResizeArray.map unpackGSSEdge
         
     member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =        
         packDescriptorWithoutGSSVertex descriptor.InputPosition descriptor.RSMState

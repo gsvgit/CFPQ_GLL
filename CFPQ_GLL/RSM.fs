@@ -32,7 +32,7 @@ type TerminalEdgesStorage =
     
 [<Struct>]
 type RSMVertexContent =
-    val OutgoingTerminalEdges : TerminalEdgesStorage //array<int64<rsmTerminalEdge>>
+    val OutgoingTerminalEdges : TerminalEdgesStorage
     val OutgoingNonTerminalEdges: array<int64<rsmNonTerminalEdge>>
     new (terminalEdges, nonTerminalEdges) =
         {
@@ -49,8 +49,7 @@ type RSMVertexMutableContent =
             OutgoingTerminalEdges = terminalEdges            
             OutgoingNonTerminalEdges = nonTerminalEdges
         }
-    
-    
+
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES) <<< (2 * BITS_FOR_GRAPH_VERTICES))
 let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES))
 let RSM_VERTEX_MAX_VALUE:int<rsmState> =
@@ -152,8 +151,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                           
               vertices.Add(kvp.Key, RSMVertexContent(storedEdges                                                                              
               , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
-        
-    
+
     do
         addBoxes boxes
         addBoxes [|extensionBox|]
