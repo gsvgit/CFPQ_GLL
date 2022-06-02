@@ -1,19 +1,34 @@
 ﻿open System.Collections.Generic
 open Argu
-open Argu.ArguAttributes
 open CFPQ_GLL
 open CFPQ_GLL.GLL
+open CFPQ_GLL.GSS
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
+open CFPQ_GLL.SPPF
 
 type ArgQueryMode =
     | All_Paths = 0
     | Reachability_Only = 1
+    
+type ArgTaskType =
+    | All_Pairs = 0
+    | Single_Source = 1
+    | Single_Source_Continuously = 2
+    
+type ArgQuery =
+    | G1 = 0
+    | G2 = 1
+    | Geo = 2
+    | Andersen = 3
+    | Java = 4
 
 type Arguments =
     | [<Mandatory>] Graph of string
     | Parallel of int
-    | Mode of ArgQueryMode
+    | [<Mandatory>] Mode of ArgQueryMode
+    | [<Mandatory>] TaskType of ArgTaskType
+    | [<Mandatory>] Query of ArgQuery
     
     interface IArgParserTemplate with
         member this.Usage =
@@ -21,6 +36,8 @@ type Arguments =
             | Graph _ -> "File with graph"
             | Parallel _ -> "Run naive parallel version with block of specified size."
             | Mode _ -> "Mode of query."
+            | TaskType _ -> "Task type."
+            | Query _ -> "Query to evaluate: one of predefined queries."
  
 let loadGraphFromCSV file (callLabelsMappings:Dictionary<_,_>) =
     let edges = ResizeArray<_>()
@@ -92,21 +109,7 @@ let g1 =
                   TerminalEdge(4<rsmState>,2<terminalSymbol>,3<rsmState>)
                   TerminalEdge(5<rsmState>,2<terminalSymbol>,3<rsmState>)|])
     RSM([|box|], box)
-
-let allPairs blockSize filePath mode =
-    let start = System.DateTime.Now 
-    let graph = loadGraphFromCSV filePath defaultMap
-    let res = evalParallel blockSize graph (graph.AllVertices()) g1 mode
-    //matched.Statistics () |> printfn "%A"
-    printfn $"Total processing time: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
-    //printfn $"Reachable: %A{res}"
-    
-let singleSourceForAll filePath mode =
-    let graph = loadGraphFromCSV filePath defaultMap
-    for n in graph.AllVertices() do
-        let result = GLL.eval graph [|n|] g1 mode
-        printfn $"Reachable: %A{result}"    
-    
+  
 let example10_go_hierarchy () =
     let graph = loadGraphFromCSV "/home/gsv/Downloads/go_hierarchy.csv" defaultMap
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
@@ -190,60 +193,70 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
        
     RSM([|alias; pointsTo; flowsTo|], alias)
     
-let runJava evaluator filePath =
-    let graph,mapping = loadJavaGraphFromCSV filePath 
-    let q = javaRsm mapping
-    printfn "Data loaded."
-    printfn $"Vertices: %A{graph.NumberOfVertices()}"
+let runAllPairs parallelBlocks (graph:InputGraph) q mode =     
     let start = System.DateTime.Now
-    let res = evaluator graph (graph.AllVertices()) q
+    match parallelBlocks with
+    | None -> eval graph (graph.AllVertices()) q mode
+    | Some blockSize -> evalParallel blockSize graph (graph.AllVertices()) q mode
+    |> ignore
     printfn $"Total processing time: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
 
+  
+let singleSourceForAllContinuously (graph:InputGraph) q mode =    
+    let mutable gss = GSS()
+    let mutable matchedRanges = MatchedRanges()
+    for n in graph.AllVertices() do
+        let startVertices = [|n|]
+        let reachableVertices =
+            let d = Dictionary<_,_>(startVertices.Length)
+            startVertices
+            |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
+            d
+        let res, newGss = evalFromState reachableVertices gss matchedRanges graph startVertices q mode
+        gss <-newGss 
+        match res with
+        | QueryResult.MatchedRanges ranges -> matchedRanges <- ranges
+        
+let singleSourceForAll (graph:InputGraph) q mode =        
+    for n in graph.AllVertices() do
+        let startVertices = [|n|]        
+        eval graph startVertices q mode |> ignore            
 
 [<EntryPoint>]
 let main argv =
-    let parser = ArgumentParser.Create<_>(programName = "Benchmarks.exe")
+    let parser = ArgumentParser.Create<_>(programName = "dotnet Benchmarks.dll")
     let args = parser.Parse argv
-    let graph = args.GetResult Graph
+       
+    let graph, query =
+        match args.GetResult Query with
+        | ArgQuery.G1 ->
+            let graph = loadGraphFromCSV (args.GetResult Graph) defaultMap
+            graph, g1
+        | ArgQuery.Java ->
+            let graph,mapping = loadJavaGraphFromCSV (args.GetResult Graph)
+            graph, javaRsm mapping
+        | x -> failwithf $"Unexpected query: %A{x}."
+    
+    printfn "Data loaded."
+    printfn $"Vertices: %A{graph.NumberOfVertices()}"
+    
     let mode =
         match args.GetResult Mode with
         | ArgQueryMode.All_Paths -> Mode.AllPaths
         | ArgQueryMode.Reachability_Only -> Mode.ReachabilityOnly
         | x -> failwithf $"Unexpected query mode: %A{x}."
         
-    if args.Contains Parallel
-    then
-        let blockSize = args.GetResult Parallel
-        runJava (fun graph vertices q -> evalParallel blockSize graph vertices q mode) graph
-    else
-        runJava (fun graph vertices q -> eval graph vertices q mode) graph
-    (*let mode =
-         if argv.[1] = "r"
-         then Mode.ReachabilityOnly
-         else Mode.AllPaths    
-    if argv.[0] = "ss"
-    then singleSourceForAll argv.[2] mode
-    elif argv.[0] = "ap"
-    then allPairs (int argv.[2]) argv.[3] mode
-    else
-        printfn "Unexpected parameters."
-        printfn "Usage: [ss|ap] [r|p] blocksize? filepath"
-    *)
-    
-    //let graph,mapping = loadJavaGraphFromCSV "/media/gsv/PSI 2015/graphs/tradebeans/data.csv"
-    //let graph,mapping = loadJavaGraphFromCSV "/media/gsv/PSI 2015/graphs/jython/data.csv"
-    //"/media/gsv/PSI 2015/graphs/pmd/data.csv"
-        
-    (*for n in graph.AllVertices() do
-        printfn $"%i{n}"
-        eval graph [|n|] q AllPaths*)
-        //printfn $"%A{res}"
-    //runExample example1
-    //example10_go_hierarchy()
-    //example11_go_allPairs ()
-    //example11_go_singleSourceForAll ()
-    //example12_go_hierarchy_allPairs ()
-    //example12_go_hierarchy_singleSourceForAll ()
-    
+    match args.GetResult TaskType with
+    | ArgTaskType.All_Pairs ->        
+        let parallelBlockSize =
+            if args.Contains Parallel
+            then Some <| args.GetResult Parallel
+            else None
+        runAllPairs parallelBlockSize graph query mode
+    | ArgTaskType.Single_Source ->        
+        singleSourceForAll graph query mode
+    | ArgTaskType.Single_Source_Continuously ->        
+        singleSourceForAllContinuously graph query mode
+    | x -> failwithf $"Unexpected task type: %A{x}."
       
     0 // return an integer exit code

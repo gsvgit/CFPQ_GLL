@@ -16,22 +16,17 @@ type QueryResult =
     | ReachabilityFacts of Dictionary<int<graphVertex>,HashSet<int<graphVertex>>>
     | MatchedRanges of MatchedRanges
 
-let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
+let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matchedRanges:MatchedRanges) (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
     let buildSppf =
         match mode with
         | ReachabilityOnly -> false
         | AllPaths -> true
         
-    let reachableVertices =
-        let d = Dictionary<_,_>(startVertices.Length)
-        startVertices
-        |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
-        d
+    
         
     let descriptorToProcess = Stack<_>()
     
-    let gss = GSS()
-    let matchedRanges = MatchedRanges()    
+        
     
     let inline addDescriptor (descriptor:Descriptor) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
@@ -175,6 +170,18 @@ let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
     match mode with
     | ReachabilityOnly -> QueryResult.ReachabilityFacts reachableVertices
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
+    , gss
+    
+
+let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
+    let reachableVertices =
+        let d = Dictionary<_,_>(startVertices.Length)
+        startVertices
+        |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
+        d
+    let gss = GSS()
+    let matchedRanges = MatchedRanges()
+    fst <| evalFromState reachableVertices gss matchedRanges (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode
 
 let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
     Array.chunkBySize blockSize startVertices
