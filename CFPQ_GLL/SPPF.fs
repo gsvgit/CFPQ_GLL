@@ -185,10 +185,10 @@ type RangesManagerMsg =
     | Get of AsyncReplyChannel<bool>
 type MatchedRanges () =
     
-    let ranges : Dictionary<int64<rsmRange>,SortedDictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
-        Dictionary<_,_>(RSMRangeEqualityComparer())
+    let ranges : HashSet<MatchedRange> =
+        HashSet<_>()
     
-    let addRange (matchedRange:MatchedRange) =
+    (*let addRange (matchedRange:MatchedRange) =
         let rsmRange = packRange matchedRange.RSMRange.StartPosition matchedRange.RSMRange.EndPosition
         let inputRange = packRange matchedRange.InputRange.StartPosition matchedRange.InputRange.EndPosition
         let rangeInfo =
@@ -210,13 +210,14 @@ type MatchedRanges () =
                 else dataForInputRange
         
         packRangeInfo matchedRange |> rangeInfo.Add |> ignore
+        *)
     let rangesManager = MailboxProcessor.Start(
         fun inbox ->
             let rec loop x =
                 async{
                     let! msg = inbox.Receive()
                     match msg with
-                    | Add matchedRange -> addRange matchedRange
+                    | Add matchedRange -> ranges.Add matchedRange |> ignore
                     | Get ch -> ch.Reply true
                     return! loop x
             }
@@ -224,7 +225,8 @@ type MatchedRanges () =
         )
     
     member this.AddMatchedRange (matchedRange: MatchedRange) =
-         rangesManager.Post (Add matchedRange)
+        // rangesManager.Post (Add matchedRange)
+        ranges.Add matchedRange |> ignore
                     
     member this.AddMatchedRange (leftSubRange: Option<MatchedRange>, rightSubRange: MatchedRange) =
         match leftSubRange with
@@ -239,12 +241,12 @@ type MatchedRanges () =
             this.AddMatchedRange newRange
             newRange
     
-    member this.Get() = rangesManager.PostAndReply(fun ch -> Get ch) 
+    //member this.Get() = rangesManager.PostAndReply Get 
     member private this.Ranges with get () =
-        rangesManager.PostAndReply(fun ch -> Get ch) |> ignore
+        //rangesManager.PostAndReply(fun ch -> Get ch) |> ignore
         ranges
-    member this.UnionWith (newRanges:MatchedRanges) =
-        for range in newRanges.Ranges do
+    member this.UnionWith (newRanges:MatchedRanges) = ()
+       (* for range in newRanges.Ranges do
             if not <| ranges.ContainsKey range.Key
             then ranges.Add (range.Key, range.Value)
             else
@@ -252,8 +254,8 @@ type MatchedRanges () =
                     if not <| ranges.[range.Key].ContainsKey kvp.Key
                     then ranges.[range.Key].Add(kvp.Key, kvp.Value)
                     else ranges.[range.Key].[kvp.Key].UnionWith kvp.Value
-                        
-    member this.Statistics() =
+              *)          
+    (*member this.Statistics() =
         ranges
         |> Seq.map (fun kvp -> kvp.Value.Count)
         |> Array.ofSeq
@@ -262,9 +264,11 @@ type MatchedRanges () =
         [|for kvp in ranges do
               for kvp in kvp.Value do
                   kvp.Value.Count|]
-        |> Array.sortDescending
+        |> Array.sortDescending*)
     member this.ToSPPF(startV, query:RSM) =
         let rangeNodes = ResizeArray<RangeNode>()
+        rangeNodes
+        (*
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
             let rsmRange = packRange rsmStart rsmEnd
             ranges.ContainsKey rsmRange && ranges.[rsmRange].ContainsKey(packRange inputStart inputEnd)
@@ -342,7 +346,7 @@ type MatchedRanges () =
         |> ResizeArray.filter (fun node -> node.RSMStartPosition = query.OriginalStartState
                                            && query.IsFinalStateForOriginalStartBox node.RSMEndPosition
                                            && startV |> Array.contains node.InputStartPosition)
-
+*)
 [<RequireQualifiedAccess>]
 type TriplesStoredSPPFNode =
     | EpsilonNode of int<graphVertex> * int<rsmState>

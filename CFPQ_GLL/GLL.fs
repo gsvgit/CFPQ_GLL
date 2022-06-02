@@ -162,7 +162,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
         descriptorToProcess.Pop()
         |> handleDescriptor
         
-    matchedRanges.Get () |> ignore
+    //matchedRanges.Get () |> ignore
     
     printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
 
