@@ -161,6 +161,8 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
     while descriptorToProcess.Count > 0 do
         descriptorToProcess.Pop()
         |> handleDescriptor
+        
+    matchedRanges.Get () |> ignore
     
     printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
 

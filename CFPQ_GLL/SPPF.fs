@@ -180,11 +180,15 @@ type RSMRangeEqualityComparer() =
         member this.Equals(x:int64<rsmRange>,y:int64<rsmRange>) = x = y
         member this.GetHashCode (x:int64<rsmRange>) = int x + 1       
 
+type RangesManagerMsg =
+    | Add of MatchedRange
+    | Get of AsyncReplyChannel<bool>
 type MatchedRanges () =
     
     let ranges : Dictionary<int64<rsmRange>,SortedDictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
         Dictionary<_,_>(RSMRangeEqualityComparer())
-    member this.AddMatchedRange (matchedRange: MatchedRange) =
+    
+    let addRange (matchedRange:MatchedRange) =
         let rsmRange = packRange matchedRange.RSMRange.StartPosition matchedRange.RSMRange.EndPosition
         let inputRange = packRange matchedRange.InputRange.StartPosition matchedRange.InputRange.EndPosition
         let rangeInfo =
@@ -205,7 +209,22 @@ type MatchedRanges () =
                     newRangeInfo
                 else dataForInputRange
         
-        packRangeInfo matchedRange |> rangeInfo.Add |> ignore      
+        packRangeInfo matchedRange |> rangeInfo.Add |> ignore
+    let rangesManager = MailboxProcessor.Start(
+        fun inbox ->
+            let rec loop x =
+                async{
+                    let! msg = inbox.Receive()
+                    match msg with
+                    | Add matchedRange -> addRange matchedRange
+                    | Get ch -> ch.Reply true
+                    return! loop x
+            }
+            loop 0
+        )
+    
+    member this.AddMatchedRange (matchedRange: MatchedRange) =
+         rangesManager.Post (Add matchedRange)
                     
     member this.AddMatchedRange (leftSubRange: Option<MatchedRange>, rightSubRange: MatchedRange) =
         match leftSubRange with
@@ -219,8 +238,11 @@ type MatchedRanges () =
                                         , RangeType.Intermediate intermediatePoint)
             this.AddMatchedRange newRange
             newRange
-     
-    member private this.Ranges with get () = ranges
+    
+    member this.Get() = rangesManager.PostAndReply(fun ch -> Get ch) 
+    member private this.Ranges with get () =
+        rangesManager.PostAndReply(fun ch -> Get ch) |> ignore
+        ranges
     member this.UnionWith (newRanges:MatchedRanges) =
         for range in newRanges.Ranges do
             if not <| ranges.ContainsKey range.Key
