@@ -22,11 +22,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
         | ReachabilityOnly -> false
         | AllPaths -> true
         
-    
-        
     let descriptorToProcess = Stack<_>()
-    
-        
     
     let inline addDescriptor (descriptor:Descriptor) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
@@ -68,22 +64,23 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                                                 
             gss.Pop(currentDescriptor, matchedRange)            
             |> ResizeArray.iter (
-                fun gssEdge ->                
-                    let leftSubRange = gssEdge.Info
-                    let rightSubRange =           
-                        MatchedRange(
-                            currentDescriptor.GSSVertex.InputPosition
-                          , currentDescriptor.InputPosition
-                          , match gssEdge.Info with
-                            | None -> gssEdge.GSSVertex.RSMState
-                            | Some v -> v.RSMRange.EndPosition
-                          , gssEdge.RSMState
-                          , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
-                        )
-                    if buildSppf then matchedRanges.AddMatchedRange rightSubRange   
+                fun gssEdge ->
                     let newRange =
                         if buildSppf
-                        then Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                        then 
+                            let leftSubRange = gssEdge.Info
+                            let rightSubRange =           
+                                MatchedRange(
+                                    currentDescriptor.GSSVertex.InputPosition
+                                  , currentDescriptor.InputPosition
+                                  , match gssEdge.Info with
+                                    | None -> gssEdge.GSSVertex.RSMState
+                                    | Some v -> v.RSMRange.EndPosition
+                                  , gssEdge.RSMState
+                                  , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
+                                )
+                            matchedRanges.AddMatchedRange rightSubRange   
+                            Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
                         else None
                     Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, newRange)
                     |> addDescriptor
@@ -171,7 +168,6 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
     | ReachabilityOnly -> QueryResult.ReachabilityFacts reachableVertices
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
     , gss
-    
 
 let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
     let reachableVertices =
