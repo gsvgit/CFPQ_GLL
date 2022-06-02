@@ -169,9 +169,21 @@ let inline unpackMatchedRange (rsmRange:int64<rsmRange>) (inputRange:int64<input
         then int32 (rangeInfo &&& ~~~IS_NON_TERMINAL) |> LanguagePrimitives.Int32WithMeasure |> RangeType.NonTerminal
         else int32 rangeInfo |> LanguagePrimitives.Int32WithMeasure |> RangeType.EpsilonNonTerminal     
     MatchedRange(inputRange, rsmRange, rangeType)
+
+type RangeInfoEqualityComparer() =
+    interface IEqualityComparer<int64<rangeInfo>> with
+        member this.Equals(x:int64<rangeInfo>,y:int64<rangeInfo>) = x = y
+        member this.GetHashCode (x:int64<rangeInfo>) = int x
+        
+type RSMRangeEqualityComparer() =
+    interface IEqualityComparer<int64<rsmRange>> with
+        member this.Equals(x:int64<rsmRange>,y:int64<rsmRange>) = x = y
+        member this.GetHashCode (x:int64<rsmRange>) = int x + 1       
+
 type MatchedRanges () =
-    let ranges : SortedDictionary<int64<rsmRange>,SortedDictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
-        SortedDictionary<_,_>()
+    
+    let ranges : Dictionary<int64<rsmRange>,SortedDictionary<int64<inputRange>,HashSet<int64<rangeInfo>>>> =
+        Dictionary<_,_>(RSMRangeEqualityComparer())
     member this.AddMatchedRange (matchedRange: MatchedRange) =
         let rsmRange = packRange matchedRange.RSMRange.StartPosition matchedRange.RSMRange.EndPosition
         let inputRange = packRange matchedRange.InputRange.StartPosition matchedRange.InputRange.EndPosition

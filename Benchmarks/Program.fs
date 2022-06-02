@@ -205,7 +205,11 @@ let runAllPairs parallelBlocks (graph:InputGraph) q mode =
 let singleSourceForAllContinuously (graph:InputGraph) q mode =    
     let mutable gss = GSS()
     let mutable matchedRanges = MatchedRanges()
-    for n in graph.AllVertices() do
+    let vertices =
+        //[|116292<graphVertex>; 116291<graphVertex>; 116293<graphVertex>; 116294<graphVertex>; 116295<graphVertex>; 116296<graphVertex>; 116297<graphVertex>|]
+        graph.AllVertices()
+    for n in vertices do
+        printfn $"V: %i{n}"
         let startVertices = [|n|]
         let reachableVertices =
             let d = Dictionary<_,_>(startVertices.Length)
