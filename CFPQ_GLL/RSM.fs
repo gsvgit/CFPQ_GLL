@@ -7,7 +7,6 @@ open FSharpx.Collections
 
 [<Measure>] type rsmState
 [<Measure>] type rsmTerminalEdge
-[<Measure>] type rsmCFGEdge
 [<Measure>] type rsmNonTerminalEdge
 
 type RSMEdges =    
