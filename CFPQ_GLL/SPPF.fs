@@ -185,9 +185,10 @@ type RangesManagerMsg =
     | Get of AsyncReplyChannel<bool>
 type MatchedRanges () =
     
-    let ranges : HashSet<MatchedRange> =
-        HashSet<_>()
+    let ranges : ResizeArray<HashSet<MatchedRange>> =
+        ResizeArray<_>()
     
+    let blockSize = 10000
     (*let addRange (matchedRange:MatchedRange) =
         let rsmRange = packRange matchedRange.RSMRange.StartPosition matchedRange.RSMRange.EndPosition
         let inputRange = packRange matchedRange.InputRange.StartPosition matchedRange.InputRange.EndPosition
@@ -211,6 +212,7 @@ type MatchedRanges () =
         
         packRangeInfo matchedRange |> rangeInfo.Add |> ignore
         *)
+    (*
     let rangesManager = MailboxProcessor.Start(
         fun inbox ->
             let rec loop x =
@@ -223,10 +225,15 @@ type MatchedRanges () =
             }
             loop 0
         )
-    
+    *)
     member this.AddMatchedRange (matchedRange: MatchedRange) =
-        // rangesManager.Post (Add matchedRange)
-        ranges.Add matchedRange |> ignore
+        //rangesManager.Post (Add matchedRange)
+        let blockId = matchedRange.InputRange.StartPosition / blockSize |> int
+        if blockId >= ranges.Count
+        then ranges.AddRange(Array.init (blockId - ranges.Count + 1) (fun i -> HashSet<_>()))
+        ranges.[blockId].Add matchedRange |> ignore
+            
+            
                     
     member this.AddMatchedRange (leftSubRange: Option<MatchedRange>, rightSubRange: MatchedRange) =
         match leftSubRange with
