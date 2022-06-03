@@ -11,7 +11,7 @@ open Tests
 let config = {FsCheckConfig.defaultConfig with maxTest = 10000}
 
 let properties =
-  testList "FsCheck samples" [
+  testList "Pack-Unpack tests" [
           
     testProperty "unpackGSSVertex - packGSSVertex is identity" <| fun a ->
       if a > 0L<gssVertex> && a <= MAX_VALUE_FOR_GSS_VERTEX
@@ -80,7 +80,7 @@ let go() =
   
   let q = RSM([|box|],box)
   let startV = [|0<graphVertex>|]
-  
+
   let result = GLL.eval graph startV q GLL.AllPaths
   
   match result with
