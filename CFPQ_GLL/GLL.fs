@@ -141,7 +141,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
             Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor
             
         outgoingTerminalEdgesInGraph
-        |> Array.iter (fun e2 ->
+        |> ResizeArray.iter (fun e2 ->
             let graphEdge = unpackInputGraphTerminalEdge e2
             match outgoingTerminalEdgesInRSM with
             | Small a ->

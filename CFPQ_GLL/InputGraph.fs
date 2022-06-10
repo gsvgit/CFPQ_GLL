@@ -1,5 +1,6 @@
 module CFPQ_GLL.InputGraph
 
+open System.Net.NetworkInformation
 open CFPQ_GLL
 
 [<Measure>] type graphVertex
@@ -55,16 +56,18 @@ let inline unpackInputGraphTerminalEdge (edge:int64<inputGraphTerminalEdge>) =
     InputGraphTerminalEdge(nextVertex, symbol)
     
 type InputGraph (edges) =
-    let vertices = System.Collections.Generic.Dictionary<int<graphVertex>,InputGraphVertexContent>()
+    let vertices = System.Collections.Generic.Dictionary<int<graphVertex>,InputGraphVertexMutableContent>()
   
     let sinkVertex = int32 MASK_FOR_INPUT_POSITION |> LanguagePrimitives.Int32WithMeasure 
     
-    do
-        let mutableVertices = System.Collections.Generic.Dictionary<int<graphVertex>,InputGraphVertexMutableContent>()
+    let addEdges edges =
         let addVertex v =
-            if not <| mutableVertices.ContainsKey v
-            then mutableVertices.Add(v,InputGraphVertexMutableContent(ResizeArray<_>()))
-            mutableVertices.[v]
+            if not <| vertices.ContainsKey v
+            then
+                vertices.Add(v,InputGraphVertexMutableContent(ResizeArray<_>()))
+                if v <> sinkVertex
+                then vertices.[v].OutgoingTerminalEdges.Add(packInputGraphTerminalEdge sinkVertex EOF)
+            vertices.[v]
         edges
         |> Array.iter (function                         
                         | TerminalEdge (_from, smb, _to) ->
@@ -73,12 +76,31 @@ type InputGraph (edges) =
                             packInputGraphTerminalEdge _to smb |> vertexContent.OutgoingTerminalEdges.Add
                        )
         addVertex sinkVertex |> ignore
-        mutableVertices
-        |> Seq.iter (fun kvp ->
-            kvp.Value.OutgoingTerminalEdges.Add (packInputGraphTerminalEdge sinkVertex EOF)
-            vertices.Add(kvp.Key, InputGraphVertexContent(kvp.Value.OutgoingTerminalEdges.ToArray())))
+    
+    do addEdges edges
+
+    new () = InputGraph([||])    
     member this.OutgoingTerminalEdges v =
         vertices.[v].OutgoingTerminalEdges    
-    member this.NumberOfVertices () = vertices.Count
+    member this.NumberOfVertices() = vertices.Count
     member this.AllVertices() = vertices.Keys |> Array.ofSeq
+    member this.ToDot(drawSink, file) =
+        seq{
+            yield "digraph InputGraph{"
+            yield "node [shape = plaintext]"
+            
+            for kvp in vertices do
+                for edge in kvp.Value.OutgoingTerminalEdges do
+                    let edge = unpackInputGraphTerminalEdge edge
+                    if edge.Vertex <> sinkVertex || drawSink
+                    then yield $"%i{kvp.Key} -> %i{edge.Vertex} [label=%i{edge.TerminalSymbol}]"
+      
+            yield "}"
+        }
+        |> fun data -> System.IO.File.WriteAllLines(file, data)
+            
+    member this.RemoveOutgoingEdges v = vertices.[v].OutgoingTerminalEdges.Clear()    
+    member this.AddEdges edges =
+        addEdges edges
+        
     
