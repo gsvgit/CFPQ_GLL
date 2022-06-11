@@ -159,6 +159,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     member this.IsFinalStateForOriginalStartBox state = startBox.FinalStates.Contains state
     member this.GetFinalStatesForBoxWithThisStartState startState = finalStatesForBox.[startState]
     member this.OriginalStartState = startBox.StartState
+    member this.OriginalFinalStates = startBox.FinalStates
     member this.OutgoingTerminalEdges v =
         vertices.[v].OutgoingTerminalEdges    
     member this.OutgoingNonTerminalEdges v =

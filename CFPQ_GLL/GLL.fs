@@ -51,7 +51,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                 match currentDescriptor.MatchedRange with             
                 | None ->
                     let newRange =
-                        MatchedRange(
+                        MatchedRangeWithType(
                                currentDescriptor.InputPosition
                              , currentDescriptor.InputPosition
                              , currentDescriptor.RSMState
@@ -70,12 +70,12 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                         then 
                             let leftSubRange = gssEdge.Info
                             let rightSubRange =           
-                                MatchedRange(
+                                MatchedRangeWithType(
                                     currentDescriptor.GSSVertex.InputPosition
                                   , currentDescriptor.InputPosition
                                   , match gssEdge.Info with
                                     | None -> gssEdge.GSSVertex.RSMState
-                                    | Some v -> v.RSMRange.EndPosition
+                                    | Some v -> v.Range.RSMRange.EndPosition
                                   , gssEdge.RSMState
                                   , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
                                 )
@@ -109,9 +109,9 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                        if buildSppf
                        then 
                            let rightSubRange =
-                               MatchedRange(
-                                    matchedRange.InputRange.StartPosition
-                                  , matchedRange.InputRange.EndPosition
+                               MatchedRangeWithType(
+                                    matchedRange.Range.InputRange.StartPosition
+                                  , matchedRange.Range.InputRange.EndPosition
                                   , currentDescriptor.RSMState
                                   , edge.State
                                   , RangeType.NonTerminal edge.NonTerminalSymbolStartState
@@ -120,7 +120,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                            let leftSubRange = currentDescriptor.MatchedRange
                            Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
                        else None 
-                   Descriptor(matchedRange.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
+                   Descriptor(matchedRange.Range.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
         )
         
         let inline handleTerminalEdge (graphEdge:InputGraphTerminalEdge) (rsmEdge:RSMTerminalEdge) =
@@ -128,7 +128,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                 if buildSppf
                 then
                     let currentlyMatchedRange =
-                        MatchedRange(
+                        MatchedRangeWithType(
                             currentDescriptor.InputPosition
                             , graphEdge.Vertex
                             , currentDescriptor.RSMState
@@ -176,7 +176,7 @@ let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
         |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
         d
     let gss = GSS()
-    let matchedRanges = MatchedRanges()
+    let matchedRanges = MatchedRanges(query)
     fst <| evalFromState reachableVertices gss matchedRanges (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode
 
 let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
@@ -195,4 +195,4 @@ let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
             )
            (match mode with
             | ReachabilityOnly -> QueryResult.ReachabilityFacts <| Dictionary()
-            | AllPaths -> QueryResult.MatchedRanges <| MatchedRanges())
+            | AllPaths -> QueryResult.MatchedRanges <| MatchedRanges query)

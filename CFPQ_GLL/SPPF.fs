@@ -92,9 +92,16 @@ and [<Struct>] Range<[<Measure>]'position> =
 type MatchedRange =
     val InputRange : Range<graphVertex>
     val RSMRange : Range<rsmState>
+    new (inputRange, rsmRange) = {InputRange = inputRange; RSMRange = rsmRange}
+    new (inputFrom, inputTo, rsmFrom, rsmTo) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo)}
+
+[<Struct>]
+type MatchedRangeWithType =
+    val Range : MatchedRange
     val RangeType: RangeType
-    new (inputRange, rsmRange, rangeType) = {InputRange = inputRange; RSMRange = rsmRange; RangeType = rangeType}
-    new (inputFrom, inputTo, rsmFrom, rsmTo, rangeType) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo); RangeType = rangeType}
+    new (range, rangeType) = {Range = range; RangeType = rangeType}
+    new (inputRange, rsmRange, rangeType) = {Range = MatchedRange(inputRange, rsmRange); RangeType = rangeType}
+    new (inputFrom, inputTo, rsmFrom, rsmTo, rangeType) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); RangeType = rangeType}
 
 let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_RSM_STATE)
 let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
@@ -110,25 +117,27 @@ let inline unpackIntermediatePoint (inputIntermediatePoint : int64<rangeIntermed
     let _rsmIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
     IntermediatePoint(_rsmIntermediatePoint, _inputIntermediatePoint) 
 
-type MatchedRanges () =
-    let ranges : ResizeArray<HashSet<MatchedRange>> = ResizeArray<_>()
+type MatchedRanges (query:RSM) =
+    let ranges : ResizeArray<HashSet<MatchedRangeWithType>> = ResizeArray<_>()
     let blockSize = 10000
     
-    member this.AddMatchedRange (matchedRange: MatchedRange) =        
-        let blockId = matchedRange.InputRange.StartPosition / blockSize |> int
+    member this.AddMatchedRange (matchedRange: MatchedRangeWithType) =        
+        let blockId = matchedRange.Range.InputRange.StartPosition / blockSize |> int
         if blockId >= ranges.Count
         then ranges.AddRange(Array.init (blockId - ranges.Count + 1) (fun _ -> HashSet<_>()))
         ranges.[blockId].Add matchedRange |> ignore
                     
-    member this.AddMatchedRange (leftSubRange: Option<MatchedRange>, rightSubRange: MatchedRange) =
+    member this.AddMatchedRange (leftSubRange: Option<MatchedRangeWithType>, rightSubRange: MatchedRangeWithType) =
         match leftSubRange with
         | None -> rightSubRange
         | Some leftSubRange ->
-            let intermediatePoint = packIntermediatePoint leftSubRange.RSMRange.EndPosition leftSubRange.InputRange.EndPosition
-            let newRange = MatchedRange(leftSubRange.InputRange.StartPosition
-                                        , rightSubRange.InputRange.EndPosition
-                                        , leftSubRange.RSMRange.StartPosition
-                                        , rightSubRange.RSMRange.EndPosition
+            let intermediatePoint = packIntermediatePoint
+                                        leftSubRange.Range.RSMRange.EndPosition
+                                        leftSubRange.Range.InputRange.EndPosition
+            let newRange = MatchedRangeWithType(leftSubRange.Range.InputRange.StartPosition
+                                        , rightSubRange.Range.InputRange.EndPosition
+                                        , leftSubRange.Range.RSMRange.StartPosition
+                                        , rightSubRange.Range.RSMRange.EndPosition
                                         , RangeType.Intermediate intermediatePoint)
             this.AddMatchedRange newRange
             newRange
@@ -143,18 +152,82 @@ type MatchedRanges () =
            (fun (_this:HashSet<_>) (_new:HashSet<_>) -> _this.UnionWith _new)
            this.Ranges
            newRanges.Ranges
-
-    member this.ToSPPF(startV, query:RSM) =
+    
+    member this.GetShortestDistances (startVertices, finalVertices) =
+        let rangesToTypes = Dictionary<MatchedRange,ResizeArray<RangeType>>()
+        for block in ranges do
+            for range in block do
+                let exists, types = rangesToTypes.TryGetValue range.Range
+                if exists
+                then types.Add range.RangeType
+                else rangesToTypes.Add(range.Range,ResizeArray[|range.RangeType|])
+                
+        let computedShortestDistances = Dictionary<MatchedRange,int>() 
+        let rec computeShortestDistance range =
+            let exists, computedDistance = computedShortestDistances.TryGetValue range
+            if exists
+            then computedDistance
+            else
+                let exists,types = rangesToTypes.TryGetValue range
+                if not exists
+                then System.Int32.MaxValue
+                else 
+                let distance =
+                    [|
+                        for rangeType in types ->
+                            match rangeType with
+                            | RangeType.EpsilonNonTerminal _ -> 0
+                            | RangeType.Terminal _ -> 1
+                            | RangeType.NonTerminal n ->
+                                let finalStates = query.GetFinalStatesForBoxWithThisStartState n
+                                [|
+                                    for finalState in finalStates ->
+                                        MatchedRange (range.InputRange.StartPosition,
+                                                      range.InputRange.EndPosition,
+                                                      n,
+                                                      finalState)
+                                        |> computeShortestDistance
+                                |]
+                                |> Array.min
+                            | RangeType.Intermediate pos -> 
+                                let pos = unpackIntermediatePoint pos
+                                let leftRangeDistance =
+                                    MatchedRange (range.InputRange.StartPosition,
+                                                  pos.InputPosition,
+                                                  range.RSMRange.StartPosition,
+                                                  pos.RSMState)
+                                    |> computeShortestDistance
+                                let rightRangeDistance =
+                                    MatchedRange (pos.InputPosition,
+                                                  range.InputRange.EndPosition,
+                                                  pos.RSMState,
+                                                  range.RSMRange.EndPosition)
+                                    |> computeShortestDistance
+                                leftRangeDistance + rightRangeDistance
+                    |]
+                    |> Array.min
+                computedShortestDistances.Add(range, distance)
+                distance
+        let res = ResizeArray<_>()
+        for startVertex in startVertices do
+            for finalVertex in finalVertices do
+                for finalState in query.OriginalFinalStates do
+                    MatchedRange(startVertex, finalVertex, query.StartState, finalState)
+                    |> computeShortestDistance
+                    |> fun distance -> res.Add (startVertex, finalVertex, distance)
+        res
+        
+    member this.ToSPPF startVertices =
         let rangeNodes = ResizeArray<RangeNode>()
         
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
             
             ranges.[int inputStart / blockSize]
             |> Seq.exists (fun range ->
-                range.InputRange.StartPosition = inputStart
-                && range.InputRange.EndPosition = inputEnd
-                && range.RSMRange.StartPosition = rsmStart
-                && range.RSMRange.EndPosition = rsmEnd)
+                range.Range.InputRange.StartPosition = inputStart
+                && range.Range.InputRange.EndPosition = inputEnd
+                && range.Range.RSMRange.StartPosition = rsmStart
+                && range.Range.RSMRange.EndPosition = rsmEnd)
 
         let getRangeNode inputStart inputEnd rsmStart rsmEnd =            
             let n =
@@ -174,17 +247,17 @@ type MatchedRanges () =
             for range in block do                                    
                 let rangeNode =
                     getRangeNode
-                        range.InputRange.StartPosition
-                        range.InputRange.EndPosition
-                        range.RSMRange.StartPosition
-                        range.RSMRange.EndPosition
+                        range.Range.InputRange.StartPosition
+                        range.Range.InputRange.EndPosition
+                        range.Range.RSMRange.StartPosition
+                        range.Range.RSMRange.EndPosition
                 match range.RangeType with
                 | RangeType.EpsilonNonTerminal n ->
-                    EpsilonNode (range.InputRange.StartPosition, n)
+                    EpsilonNode (range.Range.InputRange.StartPosition, n)
                     |> NonRangeNode.EpsilonNode
                     
                 | RangeType.Terminal t ->
-                    TerminalNode(t, range.InputRange.StartPosition, range.InputRange.EndPosition)
+                    TerminalNode(t, range.Range.InputRange.StartPosition, range.Range.InputRange.EndPosition)
                     |> NonRangeNode.TerminalNode
                     
                 | RangeType.NonTerminal n ->
@@ -192,34 +265,37 @@ type MatchedRanges () =
                         [|
                             for final in query.GetFinalStatesForBoxWithThisStartState n do
                                 if isValidRange
-                                       range.InputRange.StartPosition
-                                       range.InputRange.EndPosition
+                                       range.Range.InputRange.StartPosition
+                                       range.Range.InputRange.EndPosition
                                        n
                                        final
                                 then
                                     yield
                                      getRangeNode
-                                        range.InputRange.StartPosition
-                                        range.InputRange.EndPosition
+                                        range.Range.InputRange.StartPosition
+                                        range.Range.InputRange.EndPosition
                                         n
                                         final
                         |]
-                    NonTerminalNode(n, range.InputRange.StartPosition, range.InputRange.EndPosition,rangeNodes)
+                    NonTerminalNode(n,
+                                    range.Range.InputRange.StartPosition,
+                                    range.Range.InputRange.EndPosition,
+                                    rangeNodes)
                     |> NonRangeNode.NonTerminalNode
                 | RangeType.Intermediate packedIntermediatePoint ->
                     let intermediatePoint = unpackIntermediatePoint packedIntermediatePoint                                                        
                     let leftNode =
                         getRangeNode
-                            range.InputRange.StartPosition
+                            range.Range.InputRange.StartPosition
                             intermediatePoint.InputPosition
-                            range.RSMRange.StartPosition
+                            range.Range.RSMRange.StartPosition
                             intermediatePoint.RSMState
                     let rightNode =
                         getRangeNode
                             intermediatePoint.InputPosition
-                            range.InputRange.EndPosition
+                            range.Range.InputRange.EndPosition
                             intermediatePoint.RSMState
-                            range.RSMRange.EndPosition                                
+                            range.Range.RSMRange.EndPosition                                
                     IntermediateNode(intermediatePoint.RSMState, intermediatePoint.InputPosition, leftNode, rightNode)
                     |> NonRangeNode.IntermediateNode
                 |> rangeNode.IntermediateNodes.Add                
@@ -227,7 +303,7 @@ type MatchedRanges () =
         rangeNodes
         |> ResizeArray.filter (fun node -> node.RSMStartPosition = query.OriginalStartState
                                            && query.IsFinalStateForOriginalStartBox node.RSMEndPosition
-                                           && startV |> Array.contains node.InputStartPosition)
+                                           && startVertices |> Array.contains node.InputStartPosition)
 
 [<RequireQualifiedAccess>]
 type TriplesStoredSPPFNode =
