@@ -204,7 +204,7 @@ let runAllPairs parallelBlocks (graph:InputGraph) q mode =
   
 let singleSourceForAllContinuously (graph:InputGraph) q mode =    
     let mutable gss = GSS()
-    let mutable matchedRanges = MatchedRanges()
+    let mutable matchedRanges = MatchedRanges(q)
     let vertices =
         //[|116292<graphVertex>; 116291<graphVertex>; 116293<graphVertex>; 116294<graphVertex>; 116295<graphVertex>; 116296<graphVertex>; 116297<graphVertex>|]
         graph.AllVertices()
