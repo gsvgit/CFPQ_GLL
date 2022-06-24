@@ -3,11 +3,11 @@ module Tests.InputGraph
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 
-[<Measure>] type graphVertex
+//[<Measure>] type graphVertex
 [<Measure>] type inputGraphTerminalEdge
 
 //[<CustomEquality>]
-type Vertex = int<graphVertex>    
+//type Vertex = int<inputGraphVertex>    
     //member this.Value = v
     
     //override this.ToString() =
@@ -18,22 +18,22 @@ type Vertex = int<graphVertex>
        // y :? Vertex && (y :?> Vertex).Value = v 
 
 type DemoInputGraphEdge =    
-    | TerminalEdge of Vertex*int<terminalSymbol>*Vertex
+    | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>
     
 [<Struct>]
 type InputGraphTerminalEdge =
-    val Vertex : int<graphVertex>
+    val Vertex : int<inputGraphVertex>
     val TerminalSymbol : int<terminalSymbol>
     new (vertex, terminalSymbol) = {Vertex = vertex; TerminalSymbol = terminalSymbol}
 
 [<Struct>]
 type InputGraphVertexMutableContent =
-    val OutgoingTerminalEdges : ResizeArray<InputGraphEdge<Vertex>>    
+    val OutgoingTerminalEdges : ResizeArray<InputGraphEdge>    
     new (terminalEdges) = {OutgoingTerminalEdges = terminalEdges}
 
 
 type InputGraph (edges) =
-    let vertices = System.Collections.Generic.Dictionary<Vertex, InputGraphVertexMutableContent>()
+    let vertices = System.Collections.Generic.Dictionary<int<inputGraphVertex>, InputGraphVertexMutableContent>()
       
     let addVertex v =
         if not <| vertices.ContainsKey v
@@ -53,7 +53,7 @@ type InputGraph (edges) =
 
     new () = InputGraph([||])
     
-    interface IInputGraph<Vertex> with
+    interface IInputGraph with
         member this.GetOutgoingEdges v = vertices.[v].OutgoingTerminalEdges
     
     member this.OutgoingTerminalEdges v =

@@ -11,18 +11,18 @@ open FSharpx.Collections
 [<Measure>] type gssEdgeContent
 
 [<Struct>]
-type GssVertex<'inputVertex> =
-    val InputPosition: 'inputVertex
+type GssVertex =
+    val InputPosition: int<inputGraphVertex>
     val RSMState: int<rsmState>
     new (inputPosition, rsmState) =
         {InputPosition = inputPosition; RSMState = rsmState}
 
 [<Struct>]
-type Descriptor<'inputVertex> =
-    val InputPosition: 'inputVertex
-    val GSSVertex: GssVertex<'inputVertex>
+type Descriptor =
+    val InputPosition: int<inputGraphVertex>
+    val GSSVertex: GssVertex
     val RSMState: int<rsmState>
-    val MatchedRange: Option<MatchedRangeWithType<'inputVertex>>
+    val MatchedRange: Option<MatchedRangeWithType>
     new(inputPosition, gssVertex, rsmState, matchedRange) =
         {
             InputPosition = inputPosition
@@ -32,10 +32,10 @@ type Descriptor<'inputVertex> =
         }
 
 [<Struct>]
-type GSSEdge<'inputVertex> =
-    val GSSVertex : GssVertex<'inputVertex>
+type GSSEdge =
+    val GSSVertex : GssVertex
     val RSMState : int<rsmState>
-    val Info : Option<MatchedRangeWithType<'inputVertex>>
+    val Info : Option<MatchedRangeWithType>
     new(gssVertex, rsmState, info) =
         {
             GSSVertex = gssVertex
@@ -55,10 +55,10 @@ let MAX_VALUE_FOR_GSS_VERTEX:int64<gssVertex> =
     |> LanguagePrimitives.Int64WithMeasure
  
 [<Struct>]
-type GssVertexContent<'inputVertex> =
-    val OutgoingEdges : ResizeArray<GSSEdge<'inputVertex>>
-    val Popped : ResizeArray<MatchedRangeWithType<'inputVertex>>
-    val HandledDescriptors : HashSet<Descriptor<'inputVertex>>
+type GssVertexContent =
+    val OutgoingEdges : ResizeArray<GSSEdge>
+    val Popped : ResizeArray<MatchedRangeWithType>
+    val HandledDescriptors : HashSet<Descriptor>
     new (outputEdges, popped, handledDescriptors) =
         {
             OutgoingEdges = outputEdges
@@ -66,9 +66,9 @@ type GssVertexContent<'inputVertex> =
             HandledDescriptors = handledDescriptors
         }
 
-type GSS<'inputVertex when 'inputVertex: equality> () =
-    let vertices = Dictionary<GssVertex<'inputVertex>,GssVertexContent<'inputVertex>>()    
-    member this.AddNewVertex (inputPosition: 'inputVertex, rsmState:int<rsmState>) =
+type GSS () =
+    let vertices = Dictionary<GssVertex, GssVertexContent>()    
+    member this.AddNewVertex (inputPosition: int<inputGraphVertex>, rsmState:int<rsmState>) =
         let gssVertex = GssVertex(inputPosition, rsmState)
         if vertices.ContainsKey gssVertex
         then gssVertex
@@ -76,11 +76,11 @@ type GSS<'inputVertex when 'inputVertex: equality> () =
             vertices.Add(gssVertex, GssVertexContent(ResizeArray<_>(), ResizeArray<_>(), HashSet<_>()))
             gssVertex
    
-    member this.AddEdge (currentGSSVertex: GssVertex<'inputVertex>
+    member this.AddEdge (currentGSSVertex: GssVertex
                          , rsmStateToReturn: int<rsmState>
-                         , inputPositionToContinue: 'inputVertex
+                         , inputPositionToContinue: int<inputGraphVertex>
                          , rsmStateToContinue: int<rsmState>
-                         , matchedRange: Option<MatchedRangeWithType<'inputVertex>>) =
+                         , matchedRange: Option<MatchedRangeWithType>) =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue)
         let newGSSVertexContent = vertices.[newGSSVertex]
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
@@ -92,14 +92,14 @@ type GSS<'inputVertex when 'inputVertex: equality> () =
         newGSSVertexContent.OutgoingEdges.Add newEdge
         newGSSVertex, newGSSVertexContent.Popped
         
-    member this.Pop (currentDescriptor:Descriptor<'inputVertex>, matchedRange) =
+    member this.Pop (currentDescriptor:Descriptor, matchedRange) =
         let gssVertexContent = vertices.[currentDescriptor.GSSVertex]                
         gssVertexContent.Popped.Add matchedRange         
         gssVertexContent.OutgoingEdges
         
-    member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor<'inputVertex>) =
+    member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =
         vertices.[descriptor.GSSVertex].HandledDescriptors.Contains descriptor
     
-    member this.AddDescriptorToHandled (descriptor:Descriptor<'inputVertex>) =
+    member this.AddDescriptorToHandled (descriptor:Descriptor) =
         vertices.[descriptor.GSSVertex].HandledDescriptors.Add descriptor
         |> ignore

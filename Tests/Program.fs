@@ -11,10 +11,10 @@ let config = {FsCheckConfig.defaultConfig with maxTest = 10000}
 
   
 let go() =
-    let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 0<graphVertex>)
-                             TerminalEdge(0<graphVertex>, 1<terminalSymbol>, 0<graphVertex>)                             
+    let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, 0<terminalSymbol>, 0<inputGraphVertex>)
+                             TerminalEdge(0<inputGraphVertex>, 1<terminalSymbol>, 0<inputGraphVertex>)                             
                            |])
-    let startV = [|0<graphVertex>|]
+    let startV = [|0<inputGraphVertex>|]
     let q = Tests.GLLTests.simpleLoopRSMForDyckLanguage
 
     let result = GLL.eval graph startV q GLL.AllPaths
