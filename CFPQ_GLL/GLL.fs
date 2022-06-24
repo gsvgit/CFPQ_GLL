@@ -12,11 +12,18 @@ type Mode =
     | AllPaths
 
 [<RequireQualifiedAccess>]
-type QueryResult =
-    | ReachabilityFacts of Dictionary<int<graphVertex>,HashSet<int<graphVertex>>>
-    | MatchedRanges of MatchedRanges
+type QueryResult<'inputVertex when 'inputVertex: equality> =
+    | ReachabilityFacts of Dictionary<'inputVertex,HashSet<'inputVertex>>
+    | MatchedRanges of MatchedRanges<'inputVertex>
 
-let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matchedRanges:MatchedRanges) (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
+let evalFromState<'inputVertex when 'inputVertex: equality>
+        (reachableVertices:Dictionary<_,HashSet<_>>)
+        (gss:GSS<'inputVertex>)
+        (matchedRanges:MatchedRanges<'inputVertex>)
+        (graph:IInputGraph<'inputVertex>)
+        (startVertices:array<'inputVertex>)
+        (query:RSM) mode =
+    
     let buildSppf =
         match mode with
         | ReachabilityOnly -> false
@@ -24,7 +31,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
         
     let descriptorToProcess = Stack<_>()
     
-    let inline addDescriptor (descriptor:Descriptor) =
+    let inline addDescriptor (descriptor:Descriptor<'inputVertex>) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
         then descriptorToProcess.Push descriptor 
         
@@ -35,7 +42,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
         |> descriptorToProcess.Push
         )
     
-    let handleDescriptor (currentDescriptor:Descriptor) =
+    let handleDescriptor (currentDescriptor:Descriptor<'inputVertex>) =
        
         gss.AddDescriptorToHandled currentDescriptor
                 
@@ -86,7 +93,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                     |> addDescriptor
                 )
             
-        let outgoingTerminalEdgesInGraph = graph.OutgoingTerminalEdges currentDescriptor.InputPosition        
+        let outgoingTerminalEdgesInGraph = graph.GetOutgoingEdges currentDescriptor.InputPosition        
             
         let outgoingNonTerminalEdgesInRSM = query.OutgoingNonTerminalEdges currentDescriptor.RSMState
         let outgoingTerminalEdgesInRSM = query.OutgoingTerminalEdges currentDescriptor.RSMState       
@@ -123,14 +130,14 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                    Descriptor(matchedRange.Range.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
         )
         
-        let inline handleTerminalEdge (graphEdge:InputGraphTerminalEdge) (rsmEdge:RSMTerminalEdge) =
+        let inline handleTerminalEdge (graphEdge:InputGraphEdge<'inputVertex>) (rsmEdge:RSMTerminalEdge) =
             let newMatchedRange =                
                 if buildSppf
                 then
                     let currentlyMatchedRange =
                         MatchedRangeWithType(
                             currentDescriptor.InputPosition
-                            , graphEdge.Vertex
+                            , graphEdge.TargetVertex
                             , currentDescriptor.RSMState
                             , rsmEdge.State
                             , RangeType.Terminal rsmEdge.TerminalSymbol)
@@ -138,11 +145,9 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                     matchedRanges.AddMatchedRange currentlyMatchedRange                    
                     Some <| matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
                 else None                
-            Descriptor(graphEdge.Vertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor
-            
-        outgoingTerminalEdgesInGraph
-        |> ResizeArray.iter (fun e2 ->
-            let graphEdge = unpackInputGraphTerminalEdge e2
+            Descriptor(graphEdge.TargetVertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor
+        
+        let handleEdge (graphEdge: InputGraphEdge<'inputVertex>) =
             match outgoingTerminalEdgesInRSM with
             | Small a ->
                 a |> Array.iter (fun e1 ->                                    
@@ -154,7 +159,13 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
                 let exists, state =  d.TryGetValue graphEdge.TerminalSymbol
                 if exists
                 then handleTerminalEdge graphEdge (RSMTerminalEdge(state, graphEdge.TerminalSymbol))                
-                )
+                    
+        InputGraphEdge (EOF, currentDescriptor.InputPosition)
+        |> handleEdge
+                                  
+        outgoingTerminalEdgesInGraph
+        |> ResizeArray.iter handleEdge            
+            
         
     let startTime = System.DateTime.Now    
     
@@ -169,7 +180,7 @@ let evalFromState (reachableVertices:Dictionary<_,HashSet<_>>) (gss:GSS) (matche
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
     , gss
 
-let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
+let eval<'inputVertex when 'inputVertex: equality> (graph:IInputGraph<'inputVertex>) (startVertices:array<_>) (query:RSM) mode =
     let reachableVertices =
         let d = Dictionary<_,_>(startVertices.Length)
         startVertices
@@ -177,9 +188,9 @@ let eval (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode =
         d
     let gss = GSS()
     let matchedRanges = MatchedRanges(query)
-    fst <| evalFromState reachableVertices gss matchedRanges (graph:InputGraph) (startVertices:array<_>) (query:RSM) mode
+    fst <| evalFromState reachableVertices gss matchedRanges (graph:IInputGraph<'inputVertex>) (startVertices:array<_>) (query:RSM) mode
 
-let evalParallel blockSize (graph:InputGraph) startVertices (query:RSM) mode =
+let evalParallel blockSize (graph:IInputGraph<'inputVertex>) startVertices (query:RSM) mode =
     Array.chunkBySize blockSize startVertices
     |> Array.Parallel.map (fun startVertices -> eval graph startVertices query mode)
     |> Array.fold

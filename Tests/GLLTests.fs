@@ -7,7 +7,9 @@ open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
 open Expecto
+open Tests.InputGraph
 
+(*
 let dumpResultToConsole (sppf:TriplesStoredSPPF) =
     sppf.Edges |> Seq.iter (fun (x,y) -> printf $"(%i{x},%i{y}); ")
     sppf.Nodes
@@ -19,106 +21,109 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF) =
         | TriplesStoredSPPFNode.RangeNode (_posFrom, _posTo, _rsmFrom, _rsmTo) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.RangeNode (%i{_posFrom}<graphVertex>,%i{_posTo}<graphVertex>,%i{_rsmFrom}<rsmState>,%i{_rsmTo}<rsmState>))"
         | TriplesStoredSPPFNode.IntermediateNode (_pos, _rsm) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.IntermediateNode (%i{_pos}<graphVertex>,%i{_rsm}<rsmState>))"
         )
+*)
 
 let runGLLAndCheckResult graph startV q expected =
-    let result = GLL.eval graph startV q GLL.AllPaths
+    let result = eval graph startV q AllPaths
     match result with
-    | QueryResult.MatchedRanges ranges -> 
+    | QueryResult.MatchedRanges ranges ->
         let sppf = ranges.ToSPPF startV
         let actual = TriplesStoredSPPF sppf
         Expect.sequenceEqual actual.Nodes (fst expected) "Nodes should be equals."
         Expect.sequenceEqual actual.Edges (snd expected) "Edges should be equals."
     | _ -> failwith "Result should be MatchedRanges"
 
-let tests =
-  let simpleLoopRSMForDyckLanguage =
+let simpleLoopRSMForDyckLanguage =
     let box =
         RSMBox (
             0<rsmState>,
             HashSet([0<rsmState>]),
             [|
-              TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-              NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-              TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
+              RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+              RSM.NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+              RSM.TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
             |])
     RSM([|box|],box)
+    
+let tests =  
     
   testList "GLL CFPQ Tests with SPPF" [
     testCase "Empty graph, Epsilon-only RSM" <| fun () ->
         let graph = InputGraph([||])
         let startV = [|0<graphVertex>|]
+        graph.AddVertex startV.[0]
         let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[||])
         let q = RSM([|box|],box)
         let expected =
           let nodes = Dictionary<_,_>()
-          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(1, TriplesStoredSPPFNode.EpsilonNode (0<graphVertex>,0<rsmState>))
           let edges = ResizeArray<_>([|(0,1)|])
           (nodes,edges)
         runGLLAndCheckResult graph startV q expected
       
     testCase "Two loops with common vertex, simple loop RSM for Dyck language" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)
-                                 InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,0<graphVertex>)                             
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 0<graphVertex>)
+                                 TerminalEdge(0<graphVertex>, 1<terminalSymbol>, 0<graphVertex>)                             
                                |])
         let startV = [|0<graphVertex>|]
         let q = simpleLoopRSMForDyckLanguage
         let expected =
           let nodes = Dictionary<_,_>()
-          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(1, TriplesStoredSPPFNode.EpsilonNode (0<graphVertex>,0<rsmState>))
           nodes.Add(2, TriplesStoredSPPFNode.IntermediateNode (0<graphVertex>,2<rsmState>))
-          nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,0<rsmState>,2<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,0<rsmState>,2<rsmState>))
           nodes.Add(4, TriplesStoredSPPFNode.IntermediateNode (0<graphVertex>,1<rsmState>))
-          nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,0<rsmState>,1<rsmState>))
-          nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,0<terminalSymbol>,0<graphVertex>))
-          nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,1<rsmState>,2<rsmState>))
-          nodes.Add(8, TriplesStoredSPPFNode.NonTerminalNode (0<graphVertex>,0<rsmState>,0<graphVertex>))
-          nodes.Add(9, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,2<rsmState>,0<rsmState>))
-          nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,1<terminalSymbol>,0<graphVertex>))
+          nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,0<rsmState>,1<rsmState>))
+          nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,0<terminalSymbol>, 0<graphVertex>))
+          nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,1<rsmState>,2<rsmState>))
+          nodes.Add(8, TriplesStoredSPPFNode.NonTerminalNode (0<graphVertex>,0<rsmState>, 0<graphVertex>))
+          nodes.Add(9, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,2<rsmState>,0<rsmState>))
+          nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,1<terminalSymbol>, 0<graphVertex>))
           let edges = ResizeArray<_>([|(0,1); (0,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (8,0); (2,9); (9,10)|])
           (nodes,edges)
         runGLLAndCheckResult graph startV q expected
     
     testCase "Minimal worst case, simple loop RSM for Dyck language" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)                             
-                                 InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 0<graphVertex>)                             
+                                 TerminalEdge(0<graphVertex>, 1<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(1<graphVertex>, 1<terminalSymbol>, 0<graphVertex>) |])
         let startV = [|0<graphVertex>|]
         let q = simpleLoopRSMForDyckLanguage
         let expected =
           let nodes = Dictionary<_,_>()
-          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(1, TriplesStoredSPPFNode.EpsilonNode (0<graphVertex>,0<rsmState>))
           nodes.Add(2, TriplesStoredSPPFNode.IntermediateNode (1<graphVertex>,2<rsmState>))
-          nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,1<graphVertex>,0<rsmState>,2<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 1<graphVertex>,0<rsmState>,2<rsmState>))
           nodes.Add(4, TriplesStoredSPPFNode.IntermediateNode (0<graphVertex>,1<rsmState>))
-          nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,0<rsmState>,1<rsmState>))
-          nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,0<terminalSymbol>,0<graphVertex>))
-          nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,1<graphVertex>,1<rsmState>,2<rsmState>))
-          nodes.Add(8, TriplesStoredSPPFNode.NonTerminalNode (0<graphVertex>,0<rsmState>,1<graphVertex>))
-          nodes.Add(9, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,1<graphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,0<rsmState>,1<rsmState>))
+          nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,0<terminalSymbol>, 0<graphVertex>))
+          nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 1<graphVertex>,1<rsmState>,2<rsmState>))
+          nodes.Add(8, TriplesStoredSPPFNode.NonTerminalNode (0<graphVertex>,0<rsmState>, 1<graphVertex>))
+          nodes.Add(9, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 1<graphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(10, TriplesStoredSPPFNode.IntermediateNode (0<graphVertex>,2<rsmState>))
-          nodes.Add(11, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,0<rsmState>,2<rsmState>))
+          nodes.Add(11, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,0<rsmState>,2<rsmState>))
           nodes.Add(12, TriplesStoredSPPFNode.IntermediateNode (0<graphVertex>,1<rsmState>))
-          nodes.Add(13, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,0<graphVertex>,1<rsmState>,2<rsmState>))
-          nodes.Add(14, TriplesStoredSPPFNode.NonTerminalNode (0<graphVertex>,0<rsmState>,0<graphVertex>))
-          nodes.Add(15, TriplesStoredSPPFNode.RangeNode (0<graphVertex>,1<graphVertex>,2<rsmState>,0<rsmState>))
-          nodes.Add(16, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,1<terminalSymbol>,1<graphVertex>))
-          nodes.Add(17, TriplesStoredSPPFNode.RangeNode (1<graphVertex>,0<graphVertex>,2<rsmState>,0<rsmState>))
-          nodes.Add(18, TriplesStoredSPPFNode.TerminalNode (1<graphVertex>,1<terminalSymbol>,0<graphVertex>))
+          nodes.Add(13, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 0<graphVertex>,1<rsmState>,2<rsmState>))
+          nodes.Add(14, TriplesStoredSPPFNode.NonTerminalNode (0<graphVertex>,0<rsmState>, 0<graphVertex>))
+          nodes.Add(15, TriplesStoredSPPFNode.RangeNode (0<graphVertex>, 1<graphVertex>,2<rsmState>,0<rsmState>))
+          nodes.Add(16, TriplesStoredSPPFNode.TerminalNode (0<graphVertex>,1<terminalSymbol>, 1<graphVertex>))
+          nodes.Add(17, TriplesStoredSPPFNode.RangeNode (1<graphVertex>, 0<graphVertex>,2<rsmState>,0<rsmState>))
+          nodes.Add(18, TriplesStoredSPPFNode.TerminalNode (1<graphVertex>, 1<terminalSymbol>, 0<graphVertex>))
           let edges = ResizeArray<_>([|(0,1); (0,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (8,9); (9,10); (10,11)
                                        (11,12); (12,5); (12,13); (13,14); (14,0); (10,15); (15,16); (2,17); (17,18)|])
           (nodes,edges)
         runGLLAndCheckResult graph startV q expected
         
     testCase "Second worst case, simple loop RSM for Dyck language" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-                                 InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,0<graphVertex>)
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>,0<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(1<graphVertex>,0<terminalSymbol>, 2<graphVertex>)
+                                 TerminalEdge(2<graphVertex>,0<terminalSymbol>, 0<graphVertex>)
                                  
-                                 InputGraph.TerminalEdge(0<graphVertex>,1<terminalSymbol>,3<graphVertex>)
-                                 InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,0<graphVertex>) |])
+                                 TerminalEdge(0<graphVertex>,1<terminalSymbol>, 3<graphVertex>)
+                                 TerminalEdge(3<graphVertex>,1<terminalSymbol>, 0<graphVertex>) |])
         
         let startV = [|0<graphVertex>|]
         let q = simpleLoopRSMForDyckLanguage
@@ -191,10 +196,10 @@ let tests =
         runGLLAndCheckResult graph startV q expected
         
     testCase "Two concatenated linear pairs of brackets, simple loop RSM for Dyck language" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,2<graphVertex>)
-                                 InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
-                                 InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,4<graphVertex>) |])
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(1<graphVertex>, 1<terminalSymbol>, 2<graphVertex>)
+                                 TerminalEdge(2<graphVertex>, 0<terminalSymbol>, 3<graphVertex>)
+                                 TerminalEdge(3<graphVertex>, 1<terminalSymbol>, 4<graphVertex>) |])
         let startV = [|0<graphVertex>|]
         let q = simpleLoopRSMForDyckLanguage
         let expected =
@@ -234,10 +239,10 @@ let tests =
         runGLLAndCheckResult graph startV q expected
         
     testCase "Linear nested brackets, simple loop RSM for Dyck language" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-                                 InputGraph.TerminalEdge(2<graphVertex>,1<terminalSymbol>,3<graphVertex>)
-                                 InputGraph.TerminalEdge(3<graphVertex>,1<terminalSymbol>,4<graphVertex>) |])
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
+                                 TerminalEdge(2<graphVertex>, 1<terminalSymbol>, 3<graphVertex>)
+                                 TerminalEdge(3<graphVertex>, 1<terminalSymbol>, 4<graphVertex>) |])
         let startV = [|0<graphVertex>|]
         let q = simpleLoopRSMForDyckLanguage
         let expected =
@@ -273,12 +278,12 @@ let tests =
         runGLLAndCheckResult graph startV q expected
         
     testCase "Complex nested linear brackets, simple loop RSM for Dyck language" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-                                 InputGraph.TerminalEdge(2<graphVertex>,1<terminalSymbol>,3<graphVertex>)
-                                 InputGraph.TerminalEdge(3<graphVertex>,0<terminalSymbol>,4<graphVertex>)
-                                 InputGraph.TerminalEdge(4<graphVertex>,1<terminalSymbol>,5<graphVertex>)
-                                 InputGraph.TerminalEdge(5<graphVertex>,1<terminalSymbol>,6<graphVertex>)
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
+                                 TerminalEdge(2<graphVertex>, 1<terminalSymbol>, 3<graphVertex>)
+                                 TerminalEdge(3<graphVertex>, 0<terminalSymbol>, 4<graphVertex>)
+                                 TerminalEdge(4<graphVertex>, 1<terminalSymbol>, 5<graphVertex>)
+                                 TerminalEdge(5<graphVertex>, 1<terminalSymbol>, 6<graphVertex>)
                                |])
         let startV = [|0<graphVertex>|]
         let q = simpleLoopRSMForDyckLanguage
@@ -330,9 +335,9 @@ let tests =
         runGLLAndCheckResult graph startV q expected
         
     testCase "One edge linear graph, one edge linear RSM" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)|])
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)|])
         let startV = [|0<graphVertex>|]
-        let box = RSMBox(0<rsmState>, HashSet([1<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)|])
+        let box = RSMBox(0<rsmState>, HashSet([1<rsmState>]),[|RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)|])
         let q = RSM([|box|],box)
         let expected =
           let nodes = Dictionary<_,_>()
@@ -343,9 +348,9 @@ let tests =
         runGLLAndCheckResult graph startV q expected
 
     testCase "One edge linear graph, one edge loop RSM" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)|])
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)|])
         let startV = [|0<graphVertex>|]
-        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
+        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
         let q = RSM([|box|], box)
         let expected =
           let nodes = Dictionary<_,_>()
@@ -358,9 +363,9 @@ let tests =
         runGLLAndCheckResult graph startV q expected
         
     testCase "One edge loop graph, one edge loop RSM" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,0<graphVertex>)|])
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 0<graphVertex>)|])
         let startV = [|0<graphVertex>|]
-        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
+        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
         let q = RSM([|box|], box)
         let expected =
           let nodes = Dictionary<_,_>()
@@ -375,11 +380,11 @@ let tests =
         let graph =
             InputGraph(
                 [|
-                    InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                    InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+                    TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+                    TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
                 |])
         let startV = [|0<graphVertex>|]
-        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|])
+        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|])
         let q = RSM([|box|], box)
         let expected =
           let nodes = Dictionary<_,_>()
@@ -399,12 +404,12 @@ let tests =
         let graph =
             InputGraph(
                 [|
-                    InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
+                    TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
                 |]
                 )
         let startV = [|0<graphVertex>|]
         let box1 = RSMBox(0<rsmState>, HashSet([1<rsmState>]),[|NonTerminalEdge(0<rsmState>,2<rsmState>,1<rsmState>)|])
-        let box2 = RSMBox(2<rsmState>, HashSet([3<rsmState>]),[|TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)|])
+        let box2 = RSMBox(2<rsmState>, HashSet([3<rsmState>]),[|RSM.TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)|])
         let q = RSM([|box1; box2|], box1)
         let expected =
           let nodes = Dictionary<_,_>()
@@ -417,8 +422,8 @@ let tests =
         runGLLAndCheckResult graph startV q expected
         
     testCase "Two edges linear graph with one pair of brackets, simple loop RSM for Dyck language" <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(1<graphVertex>,1<terminalSymbol>,2<graphVertex>) |])
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(1<graphVertex>, 1<terminalSymbol>, 2<graphVertex>) |])
         let startV = [|0<graphVertex>|]        
         let q = simpleLoopRSMForDyckLanguage
         let expected =
@@ -443,18 +448,18 @@ let tests =
             
     testCase "Graph with branch, RSM with nonterminal, nodes reusing" <| fun () ->
         let graph = InputGraph([|
-            InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-            InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-            InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
-            InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,4<graphVertex>)
-            InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+            TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+            TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
+            TerminalEdge(2<graphVertex>, 0<terminalSymbol>, 3<graphVertex>)
+            TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 4<graphVertex>)
+            TerminalEdge(4<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
         |])
         let startV = [|0<graphVertex>|]
         let box = RSMBox(0<rsmState>, HashSet([2<rsmState>]),
                          [|
-                           TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
-                           NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-                           TerminalEdge(0<rsmState>,0<terminalSymbol>,2<rsmState>)
+                           RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                           RSM.NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                           RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,2<rsmState>)
                          |]) 
         let q = RSM([|box|], box)
         
@@ -513,14 +518,14 @@ let tests =
         
     testCase "Graph with branch, RSM is loop DFA, nodes reusing" <| fun () ->
         let graph = InputGraph([|
-            InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-            InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-            InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
-            InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,4<graphVertex>)
-            InputGraph.TerminalEdge(4<graphVertex>,0<terminalSymbol>,2<graphVertex>)
+            TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+            TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
+            TerminalEdge(2<graphVertex>, 0<terminalSymbol>, 3<graphVertex>)
+            TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 4<graphVertex>)
+            TerminalEdge(4<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
         |])
         let startV = [|0<graphVertex>|]
-        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
+        let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
         let q = RSM([|box|], box)
         
         let expected =
@@ -550,47 +555,47 @@ let tests =
         runGLLAndCheckResult graph startV q expected
         
     testCase "Minimal example of interprocedural control flow." <| fun () ->
-        let graph = InputGraph([|InputGraph.TerminalEdge(0<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(1<graphVertex>,0<terminalSymbol>,4<graphVertex>)
-                                 InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,1<graphVertex>)
-                                 InputGraph.TerminalEdge(2<graphVertex>,0<terminalSymbol>,3<graphVertex>)
-                                 InputGraph.TerminalEdge(5<graphVertex>,0<terminalSymbol>,2<graphVertex>)
-                                 InputGraph.TerminalEdge(4<graphVertex>,1<terminalSymbol>,6<graphVertex>)
-                                 InputGraph.TerminalEdge(10<graphVertex>,2<terminalSymbol>,5<graphVertex>)
+        let graph = InputGraph([|TerminalEdge(0<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(1<graphVertex>, 0<terminalSymbol>, 4<graphVertex>)
+                                 TerminalEdge(2<graphVertex>, 0<terminalSymbol>, 1<graphVertex>)
+                                 TerminalEdge(2<graphVertex>, 0<terminalSymbol>, 3<graphVertex>)
+                                 TerminalEdge(5<graphVertex>, 0<terminalSymbol>, 2<graphVertex>)
+                                 TerminalEdge(4<graphVertex>, 1<terminalSymbol>, 6<graphVertex>)
+                                 TerminalEdge(10<graphVertex>,2<terminalSymbol>, 5<graphVertex>)
                                  
-                                 InputGraph.TerminalEdge(6<graphVertex>,0<terminalSymbol>,7<graphVertex>)
-                                 InputGraph.TerminalEdge(7<graphVertex>,0<terminalSymbol>,9<graphVertex>)
-                                 InputGraph.TerminalEdge(8<graphVertex>,0<terminalSymbol>,9<graphVertex>)
-                                 InputGraph.TerminalEdge(9<graphVertex>,0<terminalSymbol>,10<graphVertex>)
-                                 InputGraph.TerminalEdge(7<graphVertex>,3<terminalSymbol>,6<graphVertex>)
-                                 InputGraph.TerminalEdge(10<graphVertex>,4<terminalSymbol>,8<graphVertex>)
+                                 TerminalEdge(6<graphVertex>, 0<terminalSymbol>,7<graphVertex>)
+                                 TerminalEdge(7<graphVertex>, 0<terminalSymbol>,9<graphVertex>)
+                                 TerminalEdge(8<graphVertex>, 0<terminalSymbol>,9<graphVertex>)
+                                 TerminalEdge(9<graphVertex>, 0<terminalSymbol>,10<graphVertex>)
+                                 TerminalEdge(7<graphVertex>, 3<terminalSymbol>,6<graphVertex>)
+                                 TerminalEdge(10<graphVertex>,4<terminalSymbol>,8<graphVertex>)
                                  
-                                 InputGraph.TerminalEdge(11<graphVertex>,0<terminalSymbol>,12<graphVertex>)
-                                 InputGraph.TerminalEdge(12<graphVertex>,0<terminalSymbol>,13<graphVertex>)
-                                 InputGraph.TerminalEdge(14<graphVertex>,0<terminalSymbol>,12<graphVertex>)
-                                 InputGraph.TerminalEdge(14<graphVertex>,0<terminalSymbol>,15<graphVertex>)
-                                 InputGraph.TerminalEdge(13<graphVertex>,5<terminalSymbol>,6<graphVertex>)
-                                 InputGraph.TerminalEdge(10<graphVertex>,6<terminalSymbol>,14<graphVertex>)
+                                 TerminalEdge(11<graphVertex>, 0<terminalSymbol>, 12<graphVertex>)
+                                 TerminalEdge(12<graphVertex>, 0<terminalSymbol>, 13<graphVertex>)
+                                 TerminalEdge(14<graphVertex>, 0<terminalSymbol>, 12<graphVertex>)
+                                 TerminalEdge(14<graphVertex>, 0<terminalSymbol>, 15<graphVertex>)
+                                 TerminalEdge(13<graphVertex>, 5<terminalSymbol>, 6<graphVertex>)
+                                 TerminalEdge(10<graphVertex>, 6<terminalSymbol>, 14<graphVertex>)
                                  
                                  |])
         
         let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),
-                    [|TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)
-                      TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
-                      NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
-                      TerminalEdge(2<rsmState>,2<terminalSymbol>,0<rsmState>)
+                    [|RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)
+                      RSM.TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
+                      RSM.NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                      RSM.TerminalEdge(2<rsmState>,2<terminalSymbol>,0<rsmState>)
                       
-                      TerminalEdge(0<rsmState>,3<terminalSymbol>,3<rsmState>)
-                      NonTerminalEdge(3<rsmState>,0<rsmState>,4<rsmState>)
-                      TerminalEdge(4<rsmState>,4<terminalSymbol>,0<rsmState>)
+                      RSM.TerminalEdge(0<rsmState>,3<terminalSymbol>,3<rsmState>)
+                      RSM.NonTerminalEdge(3<rsmState>,0<rsmState>,4<rsmState>)
+                      RSM.TerminalEdge(4<rsmState>,4<terminalSymbol>,0<rsmState>)
                       
-                      TerminalEdge(0<rsmState>,5<terminalSymbol>,5<rsmState>)
-                      NonTerminalEdge(5<rsmState>,0<rsmState>,6<rsmState>)
-                      TerminalEdge(6<rsmState>,6<terminalSymbol>,0<rsmState>)
+                      RSM.TerminalEdge(0<rsmState>,5<terminalSymbol>,5<rsmState>)
+                      RSM.NonTerminalEdge(5<rsmState>,0<rsmState>,6<rsmState>)
+                      RSM.TerminalEdge(6<rsmState>,6<terminalSymbol>,0<rsmState>)
                       
-                      TerminalEdge(0<rsmState>,1<terminalSymbol>,0<rsmState>)
-                      TerminalEdge(0<rsmState>,3<terminalSymbol>,0<rsmState>)
-                      TerminalEdge(0<rsmState>,5<terminalSymbol>,0<rsmState>)
+                      RSM.TerminalEdge(0<rsmState>,1<terminalSymbol>,0<rsmState>)
+                      RSM.TerminalEdge(0<rsmState>,3<terminalSymbol>,0<rsmState>)
+                      RSM.TerminalEdge(0<rsmState>,5<terminalSymbol>,0<rsmState>)
                       
                       |])
         
