@@ -6,7 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Common.fs" />
         <Compile Include="InputGraph.fs" />
         <Compile Include="RSM.fs" />
         <Compile Include="SPPF.fs" />

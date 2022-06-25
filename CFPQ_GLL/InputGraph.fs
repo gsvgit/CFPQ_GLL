@@ -1,8 +1,8 @@
 module CFPQ_GLL.InputGraph
 
-open CFPQ_GLL
 
-type [<Measure>] inputGraphVertex
+[<Measure>] type inputGraphVertex
+[<Measure>] type terminalSymbol
 
 [<Struct>]
 type InputGraphEdge =

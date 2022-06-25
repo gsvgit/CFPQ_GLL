@@ -3,10 +3,10 @@ open Argu
 open CFPQ_GLL
 open CFPQ_GLL.GLL
 open CFPQ_GLL.GSS
-//open CFPQ_GLL.InputGraph
 open Tests.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
+open CFPQ_GLL.InputGraph
 
 type ArgQueryMode =
     | All_Paths = 0

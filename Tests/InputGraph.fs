@@ -2,7 +2,6 @@ module Tests.InputGraph
 
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
-
 [<Measure>] type inputGraphTerminalEdge
 
 type DemoInputGraphEdge =    
