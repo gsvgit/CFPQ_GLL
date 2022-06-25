@@ -110,7 +110,6 @@ let evalFromState
         
         outgoingNonTerminalEdgesInRSM
         |> Array.iter (fun edge ->
-               let edge = unpackRSMNonTerminalEdge edge
                let newGSSVertex, positionsForPops =
                     gss.AddEdge(currentDescriptor.GSSVertex
                                 , edge.State
@@ -160,8 +159,7 @@ let evalFromState
         let handleEdge (graphEdge: InputGraphEdge) =
             match outgoingTerminalEdgesInRSM with
             | Small a ->
-                a |> Array.iter (fun e1 ->                                    
-                    let rsmEdge = unpackRSMTerminalEdge e1
+                a |> Array.iter (fun rsmEdge ->
                     if graphEdge.TerminalSymbol = rsmEdge.TerminalSymbol
                     then handleTerminalEdge graphEdge rsmEdge
                     )

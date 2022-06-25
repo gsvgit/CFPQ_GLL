@@ -6,8 +6,6 @@ open CFPQ_GLL.InputGraph
 open FSharpx.Collections
 
 [<Measure>] type rsmState
-[<Measure>] type rsmTerminalEdge
-[<Measure>] type rsmNonTerminalEdge
 
 type RSMEdges =    
     | TerminalEdge of int<rsmState>*int<terminalSymbol>*int<rsmState>
@@ -26,13 +24,13 @@ type RSMNonTerminalEdge =
     new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}
 
 type TerminalEdgesStorage =
-    | Small of array<int64<rsmTerminalEdge>>
+    | Small of array<RSMTerminalEdge>
     | Big of SortedDictionary<int<terminalSymbol>,int<rsmState>>
     
 [<Struct>]
 type RSMVertexContent =
     val OutgoingTerminalEdges : TerminalEdgesStorage
-    val OutgoingNonTerminalEdges: array<int64<rsmNonTerminalEdge>>
+    val OutgoingNonTerminalEdges: array<RSMNonTerminalEdge>
     new (terminalEdges, nonTerminalEdges) =
         {
             OutgoingTerminalEdges = terminalEdges            
@@ -41,51 +39,13 @@ type RSMVertexContent =
     
 [<Struct>]
 type RSMVertexMutableContent =
-    val OutgoingTerminalEdges : ResizeArray<int64<rsmTerminalEdge>>    
-    val OutgoingNonTerminalEdges: ResizeArray<int64<rsmNonTerminalEdge>>
+    val OutgoingTerminalEdges : ResizeArray<RSMTerminalEdge>    
+    val OutgoingNonTerminalEdges: ResizeArray<RSMNonTerminalEdge>
     new (terminalEdges, nonTerminalEdges) =
         {
             OutgoingTerminalEdges = terminalEdges            
             OutgoingNonTerminalEdges = nonTerminalEdges
         }
-
-let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES) <<< (2 * BITS_FOR_GRAPH_VERTICES))
-let MASK_FOR_INPUT_SYMBOL = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES))
-let RSM_VERTEX_MAX_VALUE:int<rsmState> =
-    System.UInt32.MaxValue >>> (32 - BITS_FOR_RSM_STATE)
-    |> int
-    |> fun x -> x - 1
-    |> LanguagePrimitives.Int32WithMeasure
-
-let inline private packRSMTerminalOrNonTerminalEdge (targetVertex:int<rsmState>) (symbol:int) : int64 =
-    if targetVertex > RSM_VERTEX_MAX_VALUE
-    then failwithf $"RSM vertex should be less then %A{RSM_VERTEX_MAX_VALUE}"
-    if symbol > int32 RSM_VERTEX_MAX_VALUE
-    then failwithf $"Symbol should be less then %A{RSM_VERTEX_MAX_VALUE}"
-    
-    let _targetVertex = (int64 targetVertex) <<< BITS_FOR_RSM_STATE
-    let _symbol = int64 symbol
-    (_targetVertex ||| _symbol)
-
-
-let inline packRSMTerminalEdge (targetVertex:int<rsmState>) (symbol:int<terminalSymbol>) : int64<rsmTerminalEdge> =
-    packRSMTerminalOrNonTerminalEdge targetVertex (int symbol) |> LanguagePrimitives.Int64WithMeasure
-
-let inline packRSMNonTerminalEdge (targetVertex:int<rsmState>) (nonTerminalSymbolStartState:int<rsmState>) : int64<rsmNonTerminalEdge> =
-    packRSMTerminalOrNonTerminalEdge targetVertex (int nonTerminalSymbolStartState) |> LanguagePrimitives.Int64WithMeasure
-    
-let inline unpackRSMTerminalOrNonTerminalEdge (edge:int64) =
-    let nextVertex = int32 (edge >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
-    let symbol = int32 (edge &&& MASK_FOR_INPUT_SYMBOL) |> LanguagePrimitives.Int32WithMeasure   
-    nextVertex, symbol
-
-let inline unpackRSMTerminalEdge (edge:int64<rsmTerminalEdge>) =
-    let nextVertex, symbol = unpackRSMTerminalOrNonTerminalEdge (int64 edge)
-    RSMTerminalEdge(nextVertex, symbol)
-    
-let inline unpackRSMNonTerminalEdge (edge:int64<rsmNonTerminalEdge>) =
-    let nextVertex, symbol = unpackRSMTerminalOrNonTerminalEdge (int64 edge)
-    RSMNonTerminalEdge(nextVertex, symbol)    
 
 type RSMBox(startState:int<rsmState>, finalStates:HashSet<int<rsmState>>, transitions) =
     member this.StartState = startState
@@ -96,7 +56,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let vertices = Dictionary<int<rsmState>,RSMVertexContent>()
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM = RSM_VERTEX_MAX_VALUE
+    let startStateOfExtendedRSM = System.Int32.MaxValue - 1 |> LanguagePrimitives.Int32WithMeasure
         
     let extensionBox =
         let originalStartState = startBox.StartState        
@@ -128,11 +88,11 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                     | TerminalEdge (_from, smb, _to) ->
                         let vertexContent = addVertex _from
                         addVertex _to |> ignore
-                        packRSMTerminalEdge _to smb |> vertexContent.OutgoingTerminalEdges.Add
+                        RSMTerminalEdge(_to, smb) |> vertexContent.OutgoingTerminalEdges.Add
                     | NonTerminalEdge (_from, _nonTerminalStartState, _to) ->
                         let vertexContent = addVertex _from
                         addVertex _to |> ignore
-                        packRSMNonTerminalEdge _to _nonTerminalStartState |> vertexContent.OutgoingNonTerminalEdges.Add
+                        RSMNonTerminalEdge(_to, _nonTerminalStartState) |> vertexContent.OutgoingNonTerminalEdges.Add
                         )
             )
         mutableVertices
@@ -143,8 +103,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                   then Small edges
                   else
                       let dict = SortedDictionary<_,_>()
-                      for e in edges do
-                          let edge = unpackRSMTerminalEdge e
+                      for edge in edges do
                           dict.Add(edge.TerminalSymbol, edge.State)
                       Big dict
                           
