@@ -34,11 +34,21 @@ let evalFromState
     let inline addDescriptor (descriptor:Descriptor) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
         then descriptorToProcess.Push descriptor 
-        
+
+    let emptyRange =
+        MatchedRangeWithType
+            (
+                    -1<inputGraphVertex>
+                  , -1<inputGraphVertex>
+                  , -1<rsmState>
+                  , -1<rsmState>
+                  , RangeType.Empty
+               )
+
     startVertices
     |> Array.iter (fun v ->        
         let gssVertex = gss.AddNewVertex(v, query.StartState)            
-        Descriptor(v, gssVertex, query.StartState, None)
+        Descriptor(v, gssVertex, query.StartState, emptyRange)
         |> descriptorToProcess.Push
         )
     
@@ -55,8 +65,8 @@ let evalFromState
                 then reachableVertices.[startPosition].Add(currentDescriptor.InputPosition) |> ignore
             
             let matchedRange =
-                match currentDescriptor.MatchedRange with             
-                | None ->
+                match currentDescriptor.MatchedRange.RangeType with             
+                | RangeType.Empty ->
                     let newRange =
                         MatchedRangeWithType(
                                currentDescriptor.InputPosition
@@ -67,7 +77,7 @@ let evalFromState
                         )
                     if buildSppf then matchedRanges.AddMatchedRange newRange
                     newRange
-                | Some range -> range
+                | _ -> currentDescriptor.MatchedRange
                                                 
             gss.Pop(currentDescriptor, matchedRange)            
             |> ResizeArray.iter (
@@ -80,15 +90,15 @@ let evalFromState
                                 MatchedRangeWithType(
                                     currentDescriptor.GSSVertex.InputPosition
                                   , currentDescriptor.InputPosition
-                                  , match gssEdge.Info with
-                                    | None -> gssEdge.GSSVertex.RSMState
-                                    | Some v -> v.Range.RSMRange.EndPosition
+                                  , match gssEdge.Info.RangeType with
+                                    | RangeType.Empty -> gssEdge.GSSVertex.RSMState
+                                    | _ -> gssEdge.Info.Range.RSMRange.EndPosition
                                   , gssEdge.RSMState
                                   , RangeType.NonTerminal currentDescriptor.GSSVertex.RSMState
                                 )
                             matchedRanges.AddMatchedRange rightSubRange   
-                            Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
-                        else None
+                            matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                        else emptyRange
                     Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, newRange)
                     |> addDescriptor
                 )
@@ -108,7 +118,7 @@ let evalFromState
                                 , edge.NonTerminalSymbolStartState
                                 , currentDescriptor.MatchedRange)
                
-               Descriptor(currentDescriptor.InputPosition, newGSSVertex, edge.NonTerminalSymbolStartState, None)
+               Descriptor(currentDescriptor.InputPosition, newGSSVertex, edge.NonTerminalSymbolStartState, emptyRange)
                |> addDescriptor
                positionsForPops
                |> ResizeArray.iter (fun matchedRange ->
@@ -125,8 +135,8 @@ let evalFromState
                                )
                            matchedRanges.AddMatchedRange rightSubRange
                            let leftSubRange = currentDescriptor.MatchedRange
-                           Some <| matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
-                       else None 
+                           matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                       else emptyRange 
                    Descriptor(matchedRange.Range.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
         )
         
@@ -143,8 +153,8 @@ let evalFromState
                             , RangeType.Terminal rsmEdge.TerminalSymbol)
                         
                     matchedRanges.AddMatchedRange currentlyMatchedRange                    
-                    Some <| matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
-                else None                
+                    matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
+                else emptyRange                
             Descriptor(graphEdge.TargetVertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor
         
         let handleEdge (graphEdge: InputGraphEdge) =

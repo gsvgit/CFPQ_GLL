@@ -85,7 +85,8 @@ type RangeType =
     | Terminal of terminal:int<terminalSymbol>
     | NonTerminal of nonTerminal:int<rsmState>
     | EpsilonNonTerminal of epsilonNonTerminal:int<rsmState>
-    | Intermediate of intermediatePoint: IntermediatePoint    
+    | Intermediate of intermediatePoint: IntermediatePoint
+    | Empty
     
 [<Struct>]
 type MatchedRange =
@@ -122,15 +123,15 @@ type MatchedRanges (query:RSM) =
     let blockSize = 10000
     
     member this.AddMatchedRange (matchedRange: MatchedRangeWithType) =        
-        let blockId = hash matchedRange.Range.InputRange.StartPosition / blockSize |> abs
+        let blockId = int matchedRange.Range.InputRange.StartPosition / blockSize 
         if blockId >= ranges.Count
         then ranges.AddRange(Array.init (blockId - ranges.Count + 1) (fun _ -> HashSet<_>()))
         ranges.[blockId].Add matchedRange |> ignore
                     
-    member this.AddMatchedRange (leftSubRange: Option<MatchedRangeWithType>, rightSubRange: MatchedRangeWithType) =
-        match leftSubRange with
-        | None -> rightSubRange
-        | Some leftSubRange ->
+    member this.AddMatchedRange (leftSubRange: MatchedRangeWithType, rightSubRange: MatchedRangeWithType) =
+        match leftSubRange.RangeType with
+        | RangeType.Empty -> rightSubRange
+        | _ ->
             let intermediatePoint = IntermediatePoint(
                                         leftSubRange.Range.RSMRange.EndPosition
                                         , leftSubRange.Range.InputRange.EndPosition)
@@ -221,7 +222,7 @@ type MatchedRanges (query:RSM) =
         
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
             
-            ranges.[hash inputStart / blockSize |> abs]
+            ranges.[int inputStart / blockSize]
             |> Seq.exists (fun range ->
                 range.Range.InputRange.StartPosition = inputStart
                 && range.Range.InputRange.EndPosition = inputEnd
