@@ -3,19 +3,7 @@ module Tests.InputGraph
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 
-//[<Measure>] type graphVertex
 [<Measure>] type inputGraphTerminalEdge
-
-//[<CustomEquality>]
-//type Vertex = int<inputGraphVertex>    
-    //member this.Value = v
-    
-    //override this.ToString() =
-    //    string v
-    
-    //override this.GetHashCode() = int v
-    //override this.Equals(y: obj) =
-       // y :? Vertex && (y :?> Vertex).Value = v 
 
 type DemoInputGraphEdge =    
     | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>

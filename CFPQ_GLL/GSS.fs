@@ -6,9 +6,6 @@ open CFPQ_GLL.SPPF
 open FSharpx.Collections
 
 [<Measure>] type gssVertex
-[<Measure>] type gssEdge
-[<Measure>] type descriptorWithoutGSSVertex
-[<Measure>] type gssEdgeContent
 
 [<Struct>]
 type GssVertex =
@@ -53,17 +50,6 @@ type GSSEdge =
             Info = info
         }
 
-// gssEdge = |gssVertex|rsmState|
-// gssVertex = |...|InputPosition|rsmState|
-let MASK_FOR_GSS_VERTEX = int64 ((System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES) <<< BITS_FOR_RSM_STATE)
-let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> (2 * BITS_FOR_GRAPH_VERTICES))
-
-let MAX_VALUE_FOR_GSS_VERTEX:int64<gssVertex> =
-    System.UInt64.MaxValue >>> (64 - BITS_FOR_GRAPH_VERTICES - BITS_FOR_RSM_STATE)
-    |> int64
-    |> fun x -> x - 1L
-    |> LanguagePrimitives.Int64WithMeasure
- 
 [<Struct>]
 type GssVertexContent =
     val OutgoingEdges : ResizeArray<GSSEdge>

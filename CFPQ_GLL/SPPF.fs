@@ -103,24 +103,9 @@ type MatchedRangeWithType =
     new (inputRange, rsmRange, rangeType) = {Range = MatchedRange(inputRange, rsmRange); RangeType = rangeType}
     new (inputFrom, inputTo, rsmFrom, rsmTo, rangeType) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); RangeType = rangeType}
 
-let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_RSM_STATE)
-let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
-
-(*let inline packIntermediatePoint (rsmIntermediatePoint:int<rsmState>) (inputIntermediatePoint:int<graphVertex>) : int64<rangeIntermediatePoint> =
-    let _inputIntermediatePoint = (int64 inputIntermediatePoint) <<< BITS_FOR_RSM_STATE
-    let _rsmIntermediatePoint = int64 rsmIntermediatePoint
-    (_rsmIntermediatePoint ||| _inputIntermediatePoint) |> LanguagePrimitives.Int64WithMeasure
-
-let inline unpackIntermediatePoint (inputIntermediatePoint : int64<rangeIntermediatePoint>) =
-    let inputIntermediatePoint = int64 inputIntermediatePoint
-    let _inputIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
-    let _rsmIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
-    IntermediatePoint(_rsmIntermediatePoint, _inputIntermediatePoint) 
-*)
-
 type MatchedRanges (query:RSM) =
     let ranges : ResizeArray<HashSet<MatchedRangeWithType>> = ResizeArray<_>()
-    let blockSize = 10000
+    let blockSize = 1000
     
     member this.AddMatchedRange (matchedRange: MatchedRangeWithType) =        
         let blockId = int matchedRange.Range.InputRange.StartPosition / blockSize 
@@ -177,6 +162,7 @@ type MatchedRanges (query:RSM) =
                     [|
                         for rangeType in types ->
                             match rangeType with
+                            | RangeType.Empty -> failwith "Empty range in shortest path."
                             | RangeType.EpsilonNonTerminal _ -> 0
                             | RangeType.Terminal _ -> 1
                             | RangeType.NonTerminal n ->
@@ -252,6 +238,7 @@ type MatchedRanges (query:RSM) =
                         range.Range.RSMRange.StartPosition
                         range.Range.RSMRange.EndPosition
                 match range.RangeType with
+                | RangeType.Empty -> failwith "Empty range in sppf construction."
                 | RangeType.EpsilonNonTerminal n ->
                     EpsilonNode (range.Range.InputRange.StartPosition, n)
                     |> NonRangeNode.EpsilonNode
