@@ -32,6 +32,16 @@ type Descriptor =
         }
 
 [<Struct>]
+type DescriptorPart =
+    val InputPosition: int<inputGraphVertex>
+    val RSMState: int<rsmState>
+    new (descriptor: Descriptor) =
+        {
+            InputPosition = descriptor.InputPosition
+            RSMState = descriptor.RSMState
+        }
+        
+[<Struct>]
 type GSSEdge =
     val GSSVertex : GssVertex
     val RSMState : int<rsmState>
@@ -58,7 +68,7 @@ let MAX_VALUE_FOR_GSS_VERTEX:int64<gssVertex> =
 type GssVertexContent =
     val OutgoingEdges : ResizeArray<GSSEdge>
     val Popped : ResizeArray<MatchedRangeWithType>
-    val HandledDescriptors : HashSet<Descriptor>
+    val HandledDescriptors : HashSet<DescriptorPart>
     new (outputEdges, popped, handledDescriptors) =
         {
             OutgoingEdges = outputEdges
@@ -98,8 +108,8 @@ type GSS () =
         gssVertexContent.OutgoingEdges
         
     member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =
-        vertices.[descriptor.GSSVertex].HandledDescriptors.Contains descriptor
+        vertices.[descriptor.GSSVertex].HandledDescriptors.Contains (DescriptorPart descriptor)
     
     member this.AddDescriptorToHandled (descriptor:Descriptor) =
-        vertices.[descriptor.GSSVertex].HandledDescriptors.Add descriptor
+        vertices.[descriptor.GSSVertex].HandledDescriptors.Add (DescriptorPart descriptor)
         |> ignore
