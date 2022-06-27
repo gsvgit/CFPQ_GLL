@@ -15,7 +15,7 @@ type InputGraphTerminalEdge =
 
 [<Struct>]
 type InputGraphVertexMutableContent =
-    val OutgoingTerminalEdges : ResizeArray<InputGraphEdge>    
+    val OutgoingTerminalEdges : ResizeArray<InputGraphEdge<int<inputGraphVertex>>>    
     new (terminalEdges) = {OutgoingTerminalEdges = terminalEdges}
 
 
@@ -40,7 +40,7 @@ type InputGraph (edges) =
 
     new () = InputGraph([||])
     
-    interface IInputGraph with
+    interface IInputGraph<int<inputGraphVertex>> with
         member this.GetOutgoingEdges v = vertices.[v].OutgoingTerminalEdges
     
     member this.OutgoingTerminalEdges v =

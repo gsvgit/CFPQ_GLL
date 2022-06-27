@@ -5,12 +5,12 @@ module CFPQ_GLL.InputGraph
 [<Measure>] type terminalSymbol
 
 [<Struct>]
-type InputGraphEdge =
+type InputGraphEdge<'inputGraphVertex> =
     val TerminalSymbol: int<terminalSymbol>
-    val TargetVertex: int<inputGraphVertex>
+    val TargetVertex: 'inputGraphVertex
     new (terminal, targetVertex) = {TerminalSymbol = terminal; TargetVertex = targetVertex}
 
-type IInputGraph =
-    abstract GetOutgoingEdges: int<inputGraphVertex> -> ResizeArray<InputGraphEdge>
+type IInputGraph<'inputGraphVertex> =
+    abstract GetOutgoingEdges: 'inputGraphVertex -> ResizeArray<InputGraphEdge<'inputGraphVertex>>
     
 let EOF:int<terminalSymbol> = System.Int32.MaxValue - 1 |> LanguagePrimitives.Int32WithMeasure
