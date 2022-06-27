@@ -34,7 +34,7 @@ type Arguments =
     interface IArgParserTemplate with
         member this.Usage =
             match this with
-            | Graph _ -> "File with graph"
+            | Graph _ -> "File with graph."
             | Parallel _ -> "Run naive parallel version with block of specified size."
             | Mode _ -> "Mode of query."
             | TaskType _ -> "Task type."
@@ -207,7 +207,6 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
     let mutable gss = GSS()
     let mutable matchedRanges = MatchedRanges(q)
     let vertices =
-        //[|116292<graphVertex>; 116291<graphVertex>; 116293<graphVertex>; 116294<graphVertex>; 116295<graphVertex>; 116296<graphVertex>; 116297<graphVertex>|]
         graph.AllVertices()
     for n in vertices do
         printfn $"V: %i{n}"
@@ -265,4 +264,4 @@ let main argv =
         singleSourceForAllContinuously graph query mode
     | x -> failwithf $"Unexpected task type: %A{x}."
       
-    0 // return an integer exit code
+    0
