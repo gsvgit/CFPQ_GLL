@@ -3,9 +3,10 @@ open Argu
 open CFPQ_GLL
 open CFPQ_GLL.GLL
 open CFPQ_GLL.GSS
-open CFPQ_GLL.InputGraph
+open Tests.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
+open CFPQ_GLL.InputGraph
 
 type ArgQueryMode =
     | All_Paths = 0
@@ -33,7 +34,7 @@ type Arguments =
     interface IArgParserTemplate with
         member this.Usage =
             match this with
-            | Graph _ -> "File with graph"
+            | Graph _ -> "File with graph."
             | Parallel _ -> "Run naive parallel version with block of specified size."
             | Mode _ -> "Mode of query."
             | TaskType _ -> "Task type."
@@ -46,13 +47,13 @@ let loadGraphFromCSV file (callLabelsMappings:Dictionary<_,_>) =
     |> Seq.iter (fun a ->
         if callLabelsMappings.ContainsKey a.[2]
         then
-            edges.Add (InputGraph.TerminalEdge(a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
+            edges.Add (Tests.InputGraph.TerminalEdge (a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
                                                , callLabelsMappings.[a.[2]] |> fst |> LanguagePrimitives.Int32WithMeasure
                                                , a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
-            edges.Add (InputGraph.TerminalEdge(a.[1] |> int |> LanguagePrimitives.Int32WithMeasure
+            edges.Add (Tests.InputGraph.TerminalEdge(a.[1] |> int |> LanguagePrimitives.Int32WithMeasure
                                                , callLabelsMappings.[a.[2]] |> snd |> LanguagePrimitives.Int32WithMeasure
                                                , a.[0] |> int |> LanguagePrimitives.Int32WithMeasure))
-        else edges.Add (InputGraph.TerminalEdge (a.[0] |> int |> LanguagePrimitives.Int32WithMeasure,
+        else edges.Add (Tests.InputGraph.TerminalEdge (a.[0] |> int |> LanguagePrimitives.Int32WithMeasure,
                                                  4<terminalSymbol>,
                                                  a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))
             )
@@ -75,10 +76,10 @@ let loadJavaGraphFromCSV file =
                 terminalId , (terminalId + 1<terminalSymbol>) 
             
             
-        edges.Add (InputGraph.TerminalEdge(a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
+        edges.Add (Tests.InputGraph.TerminalEdge(a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
                                            , terminal 
                                            , a.[2] |> int |> LanguagePrimitives.Int32WithMeasure))
-        edges.Add (InputGraph.TerminalEdge(a.[2] |> int |> LanguagePrimitives.Int32WithMeasure
+        edges.Add (Tests.InputGraph.TerminalEdge(a.[2] |> int |> LanguagePrimitives.Int32WithMeasure
                                            , reversedTerminal
                                            , a.[0] |> int |> LanguagePrimitives.Int32WithMeasure))
         
@@ -206,7 +207,6 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
     let mutable gss = GSS()
     let mutable matchedRanges = MatchedRanges(q)
     let vertices =
-        //[|116292<graphVertex>; 116291<graphVertex>; 116293<graphVertex>; 116294<graphVertex>; 116295<graphVertex>; 116296<graphVertex>; 116297<graphVertex>|]
         graph.AllVertices()
     for n in vertices do
         printfn $"V: %i{n}"
@@ -220,6 +220,7 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
         gss <-newGss 
         match res with
         | QueryResult.MatchedRanges ranges -> matchedRanges <- ranges
+        | _ -> ()
         
 let singleSourceForAll (graph:InputGraph) q mode =        
     for n in graph.AllVertices() do
@@ -263,4 +264,4 @@ let main argv =
         singleSourceForAllContinuously graph query mode
     | x -> failwithf $"Unexpected task type: %A{x}."
       
-    0 // return an integer exit code
+    0

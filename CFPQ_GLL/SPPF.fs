@@ -7,21 +7,12 @@ open CFPQ_GLL.RSM
 open Microsoft.FSharp.Core
 open FSharpx.Collections
 
-[<Measure>] type rangeIntermediatePoint
-  
-[<RequireQualifiedAccess>]
-[<Struct>]
-type RangeType =    
-    | Terminal of terminal:int<terminalSymbol>
-    | NonTerminal of nonTerminal:int<rsmState>
-    | EpsilonNonTerminal of epsilonNonTerminal:int<rsmState>
-    | Intermediate of intermediatePoint:int64<rangeIntermediatePoint>
-    
+
 [<Struct>]
 type TerminalNode =
     val Terminal : int<terminalSymbol>
-    val LeftPosition : int<graphVertex>
-    val RightPosition : int<graphVertex>
+    val LeftPosition : int<inputGraphVertex>
+    val RightPosition : int<inputGraphVertex>
     new (terminal, leftPosition, rightPosition)  =
         {
             Terminal = terminal
@@ -31,7 +22,7 @@ type TerminalNode =
 
 [<Struct>]
 type EpsilonNode =    
-    val Position : int<graphVertex>
+    val Position : int<inputGraphVertex>
     val NonTerminalStartState : int<rsmState>
     new (position, nonTerminalStartState)  =
         {            
@@ -40,19 +31,19 @@ type EpsilonNode =
         }
 
 type IntermediateNode (rsmState:int<rsmState>
-                       , inputPosition:int<graphVertex>
-                       , leftSubtree
-                       , rightSubtree) =
+                       , inputPosition:int<inputGraphVertex>
+                       , leftSubtree: RangeNode
+                       , rightSubtree: RangeNode) =
     member this.RSMState = rsmState
     member this.InputPosition = inputPosition
     member this.LeftSubtree = leftSubtree
     member this.RightSubtree = rightSubtree
 
-and RangeNode (inputStartPosition:int<graphVertex>
-               , inputEndPosition:int<graphVertex>
-               , rsmStartPosition:int<rsmState>
-               , rsmEndPosition:int<rsmState>
-               , intermediateNodes) =
+and RangeNode (inputStartPosition: int<inputGraphVertex>
+               , inputEndPosition: int<inputGraphVertex>
+               , rsmStartPosition: int<rsmState>
+               , rsmEndPosition: int<rsmState>
+               , intermediateNodes: ResizeArray<NonRangeNode>) =
     member this.InputStartPosition = inputStartPosition
     member this.InputEndPosition = inputEndPosition
     member this.RSMStartPosition = rsmStartPosition
@@ -61,13 +52,13 @@ and RangeNode (inputStartPosition:int<graphVertex>
   
 and [<Struct>] IntermediatePoint =
     val RSMState : int<rsmState>
-    val InputPosition : int<graphVertex>
+    val InputPosition : int<inputGraphVertex>
     new (rsmState, inputPosition) = {RSMState = rsmState; InputPosition = inputPosition}
 
 and [<Struct>] NonTerminalNode =
     val NonTerminalStartState : int<rsmState>
-    val LeftPosition : int<graphVertex>
-    val RightPosition : int<graphVertex>
+    val LeftPosition : int<inputGraphVertex>
+    val RightPosition : int<inputGraphVertex>
     val RangeNodes : array<RangeNode>
     new (nonTerminalStartState, leftPosition, rightPosition, rangeNodes)  =
         {
@@ -88,9 +79,18 @@ and [<Struct>] Range<[<Measure>]'position> =
     val EndPosition: int<'position>
     new (startPosition, endPosition) = {StartPosition = startPosition; EndPosition = endPosition}
 
+[<RequireQualifiedAccess>]
+[<Struct>]
+type RangeType =    
+    | Terminal of terminal:int<terminalSymbol>
+    | NonTerminal of nonTerminal:int<rsmState>
+    | EpsilonNonTerminal of epsilonNonTerminal:int<rsmState>
+    | Intermediate of intermediatePoint: IntermediatePoint
+    | Empty
+    
 [<Struct>]
 type MatchedRange =
-    val InputRange : Range<graphVertex>
+    val InputRange : Range<inputGraphVertex>
     val RSMRange : Range<rsmState>
     new (inputRange, rsmRange) = {InputRange = inputRange; RSMRange = rsmRange}
     new (inputFrom, inputTo, rsmFrom, rsmTo) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo)}
@@ -103,37 +103,23 @@ type MatchedRangeWithType =
     new (inputRange, rsmRange, rangeType) = {Range = MatchedRange(inputRange, rsmRange); RangeType = rangeType}
     new (inputFrom, inputTo, rsmFrom, rsmTo, rangeType) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); RangeType = rangeType}
 
-let MASK_FOR_INPUT_POSITION = int64 (System.UInt64.MaxValue >>> BITS_FOR_GRAPH_VERTICES + BITS_FOR_RSM_STATE <<< BITS_FOR_RSM_STATE)
-let MASK_FOR_RSM_STATE = int64 (System.UInt64.MaxValue >>> 2 * BITS_FOR_GRAPH_VERTICES)
-
-let inline packIntermediatePoint (rsmIntermediatePoint:int<rsmState>) (inputIntermediatePoint:int<graphVertex>) : int64<rangeIntermediatePoint> =
-    let _inputIntermediatePoint = (int64 inputIntermediatePoint) <<< BITS_FOR_RSM_STATE
-    let _rsmIntermediatePoint = int64 rsmIntermediatePoint
-    (_rsmIntermediatePoint ||| _inputIntermediatePoint) |> LanguagePrimitives.Int64WithMeasure
-
-let inline unpackIntermediatePoint (inputIntermediatePoint : int64<rangeIntermediatePoint>) =
-    let inputIntermediatePoint = int64 inputIntermediatePoint
-    let _inputIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_INPUT_POSITION >>> BITS_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure    
-    let _rsmIntermediatePoint = int32 (inputIntermediatePoint &&& MASK_FOR_RSM_STATE) |> LanguagePrimitives.Int32WithMeasure
-    IntermediatePoint(_rsmIntermediatePoint, _inputIntermediatePoint) 
-
 type MatchedRanges (query:RSM) =
     let ranges : ResizeArray<HashSet<MatchedRangeWithType>> = ResizeArray<_>()
-    let blockSize = 10000
+    let blockSize = 1000
     
     member this.AddMatchedRange (matchedRange: MatchedRangeWithType) =        
-        let blockId = matchedRange.Range.InputRange.StartPosition / blockSize |> int
+        let blockId = int matchedRange.Range.InputRange.StartPosition / blockSize 
         if blockId >= ranges.Count
         then ranges.AddRange(Array.init (blockId - ranges.Count + 1) (fun _ -> HashSet<_>()))
         ranges.[blockId].Add matchedRange |> ignore
                     
-    member this.AddMatchedRange (leftSubRange: Option<MatchedRangeWithType>, rightSubRange: MatchedRangeWithType) =
-        match leftSubRange with
-        | None -> rightSubRange
-        | Some leftSubRange ->
-            let intermediatePoint = packIntermediatePoint
+    member this.AddMatchedRange (leftSubRange: MatchedRangeWithType, rightSubRange: MatchedRangeWithType) =
+        match leftSubRange.RangeType with
+        | RangeType.Empty -> rightSubRange
+        | _ ->
+            let intermediatePoint = IntermediatePoint(
                                         leftSubRange.Range.RSMRange.EndPosition
-                                        leftSubRange.Range.InputRange.EndPosition
+                                        , leftSubRange.Range.InputRange.EndPosition)
             let newRange = MatchedRangeWithType(leftSubRange.Range.InputRange.StartPosition
                                         , rightSubRange.Range.InputRange.EndPosition
                                         , leftSubRange.Range.RSMRange.StartPosition
@@ -154,7 +140,7 @@ type MatchedRanges (query:RSM) =
            newRanges.Ranges
     
     member this.GetShortestDistances (startVertices, finalVertices) =
-        let rangesToTypes = Dictionary<MatchedRange,ResizeArray<RangeType>>()
+        let rangesToTypes = Dictionary<MatchedRange, ResizeArray<RangeType>>()
         for block in ranges do
             for range in block do
                 let exists, types = rangesToTypes.TryGetValue range.Range
@@ -176,6 +162,7 @@ type MatchedRanges (query:RSM) =
                     [|
                         for rangeType in types ->
                             match rangeType with
+                            | RangeType.Empty -> failwith "Empty range in shortest path."
                             | RangeType.EpsilonNonTerminal _ -> 0
                             | RangeType.Terminal _ -> 1
                             | RangeType.NonTerminal n ->
@@ -189,8 +176,7 @@ type MatchedRanges (query:RSM) =
                                         |> computeShortestDistance
                                 |]
                                 |> Array.min
-                            | RangeType.Intermediate pos -> 
-                                let pos = unpackIntermediatePoint pos
+                            | RangeType.Intermediate pos ->                                 
                                 let leftRangeDistance =
                                     MatchedRange (range.InputRange.StartPosition,
                                                   pos.InputPosition,
@@ -217,7 +203,7 @@ type MatchedRanges (query:RSM) =
                     |> fun distance -> res.Add (startVertex, finalVertex, distance)
         res
         
-    member this.ToSPPF startVertices =
+    member this.ToSPPF (startVertices:array<int<inputGraphVertex>>) : ResizeArray<RangeNode>=
         let rangeNodes = ResizeArray<RangeNode>()
         
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
@@ -252,6 +238,7 @@ type MatchedRanges (query:RSM) =
                         range.Range.RSMRange.StartPosition
                         range.Range.RSMRange.EndPosition
                 match range.RangeType with
+                | RangeType.Empty -> failwith "Empty range in sppf construction."
                 | RangeType.EpsilonNonTerminal n ->
                     EpsilonNode (range.Range.InputRange.StartPosition, n)
                     |> NonRangeNode.EpsilonNode
@@ -282,8 +269,7 @@ type MatchedRanges (query:RSM) =
                                     range.Range.InputRange.EndPosition,
                                     rangeNodes)
                     |> NonRangeNode.NonTerminalNode
-                | RangeType.Intermediate packedIntermediatePoint ->
-                    let intermediatePoint = unpackIntermediatePoint packedIntermediatePoint                                                        
+                | RangeType.Intermediate intermediatePoint ->                                                                            
                     let leftNode =
                         getRangeNode
                             range.Range.InputRange.StartPosition
@@ -307,17 +293,17 @@ type MatchedRanges (query:RSM) =
 
 [<RequireQualifiedAccess>]
 type TriplesStoredSPPFNode =
-    | EpsilonNode of int<graphVertex> * int<rsmState>
-    | TerminalNode of int<graphVertex> * int<terminalSymbol> * int<graphVertex>
-    | NonTerminalNode of int<graphVertex> * int<rsmState> * int<graphVertex>
-    | IntermediateNode of int<graphVertex> * int<rsmState>
-    | RangeNode of int<graphVertex> * int<graphVertex> * int<rsmState> * int<rsmState> 
+    | EpsilonNode of int<inputGraphVertex> * int<rsmState>
+    | TerminalNode of int<inputGraphVertex> * int<terminalSymbol> * int<inputGraphVertex>
+    | NonTerminalNode of int<inputGraphVertex> * int<rsmState> * int<inputGraphVertex>
+    | IntermediateNode of int<inputGraphVertex> * int<rsmState>
+    | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmState> * int<rsmState> 
 
-type TriplesStoredSPPF (sppf:ResizeArray<RangeNode>) =
+type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (sppf:ResizeArray<RangeNode>) =
     let mutable nodesCount = 0
-    let nodes = Dictionary<_,_>()
+    let nodes = Dictionary<_,TriplesStoredSPPFNode>()
     let edges = ResizeArray<_>()
-    let visitedRangeNodes = Dictionary<_,_>()
+    let visitedRangeNodes = Dictionary<RangeNode,_>()
     let addEdge parentId currentId =
         match parentId with
         | Some x -> edges.Add(x,currentId)
@@ -376,15 +362,15 @@ type TriplesStoredSPPF (sppf:ResizeArray<RangeNode>) =
     let printNode nodeId node =
         match node with
         | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to) ->
-            sprintf $"%i{nodeId} [label = \"%i{_from}, %i{_terminal}, %i{_to}\", shape = rectangle]"
+            sprintf $"%i{nodeId} [label = \"%A{_from}, %i{_terminal}, %A{_to}\", shape = rectangle]"
         | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState) ->
-            sprintf $"%i{nodeId} [label = \"Input: %i{_inputPos}; RSM: %i{_rsmState}\", shape = plain]"
+            sprintf $"%i{nodeId} [label = \"Input: %A{_inputPos}; RSM: %i{_rsmState}\", shape = plain]"
         | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to) ->
-            sprintf $"%i{nodeId} [label = \"%i{_from}, %i{_nonTerminal}, %i{_to}\", shape = invtrapezium]"
+            sprintf $"%i{nodeId} [label = \"%A{_from}, %i{_nonTerminal}, %A{_to}\", shape = invtrapezium]"
         | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal) ->
-            sprintf $"%i{nodeId} [label = \"Input: %i{_pos}; RSM: %i{_nonTerminal}\", shape = invhouse]"
+            sprintf $"%i{nodeId} [label = \"Input: %A{_pos}; RSM: %i{_nonTerminal}\", shape = invhouse]"
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
-            sprintf $"%i{nodeId} [label = \"Input: %i{_inputFrom}, %i{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
+            sprintf $"%i{nodeId} [label = \"Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
             
     member this.ToDot filePath =
         System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])

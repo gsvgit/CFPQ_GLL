@@ -12,6 +12,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CFPQ_GLL\CFPQ_GLL.fsproj" />
+      <ProjectReference Include="..\Tests\Tests.fsproj" />
     </ItemGroup>
 
     <ItemGroup>
