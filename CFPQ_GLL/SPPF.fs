@@ -1,5 +1,6 @@
 module CFPQ_GLL.SPPF
 
+open System
 open System.Collections.Generic
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
@@ -7,6 +8,7 @@ open CFPQ_GLL.RSM
 open Microsoft.FSharp.Core
 open FSharpx.Collections
 
+type Distance = Unreachable | Reachable of int
 
 [<Struct>]
 type TerminalNode =
@@ -148,59 +150,65 @@ type MatchedRanges (query:RSM) =
                 then types.Add range.RangeType
                 else rangesToTypes.Add(range.Range,ResizeArray[|range.RangeType|])
                 
-        let computedShortestDistances = Dictionary<MatchedRange,int>() 
-        let rec computeShortestDistance range =
+        let computedShortestDistances = Dictionary<MatchedRange,int>()
+        let cycles = HashSet<_>()
+        let rec computeShortestDistance range =            
             let exists, computedDistance = computedShortestDistances.TryGetValue range
             if exists
             then computedDistance
             else
-                let exists,types = rangesToTypes.TryGetValue range
-                if not exists
-                then System.Int32.MaxValue
-                else 
-                let distance =
-                    [|
-                        for rangeType in types ->
-                            match rangeType with
-                            | RangeType.Empty -> failwith "Empty range in shortest path."
-                            | RangeType.EpsilonNonTerminal _ -> 0
-                            | RangeType.Terminal _ -> 1
-                            | RangeType.NonTerminal n ->
-                                let finalStates = query.GetFinalStatesForBoxWithThisStartState n
-                                [|
-                                    for finalState in finalStates ->
+                if cycles.Contains range
+                then Int32.MaxValue
+                else
+                    cycles.Add range |> ignore
+                    let exists,types = rangesToTypes.TryGetValue range
+                    if not exists
+                    then Int32.MaxValue
+                    else 
+                    let distance =
+                        [|
+                            for rangeType in types ->
+                                match rangeType with
+                                | RangeType.Empty -> failwith "Empty range in shortest path."
+                                | RangeType.EpsilonNonTerminal _ -> 0
+                                | RangeType.Terminal _ -> 1
+                                | RangeType.NonTerminal n ->
+                                    let finalStates = query.GetFinalStatesForBoxWithThisStartState n
+                                    [|
+                                        for finalState in finalStates ->
+                                            MatchedRange (range.InputRange.StartPosition,
+                                                          range.InputRange.EndPosition,
+                                                          n,
+                                                          finalState)
+                                            |> computeShortestDistance
+                                    |]
+                                    |> Array.min
+                                | RangeType.Intermediate pos ->                                 
+                                    let leftRangeDistance =
                                         MatchedRange (range.InputRange.StartPosition,
-                                                      range.InputRange.EndPosition,
-                                                      n,
-                                                      finalState)
+                                                      pos.InputPosition,
+                                                      range.RSMRange.StartPosition,
+                                                      pos.RSMState)
                                         |> computeShortestDistance
-                                |]
-                                |> Array.min
-                            | RangeType.Intermediate pos ->                                 
-                                let leftRangeDistance =
-                                    MatchedRange (range.InputRange.StartPosition,
-                                                  pos.InputPosition,
-                                                  range.RSMRange.StartPosition,
-                                                  pos.RSMState)
-                                    |> computeShortestDistance
-                                let rightRangeDistance =
-                                    MatchedRange (pos.InputPosition,
-                                                  range.InputRange.EndPosition,
-                                                  pos.RSMState,
-                                                  range.RSMRange.EndPosition)
-                                    |> computeShortestDistance
-                                leftRangeDistance + rightRangeDistance
-                    |]
-                    |> Array.min
-                computedShortestDistances.Add(range, distance)
-                distance
+                                    let rightRangeDistance =
+                                        MatchedRange (pos.InputPosition,
+                                                      range.InputRange.EndPosition,
+                                                      pos.RSMState,
+                                                      range.RSMRange.EndPosition)
+                                        |> computeShortestDistance
+                                    leftRangeDistance + rightRangeDistance
+                        |]
+                        |> Array.min
+                    computedShortestDistances.Add(range, distance)
+                    cycles.Remove range |> ignore
+                    distance
         let res = ResizeArray<_>()
         for startVertex in startVertices do
             for finalVertex in finalVertices do
                 for finalState in query.OriginalFinalStates do
-                    MatchedRange(startVertex, finalVertex, query.StartState, finalState)
+                    MatchedRange(startVertex, finalVertex, query.OriginalStartState, finalState)
                     |> computeShortestDistance
-                    |> fun distance -> res.Add (startVertex, finalVertex, distance)
+                    |> fun distance -> res.Add (startVertex, finalVertex, if distance = Int32.MaxValue then Unreachable else Reachable distance)
         res
         
     member this.ToSPPF (startVertices:array<int<inputGraphVertex>>) : ResizeArray<RangeNode>=
