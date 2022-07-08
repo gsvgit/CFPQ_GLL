@@ -141,7 +141,7 @@ type MatchedRanges (query:RSM) =
            this.Ranges
            newRanges.Ranges
     
-    member this.GetShortestDistances (startVertices, finalVertices) =
+    member this.GetShortestDistances (precomputedDistances:Dictionary<MatchedRange,int>,startVertices, finalVertices) =
         let rangesToTypes = Dictionary<MatchedRange, ResizeArray<RangeType>>()
         for block in ranges do
             for range in block do
@@ -150,7 +150,7 @@ type MatchedRanges (query:RSM) =
                 then types.Add range.RangeType
                 else rangesToTypes.Add(range.Range,ResizeArray[|range.RangeType|])
                 
-        let computedShortestDistances = Dictionary<MatchedRange,int>()
+        let computedShortestDistances = precomputedDistances//Dictionary<MatchedRange,int>()
         let cycles = HashSet<_>()
         let rec computeShortestDistance range =            
             let exists, computedDistance = computedShortestDistances.TryGetValue range
@@ -198,7 +198,8 @@ type MatchedRanges (query:RSM) =
                                         |> computeShortestDistance
                                     leftRangeDistance + rightRangeDistance
                         |]
-                        |> Array.min
+                        |> Array.filter (fun x -> x >= 0)
+                        |> fun a -> if a.Length > 0 then Array.min a else Int32.MaxValue
                     computedShortestDistances.Add(range, distance)
                     cycles.Remove range |> ignore
                     distance
@@ -209,7 +210,7 @@ type MatchedRanges (query:RSM) =
                     MatchedRange(startVertex, finalVertex, query.OriginalStartState, finalState)
                     |> computeShortestDistance
                     |> fun distance -> res.Add (startVertex, finalVertex, if distance = Int32.MaxValue then Unreachable else Reachable distance)
-        res
+        res,computedShortestDistances
         
     member this.ToSPPF (startVertices:array<int<inputGraphVertex>>) : ResizeArray<RangeNode>=
         let rangeNodes = ResizeArray<RangeNode>()
