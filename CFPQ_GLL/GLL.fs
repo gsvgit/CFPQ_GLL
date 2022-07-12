@@ -21,7 +21,7 @@ let evalFromState
         (gss:GSS)
         (matchedRanges:MatchedRanges)
         (graph:IInputGraph)
-        (startVertices:array<int<inputGraphVertex>>)
+        (startVertices:HashSet<int<inputGraphVertex>>)
         (query:RSM) mode =
     
     let buildSppf =
@@ -46,7 +46,7 @@ let evalFromState
                )
 
     startVertices
-    |> Array.iter (fun v ->        
+    |> Seq.iter (fun v ->        
         let gssVertex = gss.AddNewVertex(v, query.StartState)            
         Descriptor(v, gssVertex, query.StartState, emptyRange)
         |> descriptorToProcess.Push
@@ -61,7 +61,7 @@ let evalFromState
             if (not buildSppf) && query.IsFinalStateForOriginalStartBox currentDescriptor.RSMState
             then
                 let startPosition = currentDescriptor.GSSVertex.InputPosition
-                if Array.contains startPosition startVertices
+                if startVertices.Contains startPosition
                 then reachableVertices.[startPosition].Add(currentDescriptor.InputPosition) |> ignore
             
             let matchedRange =
@@ -188,19 +188,19 @@ let evalFromState
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
     , gss
 
-let eval<'inputVertex when 'inputVertex: equality> (graph:IInputGraph) (startVertices:array<_>) (query:RSM) mode =
+let eval<'inputVertex when 'inputVertex: equality> (graph:IInputGraph) (startVertices:HashSet<_>) (query:RSM) mode =
     let reachableVertices =
-        let d = Dictionary<_,_>(startVertices.Length)
+        let d = Dictionary<_,_>(startVertices.Count)
         startVertices
-        |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
+        |> Seq.iter (fun v -> d.Add(v, HashSet<_>()))
         d
     let gss = GSS()
     let matchedRanges = MatchedRanges(query)
-    fst <| evalFromState reachableVertices gss matchedRanges (graph:IInputGraph) (startVertices:array<_>) (query:RSM) mode
+    fst <| evalFromState reachableVertices gss matchedRanges (graph:IInputGraph) (startVertices:HashSet<_>) (query:RSM) mode
 
 let evalParallel blockSize (graph:IInputGraph) startVertices (query:RSM) mode =
     Array.chunkBySize blockSize startVertices
-    |> Array.Parallel.map (fun startVertices -> eval graph startVertices query mode)
+    |> Array.Parallel.map (fun startVertices -> eval graph (HashSet<_> startVertices) query mode)
     |> Array.fold
            (fun state item ->
             match (state,item) with
