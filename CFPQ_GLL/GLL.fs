@@ -181,7 +181,7 @@ let evalFromState
         descriptorToProcess.Pop()
         |> handleDescriptor
     
-    printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
+    //printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
 
     match mode with
     | ReachabilityOnly -> QueryResult.ReachabilityFacts reachableVertices
