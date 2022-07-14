@@ -173,20 +173,14 @@ let evalFromState
                                   
         outgoingTerminalEdgesInGraph
         |> ResizeArray.iter handleEdge            
-            
-        
-    let startTime = System.DateTime.Now    
     
     while descriptorToProcess.Count > 0 do
         descriptorToProcess.Pop()
         |> handleDescriptor
-    
-    //printfn $"Query processing total time: %A{(System.DateTime.Now - startTime).TotalMilliseconds} milliseconds"
 
     match mode with
     | ReachabilityOnly -> QueryResult.ReachabilityFacts reachableVertices
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
-    , gss
 
 let eval<'inputVertex when 'inputVertex: equality> (graph:IInputGraph) (startVertices:HashSet<_>) (query:RSM) mode =
     let reachableVertices =
@@ -196,7 +190,7 @@ let eval<'inputVertex when 'inputVertex: equality> (graph:IInputGraph) (startVer
         d
     let gss = GSS()
     let matchedRanges = MatchedRanges(query)
-    fst <| evalFromState reachableVertices gss matchedRanges (graph:IInputGraph) (startVertices:HashSet<_>) (query:RSM) mode
+    evalFromState reachableVertices gss matchedRanges (graph:IInputGraph) (startVertices:HashSet<_>) (query:RSM) mode
 
 let evalParallel blockSize (graph:IInputGraph) startVertices (query:RSM) mode =
     Array.chunkBySize blockSize startVertices
