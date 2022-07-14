@@ -140,8 +140,8 @@ type MatchedRanges (query:RSM) =
            (fun (_this:HashSet<_>) (_new:HashSet<_>) -> _this.UnionWith _new)
            this.Ranges
            newRanges.Ranges
-    
-    member this.GetShortestDistances (precomputedDistances:Dictionary<MatchedRange,int>,startVertices, finalVertices) =
+           
+    member this.GetRangesToTypes () =
         let rangesToTypes = Dictionary<MatchedRange, ResizeArray<RangeType>>()
         for block in ranges do
             for range in block do
@@ -149,8 +149,15 @@ type MatchedRanges (query:RSM) =
                 if exists
                 then types.Add range.RangeType
                 else rangesToTypes.Add(range.Range,ResizeArray[|range.RangeType|])
-                
-        let computedShortestDistances = precomputedDistances//Dictionary<MatchedRange,int>()
+        rangesToTypes
+    
+    member this.GetShortestDistances (
+            precomputedDistances:Dictionary<MatchedRange,int>,
+            rangesToTypes: Dictionary<MatchedRange, ResizeArray<RangeType>>,
+            startVertices,
+            finalVertices) =
+        
+        let computedShortestDistances = precomputedDistances
         let cycles = HashSet<_>()
         let rec computeShortestDistance range =            
             let exists, computedDistance = computedShortestDistances.TryGetValue range
@@ -210,7 +217,7 @@ type MatchedRanges (query:RSM) =
                     MatchedRange(startVertex, finalVertex, query.OriginalStartState, finalState)
                     |> computeShortestDistance
                     |> fun distance -> res.Add (startVertex, finalVertex, if distance = Int32.MaxValue then Unreachable else Reachable distance)
-        res,computedShortestDistances
+        res
         
     member this.ToSPPF (startVertices:array<int<inputGraphVertex>>) : ResizeArray<RangeNode>=
         let rangeNodes = ResizeArray<RangeNode>()
