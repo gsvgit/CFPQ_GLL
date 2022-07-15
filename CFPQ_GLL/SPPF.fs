@@ -107,6 +107,7 @@ type MatchedRangeWithType =
 
 type MatchedRanges (query:RSM) =
     let ranges : ResizeArray<HashSet<MatchedRangeWithType>> = ResizeArray<_>()
+    let rangesToTypes = Dictionary<MatchedRange, ResizeArray<RangeType>>()
     let blockSize = 1000
     
     member this.AddMatchedRange (matchedRange: MatchedRangeWithType) =        
@@ -114,6 +115,11 @@ type MatchedRanges (query:RSM) =
         if blockId >= ranges.Count
         then ranges.AddRange(Array.init (blockId - ranges.Count + 1) (fun _ -> HashSet<_>()))
         ranges.[blockId].Add matchedRange |> ignore
+        
+        let exists, types = rangesToTypes.TryGetValue matchedRange.Range
+        if exists
+        then types.Add matchedRange.RangeType
+        else rangesToTypes.Add(matchedRange.Range,ResizeArray[|matchedRange.RangeType|])
                     
     member this.AddMatchedRange (leftSubRange: MatchedRangeWithType, rightSubRange: MatchedRangeWithType) =
         match leftSubRange.RangeType with
@@ -153,7 +159,7 @@ type MatchedRanges (query:RSM) =
     
     member this.GetShortestDistances (
             precomputedDistances:Dictionary<MatchedRange,int>,
-            rangesToTypes: Dictionary<MatchedRange, ResizeArray<RangeType>>,
+            //rangesToTypes: Dictionary<MatchedRange, ResizeArray<RangeType>>,
             startVertices,
             finalVertices) =
         
