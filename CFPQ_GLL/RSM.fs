@@ -123,3 +123,20 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
         vertices.[v].OutgoingTerminalEdges    
     member this.OutgoingNonTerminalEdges v =
         vertices.[v].OutgoingNonTerminalEdges
+        
+    member this.ToDot filePath =
+        seq {
+         yield "digraph g {"
+         for kvp in vertices do                              
+             for nonTerminalEdge in kvp.Value.OutgoingNonTerminalEdges do
+                yield $"%i{kvp.Key} -> %i{nonTerminalEdge.State} [label = N_%i{nonTerminalEdge.NonTerminalSymbolStartState}]"             
+             match kvp.Value.OutgoingTerminalEdges with
+             | Small a ->
+                 for t in a do
+                     yield $"%i{kvp.Key} -> %i{t.State} [label = t_%i{t.TerminalSymbol}]"
+             | Big a ->
+                 for _kvp in a do
+                     yield $"%i{kvp.Key} -> %i{_kvp.Value} [label = t_%i{_kvp.Key}]"                               
+         yield "}"
+        }
+        |> fun x -> System.IO.File.WriteAllLines(filePath, x)

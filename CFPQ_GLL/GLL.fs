@@ -189,7 +189,7 @@ let eval<'inputVertex when 'inputVertex: equality> (graph:IInputGraph) (startVer
         |> Seq.iter (fun v -> d.Add(v, HashSet<_>()))
         d
     let gss = GSS()
-    let matchedRanges = MatchedRanges(query)
+    let matchedRanges = MatchedRanges()
     evalFromState reachableVertices gss matchedRanges (graph:IInputGraph) (startVertices:HashSet<_>) (query:RSM) mode
 
 let evalParallel blockSize (graph:IInputGraph) startVertices (query:RSM) mode =
@@ -208,4 +208,4 @@ let evalParallel blockSize (graph:IInputGraph) startVertices (query:RSM) mode =
             )
            (match mode with
             | ReachabilityOnly -> QueryResult.ReachabilityFacts <| Dictionary()
-            | AllPaths -> QueryResult.MatchedRanges <| MatchedRanges query)
+            | AllPaths -> QueryResult.MatchedRanges <| MatchedRanges () )

@@ -105,7 +105,7 @@ type MatchedRangeWithType =
     new (inputRange, rsmRange, rangeType) = {Range = MatchedRange(inputRange, rsmRange); RangeType = rangeType}
     new (inputFrom, inputTo, rsmFrom, rsmTo, rangeType) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); RangeType = rangeType}
 
-type MatchedRanges (query:RSM) =
+type MatchedRanges () =
     let ranges : ResizeArray<HashSet<MatchedRangeWithType>> = ResizeArray<_>()
     let rangesToTypes = Dictionary<MatchedRange, ResizeArray<RangeType>>()
     let blockSize = 1000
@@ -158,6 +158,7 @@ type MatchedRanges (query:RSM) =
         rangesToTypes
     
     member this.GetShortestDistances (
+            query:RSM,
             precomputedDistances:Dictionary<MatchedRange,int>,
             //rangesToTypes: Dictionary<MatchedRange, ResizeArray<RangeType>>,
             startVertices,
@@ -225,7 +226,7 @@ type MatchedRanges (query:RSM) =
                     |> fun distance -> res.Add (startVertex, finalVertex, if distance = Int32.MaxValue then Unreachable else Reachable distance)
         res
         
-    member this.ToSPPF (startVertices:array<int<inputGraphVertex>>) : ResizeArray<RangeNode>=
+    member this.ToSPPF (query:RSM, startVertices:array<int<inputGraphVertex>>) : ResizeArray<RangeNode>=
         let rangeNodes = ResizeArray<RangeNode>()
         
         let isValidRange inputStart inputEnd rsmStart rsmEnd =
