@@ -1,4 +1,5 @@
 ﻿open System.Collections.Generic
+open System.Xml.Schema
 open Argu
 open CFPQ_GLL
 open CFPQ_GLL.GLL
@@ -23,6 +24,7 @@ type ArgQuery =
     | Geo = 2
     | Andersen = 3
     | Java = 4
+    | VSharp = 5
 
 type Arguments =
     | [<Mandatory>] Graph of string
@@ -116,7 +118,7 @@ let example10_go_hierarchy () =
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
     nodes
     |> Array.iter (fun n ->
-        let reachable = GLL.eval graph [|n|] g1
+        let reachable = GLL.eval graph (HashSet [|n|]) g1
         printfn $"Reachable: %A{reachable}")
 
 type LoadStorePairsInfo =
@@ -131,6 +133,80 @@ type LoadStorePairsInfo =
             StoreTerminalId = fst storeTerminalInfo
             StoreTerminalReversedId = snd storeTerminalInfo
         }
+
+let vSharRSM maxCallSymbol =
+    let firstFreeCallTerminalId = maxCallSymbol + 1<terminalSymbol>
+    let terminalForCFGEdge = 0<terminalSymbol>
+    let startBox =
+            RSMBox(
+                0<rsmState>,
+                HashSet [|0<rsmState>; 1<rsmState>|],
+                [|                    
+                    yield RSMEdges.NonTerminalEdge(0<rsmState>, 2<rsmState>, 1<rsmState>)                    
+                    for callSymbol in 2<terminalSymbol> .. 2<terminalSymbol> .. firstFreeCallTerminalId - 1<terminalSymbol> do
+                      yield RSMEdges.TerminalEdge(1<rsmState>, callSymbol, 0<rsmState>)
+                |]
+                )
+    let balancedBracketsBox =
+      let mutable firstFreeRsmState = 3<rsmState>
+      RSMBox(
+          2<rsmState>,
+          HashSet [|2<rsmState>|],
+          [|
+              yield RSMEdges.TerminalEdge (2<rsmState>, terminalForCFGEdge, 2<rsmState>)
+              for callSymbol in 1<terminalSymbol> .. 2<terminalSymbol> .. firstFreeCallTerminalId - 1<terminalSymbol> do
+                  yield RSMEdges.TerminalEdge(2<rsmState>, callSymbol, firstFreeRsmState)
+                  yield RSMEdges.NonTerminalEdge(firstFreeRsmState, 2<rsmState>, firstFreeRsmState + 1<rsmState>)
+                  yield RSMEdges.TerminalEdge(firstFreeRsmState + 1<rsmState>, callSymbol + 1<terminalSymbol>, 2<rsmState>)                  
+                  firstFreeRsmState <- firstFreeRsmState + 2<rsmState>
+          |])
+    (*let startBox =
+            RSMBox(
+                0<rsmState>,
+                HashSet [|0<rsmState>|],
+                [|
+                    yield RSMEdges.TerminalEdge(0<rsmState>, terminalForCFGEdge, 0<rsmState>)
+                    yield RSMEdges.NonTerminalEdge(0<rsmState>, 1<rsmState>, 0<rsmState>)
+                    //for callSymbol in 1<terminalSymbol> .. 2<terminalSymbol> .. firstFreeCallTerminalId - 1<terminalSymbol> do
+                    for callSymbol in 2<terminalSymbol> .. 2<terminalSymbol> .. firstFreeCallTerminalId - 1<terminalSymbol> do
+                      yield RSMEdges.TerminalEdge(0<rsmState>, callSymbol, 0<rsmState>)
+                |]
+                )
+    let balancedBracketsBox =
+      let mutable firstFreeRsmState = 3<rsmState>
+      RSMBox(
+          1<rsmState>,
+          HashSet [|1<rsmState>; 2<rsmState>|],
+          [|              
+              for callSymbol in 1<terminalSymbol> .. 2<terminalSymbol> .. firstFreeCallTerminalId - 1<terminalSymbol> do
+                  yield RSMEdges.TerminalEdge(1<rsmState>, callSymbol, firstFreeRsmState)
+                  yield RSMEdges.NonTerminalEdge(firstFreeRsmState, 0<rsmState>, firstFreeRsmState + 1<rsmState>)
+                  yield RSMEdges.TerminalEdge(firstFreeRsmState + 1<rsmState>, callSymbol + 1<terminalSymbol>, 2<rsmState>)
+                  yield RSMEdges.TerminalEdge(firstFreeRsmState, terminalForCFGEdge, firstFreeRsmState)
+                  yield RSMEdges.TerminalEdge(firstFreeRsmState + 1<rsmState>, terminalForCFGEdge, firstFreeRsmState + 1<rsmState>)
+                  firstFreeRsmState <- firstFreeRsmState + 2<rsmState>
+          |])
+          *)
+    RSM([|startBox; balancedBracketsBox|], startBox)
+
+let loadVSharpGraphFromCSV filePath =
+    let mutable maxTerminal = 0<terminalSymbol>
+    let edges = ResizeArray<_>()
+    System.IO.File.ReadLines filePath
+    |> Seq.map (fun s -> s.Split " ")    
+    |> Seq.iter (fun a ->
+        let terminal = int a.[2] * 1<terminalSymbol>             
+        
+        if terminal > maxTerminal then maxTerminal <- terminal
+            
+        edges.Add (Tests.InputGraph.TerminalEdge(a.[0] |> int |> LanguagePrimitives.Int32WithMeasure
+                                           , terminal 
+                                           , a.[1] |> int |> LanguagePrimitives.Int32WithMeasure))        
+        
+        )
+    InputGraph <| edges.ToArray()
+    , maxTerminal
+    
 let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
     
     let alloc = fst terminalSymbolsMapping.["alloc"]
@@ -197,7 +273,7 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
 let runAllPairs parallelBlocks (graph:InputGraph) q mode =     
     let start = System.DateTime.Now
     match parallelBlocks with
-    | None -> eval graph (graph.AllVertices()) q mode
+    | None -> eval graph (HashSet (graph.AllVertices())) q mode
     | Some blockSize -> evalParallel blockSize graph (graph.AllVertices()) q mode
     |> ignore
     printfn $"Total processing time: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
@@ -216,16 +292,16 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
             startVertices
             |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
             d
-        let res, newGss = evalFromState reachableVertices gss matchedRanges graph startVertices q mode
-        gss <-newGss 
+        let res = evalFromState reachableVertices gss matchedRanges graph (HashSet startVertices) q mode         
         match res with
         | QueryResult.MatchedRanges ranges -> matchedRanges <- ranges
         | _ -> ()
         
 let singleSourceForAll (graph:InputGraph) q mode =        
     for n in graph.AllVertices() do
-        let startVertices = [|n|]        
-        eval graph startVertices q mode |> ignore            
+        let startVertices = HashSet [|n|]        
+        let res = eval graph startVertices q mode |> ignore
+        printfn $"%A{res}"
 
 [<EntryPoint>]
 let main argv =
@@ -240,6 +316,9 @@ let main argv =
         | ArgQuery.Java ->
             let graph,mapping = loadJavaGraphFromCSV (args.GetResult Graph)
             graph, javaRsm mapping
+        | ArgQuery.VSharp ->
+            let graph,maxTerminal = loadVSharpGraphFromCSV (args.GetResult Graph)
+            graph, vSharRSM maxTerminal
         | x -> failwithf $"Unexpected query: %A{x}."
     
     printfn "Data loaded."

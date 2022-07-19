@@ -1,4 +1,5 @@
 ﻿
+open System.Collections.Generic
 open CFPQ_GLL
 open CFPQ_GLL.GLL
 open CFPQ_GLL.InputGraph
@@ -17,7 +18,7 @@ let go() =
     let startV = [|0<inputGraphVertex>|]
     let q = Tests.GLLTests.simpleLoopRSMForDyckLanguage
 
-    let result = GLL.eval graph startV q GLL.AllPaths
+    let result = GLL.eval graph (HashSet startV) q GLL.AllPaths
 
     match result with
     | QueryResult.MatchedRanges ranges -> 
