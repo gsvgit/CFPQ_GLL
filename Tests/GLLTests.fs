@@ -27,7 +27,7 @@ let runGLLAndCheckResult graph (startV:array<_>) q expected =
     let result = eval graph (HashSet startV) q AllPaths
     match result with
     | QueryResult.MatchedRanges ranges ->
-        let sppf = ranges.ToSPPF startV
+        let sppf = ranges.ToSPPF(q, startV)
         let actual = TriplesStoredSPPF sppf
         Expect.sequenceEqual actual.Nodes (fst expected) "Nodes should be equals."
         Expect.sequenceEqual actual.Edges (snd expected) "Edges should be equals."

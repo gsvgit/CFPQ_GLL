@@ -22,7 +22,7 @@ let go() =
 
     match result with
     | QueryResult.MatchedRanges ranges -> 
-      let sppf = ranges.ToSPPF startV
+      let sppf = ranges.ToSPPF(q, startV)
       let actual = TriplesStoredSPPF sppf
       
       actual.ToDot "1.dot"

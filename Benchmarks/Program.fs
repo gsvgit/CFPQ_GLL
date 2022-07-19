@@ -281,7 +281,7 @@ let runAllPairs parallelBlocks (graph:InputGraph) q mode =
   
 let singleSourceForAllContinuously (graph:InputGraph) q mode =    
     let mutable gss = GSS()
-    let mutable matchedRanges = MatchedRanges(q)
+    let mutable matchedRanges = MatchedRanges()
     let vertices =
         graph.AllVertices()
     for n in vertices do
