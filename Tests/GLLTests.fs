@@ -23,8 +23,8 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF) =
         )
 *)
 
-let runGLLAndCheckResult graph startV q expected =
-    let result = eval graph startV q AllPaths
+let runGLLAndCheckResult graph (startV:array<_>) q expected =
+    let result = eval graph (HashSet startV) q AllPaths
     match result with
     | QueryResult.MatchedRanges ranges ->
         let sppf = ranges.ToSPPF startV
