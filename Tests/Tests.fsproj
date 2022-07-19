@@ -9,6 +9,7 @@
     <ItemGroup>
         <Compile Include="InputGraph.fs" />
         <Compile Include="GLLTests.fs" />
+        <Compile Include="DistancesTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

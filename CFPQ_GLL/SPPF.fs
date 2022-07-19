@@ -2,6 +2,7 @@ module CFPQ_GLL.SPPF
 
 open System
 open System.Collections.Generic
+open System.Runtime.CompilerServices
 open CFPQ_GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
@@ -91,6 +92,30 @@ type RangeType =
     | Empty
     
 [<Struct>]
+[<CustomComparison; StructuralEquality>]
+type DistanceInfo =
+    val Distance: int
+    val AtLeastOneMustHaveStateVisited: bool
+    new (distance, atLeastOneMustHaveStateVisited) =
+        {
+            Distance = distance
+            AtLeastOneMustHaveStateVisited = atLeastOneMustHaveStateVisited
+        }
+           
+    interface IComparable with
+        member this.CompareTo (y:obj) =
+            if y :? DistanceInfo
+            then
+                let y = y :?> DistanceInfo
+                if ((not this.AtLeastOneMustHaveStateVisited) && (not y.AtLeastOneMustHaveStateVisited))
+                   || (this.AtLeastOneMustHaveStateVisited && y.AtLeastOneMustHaveStateVisited)
+                then y.Distance.CompareTo this.Distance
+                elif this.AtLeastOneMustHaveStateVisited
+                then 1
+                else -1
+            else failwith "Incomparable."
+    
+[<Struct>]
 type MatchedRange =
     val InputRange : Range<inputGraphVertex>
     val RSMRange : Range<rsmState>
@@ -158,10 +183,11 @@ type MatchedRanges () =
         rangesToTypes
     
     member this.GetShortestDistances (
-            query:RSM,
-            precomputedDistances:Dictionary<MatchedRange,int>,
-            //rangesToTypes: Dictionary<MatchedRange, ResizeArray<RangeType>>,
-            startVertices,
+            query: RSM,
+            finalStates:HashSet<int<rsmState>>,
+            mustVisitStates:HashSet<int<rsmState>>,
+            precomputedDistances:Dictionary<MatchedRange,DistanceInfo>,            
+            startVertex,
             finalVertices) =
         
         let computedShortestDistances = precomputedDistances
@@ -172,20 +198,23 @@ type MatchedRanges () =
             then computedDistance
             else
                 if cycles.Contains range
-                then Int32.MaxValue
+                then DistanceInfo (Int32.MaxValue, false)
                 else
                     cycles.Add range |> ignore
+                    let atLeastMustHaveStateVisited =
+                        mustVisitStates.Contains range.RSMRange.StartPosition
+                        || mustVisitStates.Contains range.RSMRange.EndPosition
                     let exists,types = rangesToTypes.TryGetValue range
                     if not exists
-                    then Int32.MaxValue
+                    then DistanceInfo (Int32.MaxValue, false)
                     else 
                     let distance =
                         [|
                             for rangeType in types ->
                                 match rangeType with
                                 | RangeType.Empty -> failwith "Empty range in shortest path."
-                                | RangeType.EpsilonNonTerminal _ -> 0
-                                | RangeType.Terminal _ -> 1
+                                | RangeType.EpsilonNonTerminal _ -> DistanceInfo (0,atLeastMustHaveStateVisited)
+                                | RangeType.Terminal _ -> DistanceInfo(1,atLeastMustHaveStateVisited)
                                 | RangeType.NonTerminal n ->
                                     let finalStates = query.GetFinalStatesForBoxWithThisStartState n
                                     [|
@@ -210,20 +239,38 @@ type MatchedRanges () =
                                                       pos.RSMState,
                                                       range.RSMRange.EndPosition)
                                         |> computeShortestDistance
-                                    leftRangeDistance + rightRangeDistance
+                                    DistanceInfo (leftRangeDistance.Distance + rightRangeDistance.Distance, atLeastMustHaveStateVisited || leftRangeDistance.AtLeastOneMustHaveStateVisited || rightRangeDistance.AtLeastOneMustHaveStateVisited) 
                         |]
-                        |> Array.filter (fun x -> x >= 0)
-                        |> fun a -> if a.Length > 0 then Array.min a else Int32.MaxValue
+                        |> Array.filter (fun x -> x.Distance >= 0)
+                        |> fun a -> if a.Length > 0 then Array.min a else DistanceInfo(Int32.MaxValue, false)
                     computedShortestDistances.Add(range, distance)
                     cycles.Remove range |> ignore
                     distance
         let res = ResizeArray<_>()
-        for startVertex in startVertices do
-            for finalVertex in finalVertices do
-                for finalState in query.OriginalFinalStates do
-                    MatchedRange(startVertex, finalVertex, query.OriginalStartState, finalState)
-                    |> computeShortestDistance
-                    |> fun distance -> res.Add (startVertex, finalVertex, if distance = Int32.MaxValue then Unreachable else Reachable distance)
+        let reachable = HashSet<_>()
+        //for startVertex in startVertices do
+        for finalVertex in finalVertices do
+            for finalState in finalStates do
+                MatchedRange(startVertex, finalVertex, query.OriginalStartState, finalState)
+                |> computeShortestDistance
+                |> fun (distance: DistanceInfo) ->                    
+                    res.Add (
+                        startVertex,
+                        finalVertex,
+                        if distance.Distance = Int32.MaxValue || not distance.AtLeastOneMustHaveStateVisited
+                        then Unreachable
+                        else
+                            reachable.Add (startVertex,finalVertex) |> ignore
+                            Reachable distance.Distance)
+        let res = 
+            HashSet res
+            |> Seq.filter
+                (fun (_from,_to,_d) ->
+                    let idReachable = reachable.Contains (_from,_to)  
+                    (idReachable && _d <> Unreachable)
+                    || (not idReachable)                    
+                )
+            |> ResizeArray
         res
         
     member this.ToSPPF (query:RSM, startVertices:array<int<inputGraphVertex>>) : ResizeArray<RangeNode>=
