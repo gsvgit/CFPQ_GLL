@@ -10,7 +10,22 @@ open FSharpx.Collections
 type RSMEdges =    
     | TerminalEdge of int<rsmState>*int<terminalSymbol>*int<rsmState>
     | NonTerminalEdge of _from:int<rsmState>*_nonTerminalSymbolStartState:int<rsmState>*_to:int<rsmState>
-
+    
+    member this.StartState =
+        match this with
+        | TerminalEdge (_from,_,_)
+        | NonTerminalEdge (_from,_,_) -> _from
+        
+    member this.FinalState =
+        match this with
+        | TerminalEdge (_,_,_to)
+        | NonTerminalEdge (_,_,_to) -> _to
+    
+    member this.Terminal =
+        match this with
+        | TerminalEdge (_,t,_) -> t
+        | NonTerminalEdge _ -> failwith "Cannot get terminal from nonterminal edge."
+        
 [<Struct>]
 type RSMTerminalEdge =
     val State : int<rsmState>
@@ -47,11 +62,37 @@ type RSMVertexMutableContent =
             OutgoingNonTerminalEdges = nonTerminalEdges
         }
 
-type RSMBox(startState:int<rsmState>, finalStates:HashSet<int<rsmState>>, transitions) =
+type RSMBox(startState:int<rsmState>, finalStates:HashSet<int<rsmState>>, transitions: array<RSMEdges>) =
+    let outgoingEdges = Dictionary<int<rsmState>,ResizeArray<RSMEdges>>()
+    let incomingEdges = Dictionary<int<rsmState>,ResizeArray<RSMEdges>>()
+    let addTransition (transition: RSMEdges) =
+        let exists, edges = outgoingEdges.TryGetValue transition.StartState 
+        if exists
+        then edges.Add transition
+        else outgoingEdges.Add (transition.StartState, ResizeArray[|transition|])
+        if not <| outgoingEdges.ContainsKey transition.FinalState
+        then outgoingEdges.Add(transition.FinalState, ResizeArray<_>())
+        
+        let exists, edges = incomingEdges.TryGetValue transition.FinalState 
+        if exists
+        then edges.Add transition
+        else incomingEdges.Add (transition.FinalState, ResizeArray[|transition|])
+        if not <| incomingEdges.ContainsKey transition.StartState
+        then incomingEdges.Add(transition.StartState, ResizeArray<_>())
+        
+    do Array.iter addTransition transitions        
+   
+    let transitions = ResizeArray transitions
+             
     member this.StartState = startState
     member this.FinalStates = finalStates
     member this.Transitions = transitions
-    
+    member this.OutgoingEdges v = outgoingEdges.[v]
+    member this.IncomingEdges v = incomingEdges.[v]
+    member this.AddTransition t =
+        transitions.Add t
+        addTransition t
+        
 type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let vertices = Dictionary<int<rsmState>,RSMVertexContent>()
     let finalStates = HashSet<_>()
@@ -83,7 +124,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
             box.FinalStates |> Seq.iter (addVertex>>ignore)
             finalStatesForBox.Add(box.StartState, box.FinalStates |> ResizeArray.ofSeq)
             box.Transitions
-            |> Array.iter(
+            |> ResizeArray.iter(
                     function
                     | TerminalEdge (_from, smb, _to) ->
                         let vertexContent = addVertex _from

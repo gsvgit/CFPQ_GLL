@@ -202,7 +202,8 @@ type MatchedRanges () =
                 else
                     cycles.Add range |> ignore
                     let atLeastMustHaveStateVisited =
-                        mustVisitStates.Contains range.RSMRange.StartPosition
+                        mustVisitStates.Count = 0
+                        || mustVisitStates.Contains range.RSMRange.StartPosition
                         || mustVisitStates.Contains range.RSMRange.EndPosition
                     let exists,types = rangesToTypes.TryGetValue range
                     if not exists
