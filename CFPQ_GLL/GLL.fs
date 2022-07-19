@@ -164,9 +164,9 @@ let evalFromState
                     then handleTerminalEdge graphEdge rsmEdge
                     )
             | Big d ->
-                let exists, state =  d.TryGetValue graphEdge.TerminalSymbol
+                let exists, states =  d.TryGetValue graphEdge.TerminalSymbol
                 if exists
-                then handleTerminalEdge graphEdge (RSMTerminalEdge(state, graphEdge.TerminalSymbol))                
+                then states |> ResizeArray.iter (fun state -> handleTerminalEdge graphEdge (RSMTerminalEdge(state, graphEdge.TerminalSymbol)))                
                     
         InputGraphEdge (EOF, currentDescriptor.InputPosition)
         |> handleEdge

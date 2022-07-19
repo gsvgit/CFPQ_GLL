@@ -40,7 +40,7 @@ type RSMNonTerminalEdge =
 
 type TerminalEdgesStorage =
     | Small of array<RSMTerminalEdge>
-    | Big of SortedDictionary<int<terminalSymbol>,int<rsmState>>
+    | Big of Dictionary<int<terminalSymbol>,ResizeArray<int<rsmState>>>
     
 [<Struct>]
 type RSMVertexContent =
@@ -139,13 +139,16 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
         mutableVertices
         |> Seq.iter (fun kvp ->
               let edges = kvp.Value.OutgoingTerminalEdges.ToArray()
-              let storedEdges =
-                  if edges.Length <= 50
+              let storedEdges = 
+                  if edges.Length <= 20
                   then Small edges
                   else
-                      let dict = SortedDictionary<_,_>()
+                      let dict = Dictionary<_,ResizeArray<_>>()
                       for edge in edges do
-                          dict.Add(edge.TerminalSymbol, edge.State)
+                          let exists, edges = dict.TryGetValue edge.TerminalSymbol
+                          if exists
+                          then edges.Add edge.State
+                          else dict.Add(edge.TerminalSymbol, ResizeArray<_>[|edge.State|])
                       Big dict
                           
               vertices.Add(kvp.Key, RSMVertexContent(storedEdges                                                                              
@@ -164,6 +167,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
         vertices.[v].OutgoingTerminalEdges    
     member this.OutgoingNonTerminalEdges v =
         vertices.[v].OutgoingNonTerminalEdges
+    member this.StatesCount with get () = vertices.Count
         
     member this.ToDot filePath =
         seq {
@@ -177,7 +181,8 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                      yield $"%i{kvp.Key} -> %i{t.State} [label = t_%i{t.TerminalSymbol}]"
              | Big a ->
                  for _kvp in a do
-                     yield $"%i{kvp.Key} -> %i{_kvp.Value} [label = t_%i{_kvp.Key}]"                               
+                     for _to in _kvp.Value do
+                        yield $"%i{kvp.Key} -> %i{_to} [label = t_%i{_kvp.Key}]"                               
          yield "}"
         }
         |> fun x -> System.IO.File.WriteAllLines(filePath, x)
