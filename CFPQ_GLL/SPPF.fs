@@ -188,21 +188,22 @@ type MatchedRanges () =
             startVertex,
             finalVertices) =
         
+        let blockSize = 5000
+        
         let addComputedDistance (range:MatchedRange) distance =
-            let blockId = int range.InputRange.StartPosition / blockSize 
+            let blockId = int range.RSMRange.StartPosition / blockSize 
             if blockId >= precomputedDistances.Count
             then precomputedDistances.AddRange(Array.init (blockId - precomputedDistances.Count + 1) (fun _ -> Dictionary<_,_>()))
             precomputedDistances.[blockId].Add (range,distance)
             
         let tryGetComputedDistance (range:MatchedRange) =
-            let blockId = int range.InputRange.StartPosition / blockSize
+            let blockId = int range.RSMRange.StartPosition / blockSize
             if precomputedDistances.Count > blockId
             then precomputedDistances.[blockId].TryGetValue range
             else false,Unchecked.defaultof<_>
         
-        let computedShortestDistances = precomputedDistances
         let cycles = HashSet<_>()
-        let rec computeShortestDistance range =            
+        let rec computeShortestDistance distanceEstimation range =            
             let exists, computedDistance = tryGetComputedDistance range
             if exists
             then computedDistance
@@ -220,6 +221,10 @@ type MatchedRanges () =
                     then DistanceInfo (System.Int32.MaxValue, false)
                     else 
                         let mutable distance = DistanceInfo (System.Int32.MaxValue, false)
+                        let getNewDistanceEstimation () =
+                            if distance.Distance >= 0 && distance < distanceEstimation
+                            then distance
+                            else distanceEstimation
                         let update (newDistance:DistanceInfo) =
                             if newDistance.Distance >= 0 && newDistance < distance
                             then distance <- newDistance
@@ -235,36 +240,37 @@ type MatchedRanges () =
                                                   range.InputRange.EndPosition,
                                                   n,
                                                   finalState)
-                                    |> computeShortestDistance
+                                    |> computeShortestDistance (getNewDistanceEstimation ())
                                     |> update
                             | RangeType.Intermediate pos ->                                 
-                                let leftRangeDistance =
-                                    MatchedRange (range.InputRange.StartPosition,
-                                                  pos.InputPosition,
-                                                  range.RSMRange.StartPosition,
-                                                  pos.RSMState)
-                                    |> computeShortestDistance
                                 let rightRangeDistance =
                                     MatchedRange (pos.InputPosition,
                                                   range.InputRange.EndPosition,
                                                   pos.RSMState,
                                                   range.RSMRange.EndPosition)
-                                    |> computeShortestDistance
-                                DistanceInfo (leftRangeDistance.Distance + rightRangeDistance.Distance, atLeastMustHaveStateVisited || leftRangeDistance.AtLeastOneMustHaveStateVisited || rightRangeDistance.AtLeastOneMustHaveStateVisited)
-                                |> update
-                    
-                    //    |> Array.filter (fun x -> x.Distance >= 0)
-                    //    |> fun a -> if a.Length > 0 then Array.min a else DistanceInfo(System.Int32.MaxValue, false)
+                                    |> computeShortestDistance (getNewDistanceEstimation ())
+                                if rightRangeDistance.Distance >= 0 && rightRangeDistance < distance && rightRangeDistance < distanceEstimation
+                                then
+                                    let leftRangeDistance =
+                                        MatchedRange (range.InputRange.StartPosition,
+                                                      pos.InputPosition,
+                                                      range.RSMRange.StartPosition,
+                                                      pos.RSMState)
+                                        |> computeShortestDistance (getNewDistanceEstimation ())
+                                    
+                                    DistanceInfo (leftRangeDistance.Distance + rightRangeDistance.Distance, atLeastMustHaveStateVisited
+                                                                                                            || leftRangeDistance.AtLeastOneMustHaveStateVisited
+                                                                                                            || rightRangeDistance.AtLeastOneMustHaveStateVisited)
+                                    |> update
                         addComputedDistance range distance
                         cycles.Remove range |> ignore
                         distance
         let res = ResizeArray<_>()
         let reachable = HashSet<_>()
-        //for startVertex in startVertices do
         for finalVertex in finalVertices do
             for finalState in finalStates do
                 MatchedRange(startVertex, finalVertex, query.OriginalStartState, finalState)
-                |> computeShortestDistance
+                |> computeShortestDistance (DistanceInfo (System.Int32.MaxValue, false))
                 |> fun (distance: DistanceInfo) ->                   
                     res.Add (
                         DistanceComputationResult(
