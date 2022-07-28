@@ -31,20 +31,17 @@ let evalFromState
         
     let descriptorToProcess = Stack<_>()
     
-    let roots = ResizeArray<_>()
-    
     let inline addDescriptor (descriptor:Descriptor) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
         then descriptorToProcess.Push descriptor 
 
     let emptyRange =
-        MatchedRangeWithType
+        MatchedRangeWithNode
             (
                     -1<inputGraphVertex>
                   , -1<inputGraphVertex>
                   , -1<rsmState>
-                  , -1<rsmState>
-                  , RangeType.Empty
+                  , -1<rsmState>                  
                )
 
     startVertices
@@ -65,23 +62,21 @@ let evalFromState
                 let startPosition = currentDescriptor.GSSVertex.InputPosition
                 if startVertices.Contains startPosition
                 then
-                    reachableVertices.[startPosition].Add(currentDescriptor.InputPosition) |> ignore
-                    roots.Add currentDescriptor.MatchedRange.RangeType
+                    reachableVertices.[startPosition].Add(currentDescriptor.InputPosition) |> ignore                    
             
             let matchedRange =
-                match currentDescriptor.MatchedRange.RangeType with             
-                | RangeType.Empty ->
-                    let currentlyCreatedNode = EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GSSVertex.RSMState) 
-                    let newRange =
-                        MatchedRangeWithType(
-                               currentDescriptor.InputPosition
+                match currentDescriptor.MatchedRange.Node with             
+                | None ->
+                    let currentlyCreatedNode = EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GSSVertex.RSMState)
+                    let matchedRange = MatchedRange (
+                             currentDescriptor.InputPosition
                              , currentDescriptor.InputPosition
                              , currentDescriptor.RSMState
-                             , currentDescriptor.RSMState
-                             , RangeType.EpsilonNonTerminal currentlyCreatedNode
-                        )
-                    if buildSppf then matchedRanges.AddMatchedRange newRange
-                    newRange
+                             , currentDescriptor.RSMState)
+                    
+                    let newRangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.EpsilonNode currentlyCreatedNode)                    
+                    MatchedRangeWithNode(matchedRange, newRangeNode)
+                    
                 | _ -> currentDescriptor.MatchedRange
                                                 
             gss.Pop(currentDescriptor, matchedRange)            
@@ -91,19 +86,19 @@ let evalFromState
                         if buildSppf
                         then 
                             let leftSubRange = gssEdge.Info
-                            let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GSSVertex.InputPosition, currentDescriptor.InputPosition) ,currentDescriptor.GSSVertex.RSMState,query)
-                            let rightSubRange =           
-                                MatchedRangeWithType(
-                                    currentDescriptor.GSSVertex.InputPosition
-                                  , currentDescriptor.InputPosition
-                                  , match gssEdge.Info.RangeType with
-                                    | RangeType.Empty -> gssEdge.GSSVertex.RSMState
-                                    | _ -> gssEdge.Info.Range.RSMRange.EndPosition
-                                  , gssEdge.RSMState
-                                  , RangeType.NonTerminal currentlyCreatedNode
-                                )
-                            matchedRanges.AddMatchedRange rightSubRange   
-                            matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                            let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GSSVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GSSVertex.RSMState, query)
+                            let rightSubRange =
+                                let matchedRange =
+                                  MatchedRange (
+                                      currentDescriptor.GSSVertex.InputPosition
+                                      , currentDescriptor.InputPosition
+                                      , match gssEdge.Info.Node with
+                                        | None -> gssEdge.GSSVertex.RSMState
+                                        | _ -> gssEdge.Info.Range.RSMRange.EndPosition
+                                      , gssEdge.RSMState)
+                                let rangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
+                                MatchedRangeWithNode(matchedRange, rangeNode)
+                            matchedRanges.AddIntermediateNode (leftSubRange, rightSubRange)                            
                         else emptyRange
                     Descriptor(currentDescriptor.InputPosition, gssEdge.GSSVertex, gssEdge.RSMState, newRange)
                     |> addDescriptor
@@ -132,16 +127,16 @@ let evalFromState
                        then
                            let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(matchedRange.Range.InputRange ,edge.NonTerminalSymbolStartState,query)
                            let rightSubRange =
-                               MatchedRangeWithType(
-                                    matchedRange.Range.InputRange.StartPosition
-                                  , matchedRange.Range.InputRange.EndPosition
-                                  , currentDescriptor.RSMState
-                                  , edge.State
-                                  , RangeType.NonTerminal currentlyCreatedNode
-                               )
-                           matchedRanges.AddMatchedRange rightSubRange
+                               let matchedRange =
+                                  MatchedRange(
+                                      matchedRange.Range.InputRange.StartPosition
+                                      , matchedRange.Range.InputRange.EndPosition
+                                      , currentDescriptor.RSMState
+                                      , edge.State)
+                               let rangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
+                               MatchedRangeWithNode(matchedRange, rangeNode)                           
                            let leftSubRange = currentDescriptor.MatchedRange
-                           matchedRanges.AddMatchedRange(leftSubRange, rightSubRange)
+                           matchedRanges.AddIntermediateNode(leftSubRange, rightSubRange)
                        else emptyRange 
                    Descriptor(matchedRange.Range.InputRange.EndPosition, currentDescriptor.GSSVertex, edge.State, newRange) |> addDescriptor)
         )
@@ -152,15 +147,16 @@ let evalFromState
                 then
                     let currentlyCreatedNode = matchedRanges.AddTerminalNode(Range(currentDescriptor.InputPosition, graphEdge.TargetVertex), rsmEdge.TerminalSymbol)
                     let currentlyMatchedRange =
-                        MatchedRangeWithType(
-                            currentDescriptor.InputPosition
-                            , graphEdge.TargetVertex
-                            , currentDescriptor.RSMState
-                            , rsmEdge.State
-                            , RangeType.Terminal currentlyCreatedNode)
-                        
-                    matchedRanges.AddMatchedRange currentlyMatchedRange
-                    matchedRanges.AddMatchedRange (currentDescriptor.MatchedRange, currentlyMatchedRange)
+                        let matchedRange =
+                            MatchedRange(
+                                currentDescriptor.InputPosition
+                                , graphEdge.TargetVertex
+                                , currentDescriptor.RSMState
+                                , rsmEdge.State
+                            )
+                        let rangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.TerminalNode currentlyCreatedNode)
+                        MatchedRangeWithNode(matchedRange, rangeNode)                                            
+                    matchedRanges.AddIntermediateNode (currentDescriptor.MatchedRange, currentlyMatchedRange)
                 else emptyRange                
             Descriptor(graphEdge.TargetVertex, currentDescriptor.GSSVertex, rsmEdge.State, newMatchedRange) |> addDescriptor
         
@@ -199,21 +195,3 @@ let eval<'inputVertex when 'inputVertex: equality> (graph:IInputGraph) (startVer
     let gss = GSS()
     let matchedRanges = MatchedRanges()
     evalFromState reachableVertices gss matchedRanges (graph:IInputGraph) (startVertices:HashSet<_>) (query:RSM) mode
-
-let evalParallel blockSize (graph:IInputGraph) startVertices (query:RSM) mode =
-    Array.chunkBySize blockSize startVertices
-    |> Array.Parallel.map (fun startVertices -> eval graph (HashSet<_> startVertices) query mode)
-    |> Array.fold
-           (fun state item ->
-            match (state,item) with
-            | QueryResult.ReachabilityFacts s1, QueryResult.ReachabilityFacts s2 ->
-                for kvp in s2 do s1.Add(kvp.Key, kvp.Value)
-                QueryResult.ReachabilityFacts s1 
-            | QueryResult.MatchedRanges s1, QueryResult.MatchedRanges s2 ->
-                s1.UnionWith s2
-                QueryResult.MatchedRanges s1
-            | _ -> failwith "Inconsistent query result!"
-            )
-           (match mode with
-            | ReachabilityOnly -> QueryResult.ReachabilityFacts <| Dictionary()
-            | AllPaths -> QueryResult.MatchedRanges <| MatchedRanges () )

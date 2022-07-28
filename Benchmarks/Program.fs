@@ -27,8 +27,7 @@ type ArgQuery =
     | VSharp = 5
 
 type Arguments =
-    | [<Mandatory>] Graph of string
-    | Parallel of int
+    | [<Mandatory>] Graph of string    
     | [<Mandatory>] Mode of ArgQueryMode
     | [<Mandatory>] TaskType of ArgTaskType
     | [<Mandatory>] Query of ArgQuery
@@ -37,7 +36,6 @@ type Arguments =
         member this.Usage =
             match this with
             | Graph _ -> "File with graph."
-            | Parallel _ -> "Run naive parallel version with block of specified size."
             | Mode _ -> "Mode of query."
             | TaskType _ -> "Task type."
             | Query _ -> "Query to evaluate: one of predefined queries."
@@ -270,11 +268,9 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
        
     RSM([|alias; pointsTo; flowsTo|], alias)
     
-let runAllPairs parallelBlocks (graph:InputGraph) q mode =     
-    let start = System.DateTime.Now
-    match parallelBlocks with
-    | None -> eval graph (HashSet (graph.AllVertices())) q mode
-    | Some blockSize -> evalParallel blockSize graph (graph.AllVertices()) q mode
+let runAllPairs (graph:InputGraph) q mode =     
+    let start = System.DateTime.Now    
+    eval graph (HashSet (graph.AllVertices())) q mode    
     |> ignore
     printfn $"Total processing time: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
 
@@ -332,11 +328,7 @@ let main argv =
         
     match args.GetResult TaskType with
     | ArgTaskType.All_Pairs ->        
-        let parallelBlockSize =
-            if args.Contains Parallel
-            then Some <| args.GetResult Parallel
-            else None
-        runAllPairs parallelBlockSize graph query mode
+        runAllPairs graph query mode
     | ArgTaskType.Single_Source ->        
         singleSourceForAll graph query mode
     | ArgTaskType.Single_Source_Continuously ->        

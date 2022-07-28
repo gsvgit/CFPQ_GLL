@@ -19,7 +19,7 @@ type Descriptor =
     val InputPosition: int<inputGraphVertex>
     val GSSVertex: GssVertex
     val RSMState: int<rsmState>
-    val MatchedRange: MatchedRangeWithType
+    val MatchedRange: MatchedRangeWithNode
     new(inputPosition, gssVertex, rsmState, matchedRange) =
         {
             InputPosition = inputPosition
@@ -42,7 +42,7 @@ type DescriptorPart =
 type GSSEdge =
     val GSSVertex : GssVertex
     val RSMState : int<rsmState>
-    val Info : MatchedRangeWithType
+    val Info : MatchedRangeWithNode
     new(gssVertex, rsmState, info) =
         {
             GSSVertex = gssVertex
@@ -53,7 +53,7 @@ type GSSEdge =
 [<Struct>]
 type GssVertexContent =
     val OutgoingEdges : ResizeArray<GSSEdge>
-    val Popped : ResizeArray<MatchedRangeWithType>
+    val Popped : ResizeArray<MatchedRangeWithNode>
     val HandledDescriptors : HashSet<DescriptorPart>
     new (outputEdges, popped, handledDescriptors) =
         {
@@ -76,7 +76,7 @@ type GSS () =
                          , rsmStateToReturn: int<rsmState>
                          , inputPositionToContinue: int<inputGraphVertex>
                          , rsmStateToContinue: int<rsmState>
-                         , matchedRange: MatchedRangeWithType) =
+                         , matchedRange: MatchedRangeWithNode) =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue)
         let newGSSVertexContent = vertices.[newGSSVertex]
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)

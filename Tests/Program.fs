@@ -23,24 +23,20 @@ let go() =
 
     match result with
     | QueryResult.MatchedRanges ranges -> 
-      let sppf = ranges.ToSPPF(q, startV)
+      let sppf = ranges.NonTerminals(q.StartState)
       let actual = TriplesStoredSPPF sppf
       
       actual.ToDot "1.dot"
       
-      //GLLTests.dumpResultToConsole actual
+      Tests.GLLTests.dumpResultToConsole actual
     | _ -> failwith "Unexpected result." 
     0
  
 [<EntryPoint>]
 let main argv =
-    let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, 0<terminalSymbol>, 0<inputGraphVertex>)|])
-    let startV = [|0<inputGraphVertex>|]
-    let box = RSMBox(0<rsmState>, HashSet([0<rsmState>]),[|RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,0<rsmState>)|]) 
-    let q = RSM([|box|], box)
-    let r = eval graph (HashSet startV) q AllPaths
-    0
-    //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])
+    //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``One edge loop graph, one edge loop RSM``])
+   
+    Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])
     
     //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.DistancesTests.tests])
     //go ()
