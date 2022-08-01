@@ -2,8 +2,10 @@
 open System.Xml.Schema
 open Argu
 open CFPQ_GLL
+open CFPQ_GLL.Common
 open CFPQ_GLL.GLL
 open CFPQ_GLL.GSS
+open Tests
 open Tests.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
@@ -99,7 +101,7 @@ let defaultMap =
     res.Add("type",(2,3))
     res
 let g1 =
-    let box = RSMBox(0<rsmState>, HashSet([3<rsmState>]),
+    let box,_ = GLLTests.makeRsmBox(Dictionary(), 0<rsmState>, HashSet([3<rsmState>]),
                 [|TerminalEdge(0<rsmState>,1<terminalSymbol>,1<rsmState>)
                   NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
                   TerminalEdge(1<rsmState>,0<terminalSymbol>,3<rsmState>)
@@ -116,7 +118,8 @@ let example10_go_hierarchy () =
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
     nodes
     |> Array.iter (fun n ->
-        let reachable = GLL.eval graph (HashSet [|n|]) g1
+        let startVertices = graph.ToCfpqCoreGraph (HashSet [|n|]) 
+        let reachable = GLL.eval startVertices g1
         printfn $"Reachable: %A{reachable}")
 
 type LoadStorePairsInfo =
@@ -135,19 +138,10 @@ type LoadStorePairsInfo =
 let vSharRSM maxCallSymbol =
     let firstFreeCallTerminalId = maxCallSymbol + 1<terminalSymbol>
     let terminalForCFGEdge = 0<terminalSymbol>
-    let startBox =
-            RSMBox(
-                0<rsmState>,
-                HashSet [|0<rsmState>; 1<rsmState>|],
-                [|                    
-                    yield RSMEdges.NonTerminalEdge(0<rsmState>, 2<rsmState>, 1<rsmState>)                    
-                    for callSymbol in 2<terminalSymbol> .. 2<terminalSymbol> .. firstFreeCallTerminalId - 1<terminalSymbol> do
-                      yield RSMEdges.TerminalEdge(1<rsmState>, callSymbol, 0<rsmState>)
-                |]
-                )
-    let balancedBracketsBox =
+    let balancedBracketsBox,m =
       let mutable firstFreeRsmState = 3<rsmState>
-      RSMBox(
+      GLLTests.makeRsmBox(
+          Dictionary(),
           2<rsmState>,
           HashSet [|2<rsmState>|],
           [|
@@ -158,6 +152,18 @@ let vSharRSM maxCallSymbol =
                   yield RSMEdges.TerminalEdge(firstFreeRsmState + 1<rsmState>, callSymbol + 1<terminalSymbol>, 2<rsmState>)                  
                   firstFreeRsmState <- firstFreeRsmState + 2<rsmState>
           |])
+    let startBox,_ =
+            GLLTests.makeRsmBox(
+                m,
+                0<rsmState>,
+                HashSet [|0<rsmState>; 1<rsmState>|],
+                [|                    
+                    yield RSMEdges.NonTerminalEdge(0<rsmState>, 2<rsmState>, 1<rsmState>)                    
+                    for callSymbol in 2<terminalSymbol> .. 2<terminalSymbol> .. firstFreeCallTerminalId - 1<terminalSymbol> do
+                      yield RSMEdges.TerminalEdge(1<rsmState>, callSymbol, 0<rsmState>)
+                |]
+                )
+    
     (*let startBox =
             RSMBox(
                 0<rsmState>,
@@ -223,9 +229,14 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
         |]
                
     let mutable freeStateId = 7<rsmState>
+    let mapping = Dictionary()
+    mapping.Add(0<rsmState>, RsmVertex(true,false) :> IRsmState)
+    mapping.Add(2<rsmState>, RsmVertex(true,false))
+    mapping.Add(4<rsmState>, RsmVertex(true,false))
      
-    let pointsTo =
-        RSMBox(
+    let pointsTo,mapping =
+        GLLTests.makeRsmBox(
+           mapping,
            0<rsmState>,
            HashSet([1<rsmState>]),
            [|
@@ -240,8 +251,9 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
                   freeStateId <- freeStateId + 2<rsmState>
            |]           
         )
-    let flowsTo =
-        RSMBox(
+    let flowsTo,mapping =
+        GLLTests.makeRsmBox(
+           mapping,
            2<rsmState>,
            HashSet([3<rsmState>]),
            [|
@@ -256,8 +268,9 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
                   freeStateId <- freeStateId + 2<rsmState>
            |]
         )
-    let alias =
-       RSMBox(
+    let alias,_ =
+       GLLTests.makeRsmBox(
+              mapping,
               4<rsmState>,
               HashSet([6<rsmState>]),
               [|
@@ -269,8 +282,9 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
     RSM([|alias; pointsTo; flowsTo|], alias)
     
 let runAllPairs (graph:InputGraph) q mode =     
-    let start = System.DateTime.Now    
-    eval graph (HashSet (graph.AllVertices())) q mode    
+    let start = System.DateTime.Now
+    let startVertices = graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
+    eval startVertices q mode    
     |> ignore
     printfn $"Total processing time: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
 
@@ -283,20 +297,22 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
     for n in vertices do
         printfn $"V: %i{n}"
         let startVertices = [|n|]
+        let startVertices = graph.ToCfpqCoreGraph (HashSet startVertices)
         let reachableVertices =
-            let d = Dictionary<_,_>(startVertices.Length)
+            let d = Dictionary<_,_>(startVertices.Count)
             startVertices
-            |> Array.iter (fun v -> d.Add(v, HashSet<_>()))
-            d
-        let res = evalFromState reachableVertices gss matchedRanges graph (HashSet startVertices) q mode         
+            |> Seq.iter (fun v -> d.Add(v, HashSet<_>()))
+            d        
+        let res = evalFromState reachableVertices gss matchedRanges startVertices q mode         
         match res with
         | QueryResult.MatchedRanges ranges -> matchedRanges <- ranges
         | _ -> ()
         
-let singleSourceForAll (graph:InputGraph) q mode =        
-    for n in graph.AllVertices() do
-        let startVertices = HashSet [|n|]        
-        let res = eval graph startVertices q mode |> ignore
+let singleSourceForAll (graph:InputGraph) q mode =
+    let startVertices =  graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
+    for n in startVertices do
+        let startVertices =  HashSet [|n|]        
+        let res = eval startVertices q mode |> ignore
         printfn $"%A{res}"
 
 [<EntryPoint>]

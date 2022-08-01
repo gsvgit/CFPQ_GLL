@@ -1,8 +1,11 @@
 module CFPQ_GLL.InputGraph
 
+open System.Collections.Generic
+open CFPQ_GLL.Common
+
 
 [<Measure>] type inputGraphVertex
-[<Measure>] type terminalSymbol
+
 
 [<Struct>]
 type InputGraphEdge =
@@ -10,6 +13,7 @@ type InputGraphEdge =
     val TargetVertex: int<inputGraphVertex>
     new (terminal, targetVertex) = {TerminalSymbol = terminal; TargetVertex = targetVertex}
 
+    
 type IInputGraph =
     abstract GetOutgoingEdges: int<inputGraphVertex> -> ResizeArray<InputGraphEdge>
     

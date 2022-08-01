@@ -1,6 +1,7 @@
 ﻿
 open System.Collections.Generic
 open CFPQ_GLL
+open CFPQ_GLL.Common
 open CFPQ_GLL.GLL
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
@@ -17,14 +18,15 @@ let go() =
                              TerminalEdge(0<inputGraphVertex>, 1<terminalSymbol>, 0<inputGraphVertex>)                             
                            |])
     let startV = [|0<inputGraphVertex>|]
-    let q = Tests.GLLTests.simpleLoopRSMForDyckLanguage
-
-    let result = GLL.eval graph (HashSet startV) q GLL.AllPaths
+    let q = Tests.GLLTests.simpleLoopRSMForDyckLanguage ()
+    
+    let startVertices = graph.ToCfpqCoreGraph (HashSet startV)
+    let result = GLL.eval startVertices q GLL.AllPaths
 
     match result with
     | QueryResult.MatchedRanges ranges -> 
-      let sppf = ranges.NonTerminals(q.StartState)
-      let actual = TriplesStoredSPPF sppf
+      let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
+      let actual = TriplesStoredSPPF (sppf, Dictionary())
       
       actual.ToDot "1.dot"
       
@@ -34,7 +36,7 @@ let go() =
  
 [<EntryPoint>]
 let main argv =
-    //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``One edge loop graph, one edge loop RSM``])
+    //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Two loops with common vertex, simple loop RSM for Dyck language``])
    
     Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])
     
