@@ -2,13 +2,11 @@ module CFPQ_GLL.SPPF
 
 open System
 open System.Collections.Generic
-open CFPQ_GLL
 open CFPQ_GLL.Common
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open Microsoft.FSharp.Core
 open FSharpx.Collections
-
 
 type Distance = Unreachable | Reachable of int
 
@@ -53,7 +51,7 @@ and IntermediateNode (rsmState:IRsmState
 
 and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<NonRangeNode>) =
     let mutable distance =
-        let mutable minDistance = 0<distance>
+        let mutable minDistance = Int32.MaxValue * 1<distance>
         for node in intermediateNodes do
             minDistance <- min minDistance node.Distance            
         minDistance
@@ -69,16 +67,18 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<NonRangeNo
             and set v = distance <- v
         member this.Parents = parents
         member this.IntermediateNodes = intermediateNodes
-  
+
+(*  
 and [<Struct>] IntermediatePoint =
     val RSMState : IRsmState
     val InputPosition : int<inputGraphVertex>
     new (rsmState, inputPosition) = {RSMState = rsmState; InputPosition = inputPosition}
+*)
 
 and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
     let parents = HashSet<IRangeNode>()
     let mutable distance =
-        rangeNodes |> ResizeArray.fold (fun v n -> v + n.Distance) 0<distance> 
+        rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>) 
     member this.NonTerminalStartState = nonTerminalStartState
     member this.LeftPosition =graphRange.StartPosition
     member this.RightPosition =graphRange.EndPosition
@@ -143,14 +143,53 @@ type DistanceInfo =
             else failwith "Incomparable."
 *)    
 
-type MatchedRanges () =
-    //let rangeNodes : Dictionary<MatchedRange,RangeNode> = Dictionary<_,_>()
-    //let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange,IntermediateNode>>()
-    //let terminalNodes = Dictionary<Range<IInputGraphVertex>,Dictionary<int<terminalSymbol>,TerminalNode>>()
-    //let nonTerminalNodes = Dictionary<Range<IInputGraphVertex>,Dictionary<IRsmState,NonTerminalNode>>()
-    //let blockSize = 1000
+type MatchedRanges () =    
     
-    let updateDistances (rangeNode:IRangeNode) = () 
+    let updateDistances (rangeNode:IRangeNode) =
+        let cycle = HashSet<IRangeNode>()
+        let rec handleRangeNode (rangeNode:IRangeNode) =
+            if not <| cycle.Contains rangeNode
+            then
+                let added = cycle.Add rangeNode
+                assert added
+                let oldDistance = rangeNode.Distance 
+                let mutable newDistance = Int32.MaxValue * 1<distance>
+                for node in rangeNode.IntermediateNodes do
+                    newDistance <- min newDistance node.Distance            
+                if oldDistance > newDistance 
+                then
+                    rangeNode.Distance <- newDistance
+                    rangeNode.Parents
+                    |> Seq.iter handleNonRangeNode
+            let removed = cycle.Remove rangeNode
+            assert removed
+            
+        and handleNonRangeNode (node:NonRangeNode) =
+            match node with
+            | NonRangeNode.TerminalNode t -> failwith "Terminal node can not be parent."
+            | NonRangeNode.NonTerminalNode n -> handleNonTerminalNode n
+            | NonRangeNode.IntermediateNode i -> handleIntermediateNode i
+            | NonRangeNode.EpsilonNode _ -> failwith "Epsilon node can not be parent."
+            
+        and handleNonTerminalNode (node:INonTerminalNode) =            
+            let oldDistance = node.Distance
+            let _node = node :?> NonTerminalNode
+            let newDistance = _node.RangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
+            if oldDistance > newDistance
+            then
+                node.Distance <- newDistance
+                node.Parents |> Seq.iter handleRangeNode
+        
+        and handleIntermediateNode (node:IIntermediateNode) =
+            let oldDistance = node.Distance
+            let _node = node :?> IntermediateNode
+            let newDistance = _node.LeftSubtree.Distance + _node.RightSubtree.Distance 
+            if oldDistance > newDistance
+            then
+                node.Distance <- newDistance
+                node.Parents |> Seq.iter handleRangeNode
+        
+        handleRangeNode rangeNode    
     
     member internal this.AddTerminalNode (range:Range<IInputGraphVertex>, terminal) =
         let terminalNodes = range.EndPosition.TerminalNodes
@@ -264,16 +303,6 @@ type MatchedRanges () =
             let newRange = MatchedRangeWithNode(newMatchedRange, rangeNode)
             newRange
 
-    //member this.NonTerminalNodesStorage with get () = nonTerminalNodes
-    
-    //member this.NonTerminals nonTerminalStartState =
-    //    [|
-    //        for kvp in nonTerminalNodes do
-    //            for kvp in kvp.Value do
-    //                if kvp.Key = nonTerminalStartState
-    //                then yield kvp.Value
-    //    |]
-     
     member this.GetShortestDistances (
             //query: RSM,
             //finalStates:HashSet<int<rsmState>>,

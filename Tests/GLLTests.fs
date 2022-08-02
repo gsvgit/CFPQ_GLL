@@ -58,19 +58,22 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
         )
 
 
-let runGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (q:RSM) expected =
+let runGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
     let validDotFileName =
         testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
     let startVertices = graph.ToCfpqCoreGraph (HashSet startV)
     let result = eval startVertices q AllPaths
     match result with
-    | QueryResult.MatchedRanges ranges ->
+    | QueryResult.MatchedRanges ranges ->        
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
+        let distances = sppf |> Array.map (fun n -> n.Distance) |> Array.sort
+        //printfn $"D for %s{validDotFileName}: %A{distances}"
         let actual = TriplesStoredSPPF(sppf, Dictionary())
         //dumpResultToConsole actual
         //actual.ToDot validDotFileName
-        Expect.sequenceEqual actual.Nodes (fst expected) "Nodes should be equals."
-        Expect.sequenceEqual actual.Edges (snd expected) "Edges should be equals."
+        Expect.sequenceEqual actual.Nodes expectedNodes "Nodes should be equals."
+        Expect.sequenceEqual actual.Edges expectedEdges "Edges should be equals."
+        Expect.sequenceEqual distances expectedDistances "Distances should be equals."
     | _ -> failwith "Result should be MatchedRanges"
 
 let simpleLoopRSMForDyckLanguage () =
@@ -99,8 +102,10 @@ let ``One edge loop graph, one edge loop RSM`` =
           nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
           nodes.Add(3, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,0<inputGraphVertex>))
+          
           let edges = ResizeArray<_>([|(0,1); (1,2); (1,3);|])
-          (nodes,edges)
+          let distances = [|0<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
 
 let ``Empty graph, Epsilon-only RSM`` =
@@ -117,8 +122,9 @@ let ``Empty graph, Epsilon-only RSM`` =
           nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
 
-          let edges = ResizeArray<_>([|(0,1); (1,2);|])
-          (nodes,edges)
+          let edges = ResizeArray<_>([|(0,1); (1,2)|])
+          let distances = [|0<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
     
 let ``One edge linear graph, one edge linear RSM`` =
@@ -134,7 +140,8 @@ let ``One edge linear graph, one edge linear RSM`` =
           nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,1<rsmState>))
           nodes.Add(2, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,1<inputGraphVertex>))
           let edges = ResizeArray<_>([|(0,1); (1,2)|])
-          (nodes,edges)
+          let distances = [|1<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
 
 let ``One edge linear graph, one edge loop RSM`` =
@@ -153,7 +160,8 @@ let ``One edge linear graph, one edge loop RSM`` =
           nodes.Add(4, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(5, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,1<inputGraphVertex>))
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 1<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Two edge linear graph, one edge loop RSM`` =
@@ -182,7 +190,8 @@ let ``Two edge linear graph, one edge loop RSM`` =
           nodes.Add(9, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>,0<terminalSymbol>,2<inputGraphVertex>))
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,4); (8,9); (9,10)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 1<distance>; 2<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
 
 let ``Minimal example of interprocedural control flow`` =
@@ -344,7 +353,10 @@ let ``Minimal example of interprocedural control flow`` =
                                        (82,43); (83,84); (84,85); (85,80); (85,45); (86,9); (87,7); (88,89); (89,90)
                                        (90,7); (90,91); (91,92)
                                      |])
-          (nodes,edges)
+          let distances = [|0<distance>; 0<distance>; 1<distance>; 1<distance>; 2<distance>; 2<distance>; 3<distance>
+                            3<distance>; 4<distance>; 5<distance>; 6<distance>; 6<distance>; 7<distance>; 8<distance>
+                            9<distance>; 9<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Two concatenated linear pairs of brackets, simple loop RSM for Dyck language`` =
@@ -393,7 +405,8 @@ let ``Two concatenated linear pairs of brackets, simple loop RSM for Dyck langua
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,9); (9,10); (10,11); (11,12); (10,13)
                                        (13,3); (8,14); (14,15); (16,17); (17,18); (19,20); (20,21); (21,22); (22,23)
                                        (23,24); (24,25); (25,7); (25,26); (26,27); (23,28); (28,16); (21,29); (29,30)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Two loops with common vertex, simple loop RSM for Dyck language`` =
@@ -418,9 +431,9 @@ let ``Two loops with common vertex, simple loop RSM for Dyck language`` =
           nodes.Add(9, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,1<rsmState>,0<rsmState>))
           nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,0<inputGraphVertex>))
 
-
           let edges = ResizeArray<_>([|(0,1); (1,2); (1,3); (3,4); (4,5); (5,6); (6,7); (5,8); (8,0); (3,9); (9,10)|])
-          (nodes,edges)
+          let distances = [|0<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Minimal worst case, simple loop RSM for Dyck language`` =
@@ -455,7 +468,8 @@ let ``Minimal worst case, simple loop RSM for Dyck language`` =
 
           let edges = ResizeArray<_>([|(0,1); (1,2); (1,3); (3,4); (4,5); (5,6); (6,7); (5,8); (8,9); (9,10); (10,11)
                                        (11,12); (12,13); (13,6); (13,14); (14,0); (11,15); (15,16); (3,17); (17,18)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 2<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Second worst case, simple loop RSM for Dyck language`` =
@@ -543,7 +557,9 @@ let ``Second worst case, simple loop RSM for Dyck language`` =
                                        (33,6); (31,44); (25,46); (18,51); (51,14); (51,8); (17,49); (15,6); (13,44)
                                        (12,52); (52,20); (52,53); (53,54); (54,34); (11,46); (3,49); (55,56); (56,57)
                                        (58,59); (59,60)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>; 6<distance>; 8<distance>
+                            10<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Linear nested brackets, simple loop RSM for Dyck language`` =
@@ -590,7 +606,8 @@ let ``Linear nested brackets, simple loop RSM for Dyck language`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (9,10); (10,11); (11,12); (12,13)
                                        (13,14); (14,15); (13,16); (16,6); (11,17); (17,18); (19,20); (20,21); (21,22)
                                        (22,23); (23,24); (24,25); (23,26); (26,9); (21,27); (27,28)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Complex nested linear brackets, simple loop RSM for Dyck language`` =
@@ -657,7 +674,8 @@ let ``Complex nested linear brackets, simple loop RSM for Dyck language`` =
                                        (23,24); (24,25); (25,26); (26,27); (27,28); (28,10); (28,29); (29,30); (26,31)
                                        (31,19); (24,32); (32,33); (34,35); (35,36); (36,37); (37,38); (38,39); (39,40)
                                        (38,41); (41,22); (36,42); (42,43)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>; 6<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
 
 let ``One edge linear graph, simple chain call RSM`` =
@@ -682,7 +700,8 @@ let ``One edge linear graph, simple chain call RSM`` =
           nodes.Add(4, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,1<inputGraphVertex>))
 
           let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4)|])
-          (nodes,edges)
+          let distances = [|1<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Two edges linear graph with one pair of brackets, simple loop RSM for Dyck language`` =
@@ -713,7 +732,8 @@ let ``Two edges linear graph with one pair of brackets, simple loop RSM for Dyck
 
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,9); (9,10); (10,11); (11,12)
                                        (10,13); (13,3); (8,14); (14,15)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 0<distance>; 2<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Graph with branch, RSM with nonterminal, nodes reusing`` =
@@ -790,7 +810,9 @@ let ``Graph with branch, RSM with nonterminal, nodes reusing`` =
                                        (32,33); (31,34); (34,26); (35,36); (36,37); (37,19); (37,38); (38,29); (36,39)
                                        (39,40); (40,41); (39,34); (42,43); (43,44); (44,9); (44,45); (45,35)
                                      |])
-          (nodes,edges)
+          let distances = [|1<distance>; 1<distance>; 1<distance>; 1<distance>; 1<distance>; 2<distance>; 2<distance>
+                            2<distance>; 2<distance>; 4<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let ``Graph with branch, RSM is loop DFA, nodes reusing`` =
@@ -837,7 +859,8 @@ let ``Graph with branch, RSM is loop DFA, nodes reusing`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,4); (8,9); (9,10); (11,12); (12,13)
                                        (13,4); (13,14); (14,15); (12,16); (16,7); (16,17); (17,18); (19,20); (20,21)
                                        (21,12); (21,22); (22,23)|])
-          (nodes,edges)
+          let distances = [|0<distance>; 1<distance>; 2<distance>; 2<distance>; 3<distance>|]
+          (nodes,edges,distances)
         runGLLAndCheckResult testName graph startV q expected
         
 let tests =  
