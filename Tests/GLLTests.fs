@@ -14,8 +14,11 @@ let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:i
     let box = RSMBox()
     let getState stateId =
         let exists, state = statesMapping.TryGetValue stateId
+        
         if exists
-        then state
+        then
+            box.AddState state //!!!
+            state
         else
             let state = RsmVertex((stateId = startSate), finalStates.Contains stateId)
             statesMapping.Add(stateId, state)
@@ -61,7 +64,7 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
 let runGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
     let validDotFileName =
         testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
-    let startVertices = graph.ToCfpqCoreGraph (HashSet startV)
+    let startVertices,_ = graph.ToCfpqCoreGraph (HashSet startV)
     let result = eval startVertices q AllPaths
     match result with
     | QueryResult.MatchedRanges ranges ->        

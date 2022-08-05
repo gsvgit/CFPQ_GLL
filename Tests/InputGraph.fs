@@ -85,6 +85,7 @@ type InputGraph (edges) =
     member this.AddVertex v = addVertex v |> ignore
     
     member this.ToCfpqCoreGraph (startVertices: HashSet<int<inputGraphVertex>>) =
+        let mutable firstFreeVertexId = 0
         let verticesMapping = Dictionary<int<inputGraphVertex>, IInputGraphVertex>()
         let newStartVertices = HashSet<IInputGraphVertex>() 
         let getVertex vertexId =
@@ -94,6 +95,7 @@ type InputGraph (edges) =
                 then vertex
                 else
                     let vertex = DemoInputGraphVertex()
+                    firstFreeVertexId <- firstFreeVertexId + 1
                     verticesMapping.Add(vertexId, vertex)
                     vertex
             if startVertices.Contains vertexId
@@ -111,5 +113,5 @@ type InputGraph (edges) =
                 else
                     vertex.OutgoingEdges.Add(edge.TerminalSymbol, HashSet<_>[|targetVertex|])
                     
-        newStartVertices
+        newStartVertices,verticesMapping
                 

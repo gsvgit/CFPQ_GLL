@@ -1,4 +1,4 @@
-﻿open System.Collections.Generic
+open System.Collections.Generic
 open System.Xml.Schema
 open Argu
 open CFPQ_GLL
@@ -118,7 +118,7 @@ let example10_go_hierarchy () =
     let nodes = loadNodesFormCSV "/home/gsv/Downloads/go_hierarchy_nodes.csv"
     nodes
     |> Array.iter (fun n ->
-        let startVertices = graph.ToCfpqCoreGraph (HashSet [|n|]) 
+        let startVertices,_ = graph.ToCfpqCoreGraph (HashSet [|n|]) 
         let reachable = GLL.eval startVertices g1
         printfn $"Reachable: %A{reachable}")
 
@@ -283,9 +283,11 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
     
 let runAllPairs (graph:InputGraph) q mode =     
     let start = System.DateTime.Now
-    let startVertices = graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
+    let startVertices,_ = graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
     eval startVertices q mode    
     |> ignore
+    let reachable = q.OriginalStartState.NonTerminalNodes.ToArray().Length
+    printfn $"Reachable: %A{reachable}."
     printfn $"Total processing time: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
 
   
@@ -294,10 +296,11 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
     let mutable matchedRanges = MatchedRanges()
     let vertices =
         graph.AllVertices()
+    let startVertices, mapping = graph.ToCfpqCoreGraph (HashSet vertices)
     for n in vertices do
         printfn $"V: %i{n}"
-        let startVertices = [|n|]
-        let startVertices = graph.ToCfpqCoreGraph (HashSet startVertices)
+        //let startVertices = [|n|]
+        let startVertices = HashSet[|mapping.[n]|]
         let reachableVertices =
             let d = Dictionary<_,_>(startVertices.Count)
             startVertices
@@ -309,7 +312,7 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
         | _ -> ()
         
 let singleSourceForAll (graph:InputGraph) q mode =
-    let startVertices =  graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
+    let startVertices,_ =  graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
     for n in startVertices do
         let startVertices =  HashSet [|n|]        
         let res = eval startVertices q mode |> ignore

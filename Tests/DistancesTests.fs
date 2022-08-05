@@ -72,7 +72,7 @@ let tests =
                 
             RSM ([|sBox; bBox|], sBox)
           
-        let startVertices = graph.ToCfpqCoreGraph (HashSet startV)    
+        let startVertices,_ = graph.ToCfpqCoreGraph (HashSet startV)    
         let res = eval startVertices rsm AllPaths
         match res with
         | QueryResult.ReachabilityFacts _ -> failwith "Inconsistent result!"

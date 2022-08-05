@@ -1,4 +1,4 @@
-﻿
+
 open System.Collections.Generic
 open CFPQ_GLL
 open CFPQ_GLL.Common
@@ -20,7 +20,7 @@ let go() =
     let startV = [|0<inputGraphVertex>|]
     let q = Tests.GLLTests.simpleLoopRSMForDyckLanguage ()
     
-    let startVertices = graph.ToCfpqCoreGraph (HashSet startV)
+    let startVertices,_ = graph.ToCfpqCoreGraph (HashSet startV)
     let result = GLL.eval startVertices q GLL.AllPaths
 
     match result with
