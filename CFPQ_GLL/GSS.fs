@@ -42,8 +42,7 @@ type GSS () =
                          , inputPositionToContinue: IInputGraphVertex
                          , rsmStateToContinue: IRsmState
                          , matchedRange: MatchedRangeWithNode) =
-        let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue) :> IGssVertex
-        //let newGSSVertexContent = vertices.[newGSSVertex]
+        let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue) :> IGssVertex        
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
         
         // There is no need to check GSS edges duplication.

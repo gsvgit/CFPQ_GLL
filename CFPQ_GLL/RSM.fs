@@ -35,8 +35,7 @@ type RSMTerminalEdge =
 type RSMNonTerminalEdge =
     val State : IRsmState
     val NonTerminalSymbolStartState : IRsmState
-    new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}
-    //interface IRsmNonTerminalEdge
+    new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}    
 
 type TerminalEdgesStorage =
     | Small of array<RSMTerminalEdge>
@@ -76,28 +75,7 @@ type RSMVertexMutableContent =
 
 type RSMBox() =
     let mutable startState = None
-    let finalStates = HashSet<IRsmState>()
-    (*let outgoingEdges = Dictionary<int<rsmState>,ResizeArray<RSMEdges>>()
-    let incomingEdges = Dictionary<int<rsmState>,ResizeArray<RSMEdges>>()
-    let addTransition (transition: RSMEdges) =
-        let exists, edges = outgoingEdges.TryGetValue transition.StartState 
-        if exists
-        then edges.Add transition
-        else outgoingEdges.Add (transition.StartState, ResizeArray[|transition|])
-        if not <| outgoingEdges.ContainsKey transition.FinalState
-        then outgoingEdges.Add(transition.FinalState, ResizeArray<_>())
-        
-        let exists, edges = incomingEdges.TryGetValue transition.FinalState 
-        if exists
-        then edges.Add transition
-        else incomingEdges.Add (transition.FinalState, ResizeArray[|transition|])
-        if not <| incomingEdges.ContainsKey transition.StartState
-        then incomingEdges.Add(transition.StartState, ResizeArray<_>())
-    *)    
-    //do Array.iter addTransition transitions        
-   
-    //let transitions = ResizeArray transitions
-    
+    let finalStates = HashSet<IRsmState>()    
     member this.AddState (state:IRsmState) =
         state.Box <- this
         if state.IsFinal
@@ -114,90 +92,26 @@ type RSMBox() =
     
     interface IRsmBox with
         member this.FinalStates = finalStates
-    //member this.Transitions = transitions
-    //member this.OutgoingEdges v = outgoingEdges.[v]
-    //member this.IncomingEdges v = incomingEdges.[v]
-    //member this.AddTransition t =
-    //    transitions.Add t
-    //    addTransition t    
         
-type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
-    //let vertices = Dictionary<int<rsmState>,RSMVertexContent>()
+type RSM(boxes:array<RSMBox>, startBox:RSMBox) =    
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM = RsmVertex() :> IRsmState // System.Int32.MaxValue - 1 |> LanguagePrimitives.Int32WithMeasure
+    let startStateOfExtendedRSM = RsmVertex() :> IRsmState
         
     let extensionBox =
         let originalStartState = startBox.StartState        
-        let finalState = RsmVertex() :> IRsmState //int32 startStateOfExtendedRSM - 2 |> LanguagePrimitives.Int32WithMeasure
-        let intermediateState = RsmVertex() :> IRsmState // int32 startStateOfExtendedRSM - 1 |> LanguagePrimitives.Int32WithMeasure
-        //let startState = RsmVertex() :> IRsmState // startStateOfExtendedRSM
+        let finalState = RsmVertex() :> IRsmState
+        let intermediateState = RsmVertex() :> IRsmState        
         startStateOfExtendedRSM.OutgoingNonTerminalEdges.Add(originalStartState, HashSet[|intermediateState|])
         intermediateState.OutgoingTerminalEdges.Add(EOF, HashSet[|finalState|]) 
         let box = RSMBox()
         box.AddState startStateOfExtendedRSM
         box.AddState intermediateState
         box.AddState finalState
-
-    (*
-    let addBoxes (rsmBoxes: array<RSMBox>) =
-        let mutableVertices = Dictionary<int<rsmState>,RSMVertexMutableContent>()
-        let addVertex v =
-            if not <| mutableVertices.ContainsKey v
-            then mutableVertices.Add(v,RSMVertexMutableContent(ResizeArray<_>(),ResizeArray<_>()))
-            mutableVertices.[v]
-        rsmBoxes        
-        |> Array.iter (fun box ->
-            addVertex box.StartState |> ignore
-            box.FinalStates |> Seq.iter (finalStates.Add >> ignore)
-            box.FinalStates |> Seq.iter (addVertex>>ignore)
-            finalStatesForBox.Add(box.StartState, box.FinalStates |> ResizeArray.ofSeq)
-            box.Transitions
-            |> ResizeArray.iter(
-                    function
-                    | TerminalEdge (_from, smb, _to) ->
-                        let vertexContent = addVertex _from
-                        addVertex _to |> ignore
-                        RSMTerminalEdge(_to, smb) |> vertexContent.OutgoingTerminalEdges.Add
-                    | NonTerminalEdge (_from, _nonTerminalStartState, _to) ->
-                        let vertexContent = addVertex _from
-                        addVertex _to |> ignore
-                        RSMNonTerminalEdge(_to, _nonTerminalStartState) |> vertexContent.OutgoingNonTerminalEdges.Add
-                        )
-            )
-        mutableVertices
-        |> Seq.iter (fun kvp ->
-              let edges = kvp.Value.OutgoingTerminalEdges.ToArray()
-              let storedEdges = 
-                  if edges.Length <= 20
-                  then Small edges
-                  else
-                      let dict = Dictionary<_,ResizeArray<_>>()
-                      for edge in edges do
-                          let exists, edges = dict.TryGetValue edge.TerminalSymbol
-                          if exists
-                          then edges.Add edge.State
-                          else dict.Add(edge.TerminalSymbol, ResizeArray<_>[|edge.State|])
-                      Big dict
-                          
-              vertices.Add(kvp.Key, RSMVertexContent(storedEdges                                                                              
-              , kvp.Value.OutgoingNonTerminalEdges.ToArray())))
-
-    do
-        addBoxes boxes
-        addBoxes [|extensionBox|]
-        *)
+    
     member this.StartState = startStateOfExtendedRSM
-    //member this.IsFinalState state = finalStates.Contains state
     member this.IsFinalStateForOriginalStartBox state = (startBox :> IRsmBox).FinalStates.Contains state
-    //member this.GetFinalStatesForBoxWithThisStartState startState = finalStatesForBox.[startState]
     member this.OriginalStartState = startBox.StartState
-    //member this.OriginalFinalStates = startBox.FinalStates
-    //member this.OutgoingTerminalEdges v =
-    //    vertices.[v].OutgoingTerminalEdges    
-    //member this.OutgoingNonTerminalEdges v =
-    //    vertices.[v].OutgoingNonTerminalEdges
-    //member this.StatesCount with get () = vertices.Count
 
     (*        
     member this.ToDot filePath =

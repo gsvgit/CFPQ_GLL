@@ -68,13 +68,6 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<NonRangeNo
         member this.Parents = parents
         member this.IntermediateNodes = intermediateNodes
 
-(*  
-and [<Struct>] IntermediatePoint =
-    val RSMState : IRsmState
-    val InputPosition : int<inputGraphVertex>
-    new (rsmState, inputPosition) = {RSMState = rsmState; InputPosition = inputPosition}
-*)
-
 and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
     let parents = HashSet<IRangeNode>()
     let mutable distance =
@@ -89,60 +82,6 @@ and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputG
             and set v = distance <- v
         member this.Parents = parents
     
-
-(*and [<Struct>] Range<[<Measure>]'position> =
-    val StartPosition: int<'position>
-    val EndPosition: int<'position>
-    new (startPosition, endPosition) = {StartPosition = startPosition; EndPosition = endPosition}
-*)
-(*and [<Struct>] MatchedRange =
-    val InputRange : Range<inputGraphVertex>
-    val RSMRange : Range<rsmState>
-    new (inputRange, rsmRange) = {InputRange = inputRange; RSMRange = rsmRange}
-    new (inputFrom, inputTo, rsmFrom, rsmTo) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo)}
-
-[<Struct>]
-type PartOfMatchedRange<'graphVertex> =
-    val InputStartPosition : 'graphVertex
-    val RSMRange : Range<rsmState>
-    new (matchedRange: MatchedRange) = {InputStartPosition = matchedRange.InputRange.StartPosition; RSMRange = matchedRange.RSMRange}
-*)
-(*[<Struct>]
-type MatchedRangeWithNode =
-    val Range : MatchedRange
-    val Node: Option<RangeNode>
-    new (range, rangeNode) = {Range = range; Node = Some rangeNode}
-    new (inputRange, rsmRange, rangeNode) = {Range = MatchedRange(inputRange, rsmRange); Node = rangeNode}
-    new (inputFrom, inputTo, rsmFrom, rsmTo, rangeNode) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); Node = rangeNode}
-    new (inputFrom, inputTo, rsmFrom, rsmTo) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); Node = None}
-
-*)
-(*    
-[<Struct>]
-[<CustomComparison; StructuralEquality>]
-type DistanceInfo =
-    val Distance: int
-    val AtLeastOneMustHaveStateVisited: bool
-    new (distance, atLeastOneMustHaveStateVisited) =
-        {
-            Distance = distance
-            AtLeastOneMustHaveStateVisited = atLeastOneMustHaveStateVisited
-        }
-           
-    interface IComparable with
-        member this.CompareTo (y:obj) =
-            if y :? DistanceInfo
-            then
-                let y = y :?> DistanceInfo
-                if ((not this.AtLeastOneMustHaveStateVisited) && (not y.AtLeastOneMustHaveStateVisited))
-                   || (this.AtLeastOneMustHaveStateVisited && y.AtLeastOneMustHaveStateVisited)
-                then y.Distance.CompareTo this.Distance
-                elif this.AtLeastOneMustHaveStateVisited
-                then 1
-                else -1
-            else failwith "Incomparable."
-*)    
-
 type MatchedRanges () =    
     
     let updateDistances (rangeNode:IRangeNode) =
