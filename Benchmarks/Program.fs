@@ -227,59 +227,133 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
                 if terminalSymbolsMapping.ContainsKey(store)
                 then yield LoadStorePairsInfo(kvp.Value, terminalSymbolsMapping.[store])
         |]
-               
-    let mutable freeStateId = 7<rsmState>
-    let mapping = Dictionary()
-    mapping.Add(0<rsmState>, RsmVertex(true,false) :> IRsmState)
-    mapping.Add(2<rsmState>, RsmVertex(true,false))
-    mapping.Add(4<rsmState>, RsmVertex(true,false))
-     
-    let pointsTo,mapping =
-        GLLTests.makeRsmBox(
-           mapping,
-           0<rsmState>,
-           HashSet([1<rsmState>]),
-           [|
-              TerminalEdge(0<rsmState>, alloc, 1<rsmState>)
-              TerminalEdge(0<rsmState>, assign, 0<rsmState>)               
-              for loadStorePair in loadStorePairs do
-                  yield! [|
-                      TerminalEdge(0<rsmState>, loadStorePair.LoadTerminalId, freeStateId)
-                      NonTerminalEdge(freeStateId, 4<rsmState>, freeStateId + 1<rsmState>)
-                      TerminalEdge(freeStateId + 1<rsmState>, loadStorePair.StoreTerminalId, 0<rsmState>)
+    
+    let naiveRsm =            
+        let mutable freeStateId = 7<rsmState>
+        let mapping = Dictionary()
+        
+        let pointsTo = RSMBox()
+        let pointsToStartState = RsmVertex(true,false)
+        pointsTo.AddState pointsToStartState
+        mapping.Add(0<rsmState>, pointsToStartState :> IRsmState)
+        
+        let flowsTo = RSMBox()
+        let flowsToStartState = RsmVertex(true,false)
+        flowsTo.AddState flowsToStartState
+        mapping.Add(2<rsmState>, flowsToStartState)
+        
+        let alias = RSMBox()
+        let aliasStartState = RsmVertex(true,false)
+        alias.AddState aliasStartState    
+        mapping.Add(4<rsmState>, aliasStartState)
+         
+        let mapping =
+            GLLTests.fillRsmBox(
+               pointsTo,
+               mapping,
+               0<rsmState>,
+               HashSet([1<rsmState>]),
+               [|
+                  TerminalEdge(0<rsmState>, alloc, 1<rsmState>)
+                  TerminalEdge(0<rsmState>, assign, 0<rsmState>)               
+                  for loadStorePair in loadStorePairs do
+                      yield! [|
+                          TerminalEdge(0<rsmState>, loadStorePair.LoadTerminalId, freeStateId)
+                          NonTerminalEdge(freeStateId, 4<rsmState>, freeStateId + 1<rsmState>)
+                          TerminalEdge(freeStateId + 1<rsmState>, loadStorePair.StoreTerminalId, 0<rsmState>)
+                      |]
+                      freeStateId <- freeStateId + 2<rsmState>
+               |]           
+            )
+        let mapping =
+            GLLTests.fillRsmBox(
+               flowsTo,
+               mapping,
+               2<rsmState>,
+               HashSet([3<rsmState>]),
+               [|
+                  TerminalEdge(2<rsmState>, alloc_r, 3<rsmState>)
+                  TerminalEdge(3<rsmState>, assign_r, 3<rsmState>)
+                  for loadStorePair in loadStorePairs do
+                      yield! [|
+                          TerminalEdge(3<rsmState>, loadStorePair.StoreTerminalReversedId, freeStateId)
+                          NonTerminalEdge(freeStateId, 4<rsmState>, freeStateId + 1<rsmState>)
+                          TerminalEdge(freeStateId + 1<rsmState>, loadStorePair.LoadTerminalReversedId, 3<rsmState>)
+                      |]
+                      freeStateId <- freeStateId + 2<rsmState>
+               |]
+            )
+        let mapping =
+           GLLTests.fillRsmBox(
+                  alias,
+                  mapping,
+                  4<rsmState>,
+                  HashSet([6<rsmState>]),
+                  [|
+                      NonTerminalEdge(4<rsmState>, 0<rsmState>, 5<rsmState>)
+                      NonTerminalEdge(5<rsmState>, 2<rsmState>, 6<rsmState>)              
                   |]
-                  freeStateId <- freeStateId + 2<rsmState>
-           |]           
-        )
-    let flowsTo,mapping =
-        GLLTests.makeRsmBox(
-           mapping,
-           2<rsmState>,
-           HashSet([3<rsmState>]),
-           [|
-              TerminalEdge(2<rsmState>, alloc_r, 3<rsmState>)
-              TerminalEdge(3<rsmState>, assign_r, 3<rsmState>)
-              for loadStorePair in loadStorePairs do
-                  yield! [|
-                      TerminalEdge(3<rsmState>, loadStorePair.StoreTerminalReversedId, freeStateId)
-                      NonTerminalEdge(freeStateId, 4<rsmState>, freeStateId + 1<rsmState>)
-                      TerminalEdge(freeStateId + 1<rsmState>, loadStorePair.LoadTerminalReversedId, 3<rsmState>)
-                  |]
-                  freeStateId <- freeStateId + 2<rsmState>
-           |]
-        )
-    let alias,_ =
-       GLLTests.makeRsmBox(
-              mapping,
-              4<rsmState>,
-              HashSet([6<rsmState>]),
-              [|
-                  NonTerminalEdge(4<rsmState>, 0<rsmState>, 5<rsmState>)
-                  NonTerminalEdge(5<rsmState>, 2<rsmState>, 6<rsmState>)              
-              |]
-              )
-       
-    RSM([|alias; pointsTo; flowsTo|], alias)
+                  )
+           
+        RSM([|alias; pointsTo; flowsTo|], pointsTo)
+    
+    let optimizedRsm = 
+        let mutable freeStateId = 4<rsmState>
+        let mapping = Dictionary()
+        
+        let pointsTo = RSMBox()
+        let pointsToStartState = RsmVertex(true,false)
+        pointsTo.AddState pointsToStartState
+        mapping.Add(0<rsmState>, pointsToStartState :> IRsmState)
+        
+        let flowsTo = RSMBox()
+        let flowsToStartState = RsmVertex(true,false)
+        flowsTo.AddState flowsToStartState
+        mapping.Add(2<rsmState>, flowsToStartState)
+                         
+        let mapping =
+            GLLTests.fillRsmBox(
+               pointsTo,
+               mapping,
+               0<rsmState>,
+               HashSet([1<rsmState>]),
+               [|
+                  TerminalEdge(0<rsmState>, alloc, 1<rsmState>)
+                  TerminalEdge(0<rsmState>, assign, 0<rsmState>)               
+                  for loadStorePair in loadStorePairs do
+                      yield! [|
+                          TerminalEdge(0<rsmState>, loadStorePair.LoadTerminalId, freeStateId)
+                          NonTerminalEdge(freeStateId, 0<rsmState>, freeStateId + 1<rsmState>)
+                          NonTerminalEdge(freeStateId + 1<rsmState>, 2<rsmState>, freeStateId + 2<rsmState>)
+                          TerminalEdge(freeStateId + 2<rsmState>, loadStorePair.StoreTerminalId, 0<rsmState>)
+                      |]
+                      freeStateId <- freeStateId + 3<rsmState>
+               |]           
+            )
+        let mapping =
+            GLLTests.fillRsmBox(
+               flowsTo,
+               mapping,
+               2<rsmState>,
+               HashSet([3<rsmState>]),
+               [|
+                  TerminalEdge(2<rsmState>, alloc_r, 3<rsmState>)
+                  TerminalEdge(3<rsmState>, assign_r, 3<rsmState>)
+                  for loadStorePair in loadStorePairs do
+                      yield! [|
+                          TerminalEdge(3<rsmState>, loadStorePair.StoreTerminalReversedId, freeStateId)
+                          NonTerminalEdge(freeStateId, 0<rsmState>, freeStateId + 1<rsmState>)
+                          NonTerminalEdge(freeStateId + 1<rsmState>, 2<rsmState>, freeStateId + 2<rsmState>)
+                          TerminalEdge(freeStateId + 2<rsmState>, loadStorePair.LoadTerminalReversedId, 3<rsmState>)
+                      |]
+                      freeStateId <- freeStateId + 3<rsmState>
+               |]
+            )
+        
+        RSM([|pointsTo; flowsTo|], pointsTo)
+    
+    optimizedRsm
+    
     
 let runAllPairs (graph:InputGraph) q mode =     
     let start = System.DateTime.Now

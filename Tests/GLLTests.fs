@@ -10,15 +10,14 @@ open CFPQ_GLL.SPPF
 open Expecto
 open Tests.InputGraph
 
-let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
-    let box = RSMBox()
+let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
+    
     let getState stateId =
-        let exists, state = statesMapping.TryGetValue stateId
-        
+        let exists, state = statesMapping.TryGetValue stateId                        
         if exists
         then
-            box.AddState state //!!!
-            state
+            //box.AddState state
+            state            
         else
             let state = RsmVertex((stateId = startSate), finalStates.Contains stateId)
             statesMapping.Add(stateId, state)
@@ -26,11 +25,11 @@ let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:i
             state
     getState startSate |> ignore
     for edge in edges do
-        let startState = getState edge.StartState
-        let finalState = getState edge.FinalState
+        let startState = getState edge.StartState 
+        let finalState = getState edge.FinalState 
         match edge with
         | NonTerminalEdge(_from,_nonTerm,_to ) ->
-            let nonTerm = getState _nonTerm
+            let nonTerm = getState _nonTerm 
             let exists,finalStates = startState.OutgoingNonTerminalEdges.TryGetValue nonTerm
             if exists
             then
@@ -45,8 +44,13 @@ let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:i
             else 
                 startState.OutgoingTerminalEdges.Add(_term, HashSet [|finalState|])
                 
+    statesMapping
+
+let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
+    let box = RSMBox()
+    let statesMapping = fillRsmBox (box, statesMapping, startSate, finalStates, edges)
     box, statesMapping
-        
+    
 let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
     sppf.Edges |> Seq.iter (fun (x,y) -> printf $"(%i{x},%i{y}); ")
     printfn ""
