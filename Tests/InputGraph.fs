@@ -7,21 +7,12 @@ open CFPQ_GLL.InputGraph
 
 [<Measure>] type inputGraphTerminalEdge
 
-type DemoInputGraphVertex () =
-    let outgoingEdges = Dictionary<int<terminalSymbol>, HashSet<IInputGraphVertex>>()
-    let descriptors = ResizeArray<Descriptor>()
-    let terminalNodes = Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>()
-    let nonTerminalNodes = Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()
-    let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
-    let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>()
-    interface IInputGraphVertex with
-        member this.OutgoingEdges = outgoingEdges
-        member this.Descriptors = descriptors
-        member this.TerminalNodes = terminalNodes
-        member this.NonTerminalNodes = nonTerminalNodes    
-        member this.RangeNodes = rangeNodes
-        member this.IntermediateNodes = intermediateNodes
-        
+[<Struct>]
+type InputGraphEdge =
+    val TerminalSymbol: int<terminalSymbol>
+    val TargetVertex: int<inputGraphVertex>
+    new (terminal, targetVertex) = {TerminalSymbol = terminal; TargetVertex = targetVertex}
+
 type DemoInputGraphEdge =    
     | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>
     
@@ -57,8 +48,6 @@ type InputGraph (edges) =
 
     new () = InputGraph([||])
     
-    interface IInputGraph with
-        member this.GetOutgoingEdges v = vertices.[v].OutgoingTerminalEdges
     
     member this.OutgoingTerminalEdges v =
         vertices.[v].OutgoingTerminalEdges    
@@ -93,7 +82,7 @@ type InputGraph (edges) =
                 if exists
                 then vertex
                 else
-                    let vertex = DemoInputGraphVertex()
+                    let vertex = InputGraphVertexBase()
                     firstFreeVertexId <- firstFreeVertexId + 1
                     verticesMapping.Add(vertexId, vertex)
                     vertex
