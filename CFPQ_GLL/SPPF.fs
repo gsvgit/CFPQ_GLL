@@ -49,13 +49,13 @@ and IntermediateNode (rsmState:IRsmState
             with get () = distance
             and set v = distance <- v
 
-and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<NonRangeNode>) =
+and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeNode>) =
     let mutable distance =
         let mutable minDistance = Int32.MaxValue * 1<distance>
         for node in intermediateNodes do
             minDistance <- min minDistance node.Distance            
         minDistance
-    let parents = HashSet<NonRangeNode>()    
+    let parents = HashSet<INonRangeNode>()    
             
     member this.InputStartPosition = matchedRange.InputRange.StartPosition
     member this.InputEndPosition = matchedRange.InputRange.EndPosition
@@ -81,6 +81,27 @@ and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputG
             with get () = distance
             and set v = distance <- v
         member this.Parents = parents
+        
+and [<RequireQualifiedAccess>]NonRangeNode =
+    | TerminalNode of ITerminalNode
+    | NonTerminalNode of INonTerminalNode
+    | EpsilonNode of IEpsilonNode
+    | IntermediateNode of IIntermediateNode
+    
+    interface INonRangeNode with 
+        member this.Distance =
+            match this with 
+            | NonRangeNode.TerminalNode t -> t.Distance
+            | NonRangeNode.NonTerminalNode n -> n.Distance
+            | NonRangeNode.IntermediateNode i -> i.Distance
+            | NonRangeNode.EpsilonNode e -> 0<distance>
+        member this.Parents =
+            match this with 
+            | NonRangeNode.TerminalNode t -> t.Parents
+            | NonRangeNode.NonTerminalNode n -> n.Parents
+            | NonRangeNode.IntermediateNode i -> i.Parents
+            | NonRangeNode.EpsilonNode e -> failwithf $"Attempt to get parents for epsilon node: %A{e}"
+    
     
 type MatchedRanges () =    
     
@@ -103,8 +124,8 @@ type MatchedRanges () =
             let removed = cycle.Remove rangeNode
             assert removed
             
-        and handleNonRangeNode (node:NonRangeNode) =
-            match node with
+        and handleNonRangeNode (node:INonRangeNode) =
+            match (node :?> NonRangeNode) with
             | NonRangeNode.TerminalNode t -> failwith "Terminal node can not be parent."
             | NonRangeNode.NonTerminalNode n -> handleNonTerminalNode n
             | NonRangeNode.IntermediateNode i -> handleIntermediateNode i
@@ -182,7 +203,7 @@ type MatchedRanges () =
             nonTerminalNodes.Add(range.StartPosition, d)
             newNonTerminalNode
     
-    member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:NonRangeNode) =
+    member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode) =
         let rangeNodes = matchedRange.InputRange.EndPosition.RangeNodes
         let exists, rangeNode = rangeNodes.TryGetValue matchedRange
         if exists
@@ -416,8 +437,8 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
             node.RangeNodes
             |> ResizeArray.iter (handleRangeNode (Some currentId))
         
-    and handleNonRangeNode parentId node =
-        match node with
+    and handleNonRangeNode parentId (node: INonRangeNode) =
+        match (node :?> NonRangeNode) with
         | NonRangeNode.TerminalNode t -> handleTerminalNode parentId t
         | NonRangeNode.NonTerminalNode n -> handleNonTerminalNode parentId n
         | NonRangeNode.EpsilonNode e -> handleEpsilonNode parentId e

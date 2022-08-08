@@ -74,14 +74,13 @@ and IIntermediateNode =
     abstract Parents: HashSet<IRangeNode>
 and IRangeNode =
     abstract Distance: int<distance> with get, set
-    abstract Parents: HashSet<NonRangeNode>
-    abstract IntermediateNodes: HashSet<NonRangeNode>
+    abstract Parents: HashSet<INonRangeNode>
+    abstract IntermediateNodes: HashSet<INonRangeNode>
 and IGssEdge =
     abstract RsmState: IRsmState
     abstract GssVertex: IGssVertex
     abstract MatchedRange: MatchedRangeWithNode
-    
-//and IRsmNonTerminalEdge = interface end
+   
 and IGssVertex =
     abstract InputPosition: IInputGraphVertex
     abstract RsmState: IRsmState
@@ -89,20 +88,7 @@ and IGssVertex =
     abstract Popped: ResizeArray<MatchedRangeWithNode>
     abstract HandledDescriptors: HashSet<Descriptor>
     
-and [<RequireQualifiedAccess>]NonRangeNode =
-    | TerminalNode of ITerminalNode
-    | NonTerminalNode of INonTerminalNode
-    | EpsilonNode of IEpsilonNode
-    | IntermediateNode of IIntermediateNode    
-    member this.Distance =
-        match this with 
-        | NonRangeNode.TerminalNode t -> t.Distance
-        | NonRangeNode.NonTerminalNode n -> n.Distance
-        | NonRangeNode.IntermediateNode i -> i.Distance
-        | NonRangeNode.EpsilonNode e -> 0<distance>
-    member this.Parents =
-        match this with 
-        | NonRangeNode.TerminalNode t -> t.Parents
-        | NonRangeNode.NonTerminalNode n -> n.Parents
-        | NonRangeNode.IntermediateNode i -> i.Parents
-        | NonRangeNode.EpsilonNode e -> failwithf $"Attempt to get parents for epsilon node: %A{e}"    
+and INonRangeNode =
+    abstract Distance: int<distance>
+    abstract Parents: HashSet<IRangeNode>
+    
