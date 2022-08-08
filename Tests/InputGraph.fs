@@ -36,7 +36,6 @@ type InputGraphVertexMutableContent =
     val OutgoingTerminalEdges : ResizeArray<InputGraphEdge>    
     new (terminalEdges) = {OutgoingTerminalEdges = terminalEdges}
 
-
 type InputGraph (edges) =
     let vertices = System.Collections.Generic.Dictionary<int<inputGraphVertex>, InputGraphVertexMutableContent>()
       

@@ -7,7 +7,7 @@ open System.Collections.Generic
 
 type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) =
     let hashCode =
-        let mutable hash = 17        
+        let mutable hash = 17
         hash <- hash * 23 + rsmState.GetHashCode()
         hash <- hash * 23 + inputPosition.GetHashCode()
         hash <- hash * 23 + gssVertex.GetHashCode()

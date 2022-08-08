@@ -44,12 +44,25 @@ let evalFromState
                   , Unchecked.defaultof<IRsmState>
                )
 
+    let dummyRangeNode = Unchecked.defaultof<RangeNode>
+    
     startVertices
     |> Seq.iter (fun v ->        
         let gssVertex = gss.AddNewVertex(v, query.StartState)            
         Descriptor(query.StartState, v, gssVertex, emptyRange)
         |> descriptorToProcess.Push
         )
+    
+    let makeIntermediateNode (leftSubRange: MatchedRangeWithNode) (rightSubRange: MatchedRangeWithNode) =
+        if buildSppf
+        then matchedRanges.AddIntermediateNode (leftSubRange, rightSubRange)
+        else
+            let newMatchedRange = MatchedRange (leftSubRange.Range.InputRange.StartPosition
+                        , rightSubRange.Range.InputRange.EndPosition
+                        , leftSubRange.Range.RSMRange.StartPosition
+                        , rightSubRange.Range.RSMRange.EndPosition)
+            let rangeNode = dummyRangeNode
+            MatchedRangeWithNode(newMatchedRange, rangeNode)
     
     let handleDescriptor (currentDescriptor:Descriptor) =
        
@@ -62,44 +75,49 @@ let evalFromState
                 let startPosition = currentDescriptor.GssVertex.InputPosition
                 if startVertices.Contains startPosition
                 then
-                    reachableVertices.[startPosition].Add(currentDescriptor.InputPosition) |> ignore                    
+                    reachableVertices.[startPosition].Add currentDescriptor.InputPosition |> ignore                    
             
-            let matchedRange =
+            let matchedRange =                 
                 match currentDescriptor.MatchedRange.Node with             
-                | None ->
-                    let currentlyCreatedNode = EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
+                | None ->                    
                     let matchedRange = MatchedRange (
                              currentDescriptor.InputPosition
                              , currentDescriptor.InputPosition
                              , currentDescriptor.RsmState
                              , currentDescriptor.RsmState)
                     
-                    let newRangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.EpsilonNode currentlyCreatedNode)                    
+                    let newRangeNode =
+                        if buildSppf
+                        then
+                            let currentlyCreatedNode = EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
+                            matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.EpsilonNode currentlyCreatedNode)
+                        else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, newRangeNode)
                     
-                | _ -> currentDescriptor.MatchedRange
+                | _ -> currentDescriptor.MatchedRange                
                                                 
             gss.Pop(currentDescriptor, matchedRange)            
             |> ResizeArray.iter (
-                fun gssEdge ->
-                    let newRange =
-                        if buildSppf
-                        then 
-                            let leftSubRange = gssEdge.MatchedRange
-                            let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
-                            let rightSubRange =
-                                let matchedRange =
-                                  MatchedRange (
-                                      currentDescriptor.GssVertex.InputPosition
-                                      , currentDescriptor.InputPosition
-                                      , match gssEdge.MatchedRange.Node with
-                                        | None -> gssEdge.GssVertex.RsmState
-                                        | _ -> gssEdge.MatchedRange.Range.RSMRange.EndPosition
-                                      , gssEdge.RsmState)
-                                let rangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
-                                MatchedRangeWithNode(matchedRange, rangeNode)
-                            matchedRanges.AddIntermediateNode (leftSubRange, rightSubRange)                            
-                        else emptyRange
+                fun gssEdge ->                    
+                    let newRange =                        
+                        let leftSubRange = gssEdge.MatchedRange                        
+                        let rightSubRange =
+                            let matchedRange =
+                              MatchedRange (
+                                  currentDescriptor.GssVertex.InputPosition
+                                  , currentDescriptor.InputPosition
+                                  , match gssEdge.MatchedRange.Node with
+                                    | None -> gssEdge.GssVertex.RsmState
+                                    | _ -> gssEdge.MatchedRange.Range.RSMRange.EndPosition
+                                  , gssEdge.RsmState)
+                            let rangeNode =
+                                if buildSppf
+                                then
+                                    let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
+                                    matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
+                                else dummyRangeNode
+                            MatchedRangeWithNode(matchedRange, rangeNode)
+                        makeIntermediateNode leftSubRange rightSubRange
                     Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange)
                     |> addDescriptor
                 )
@@ -122,41 +140,44 @@ let evalFromState
                |> addDescriptor
                positionsForPops
                |> ResizeArray.iter (fun matchedRange ->
-                   let newRange =
-                       if buildSppf
-                       then
-                           let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(matchedRange.Range.InputRange, kvp.Key)
-                           let rightSubRange =
-                               let matchedRange =
-                                  MatchedRange(
-                                      matchedRange.Range.InputRange.StartPosition
-                                      , matchedRange.Range.InputRange.EndPosition
-                                      , currentDescriptor.RsmState
-                                      , finalState)
-                               let rangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
-                               MatchedRangeWithNode(matchedRange, rangeNode)                           
-                           let leftSubRange = currentDescriptor.MatchedRange
-                           matchedRanges.AddIntermediateNode(leftSubRange, rightSubRange)
-                       else emptyRange 
+                   let newRange =                       
+                       let rightSubRange =
+                           let newMatchedRange =
+                              MatchedRange(
+                                  matchedRange.Range.InputRange.StartPosition
+                                  , matchedRange.Range.InputRange.EndPosition
+                                  , currentDescriptor.RsmState
+                                  , finalState)
+                           let rangeNode =
+                               if buildSppf
+                               then
+                                   let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(matchedRange.Range.InputRange, kvp.Key)
+                                   matchedRanges.AddToMatchedRange(newMatchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
+                                else dummyRangeNode
+                           MatchedRangeWithNode(newMatchedRange, rangeNode)                           
+                       let leftSubRange = currentDescriptor.MatchedRange
+                       makeIntermediateNode leftSubRange rightSubRange                       
                    Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange) |> addDescriptor)
         
         let inline handleTerminalEdge terminalSymbol (graphTargetVertex:IInputGraphVertex) (rsmTargetVertex:IRsmState) =
-            let newMatchedRange =
-                if buildSppf
-                then
-                    let currentlyCreatedNode = matchedRanges.AddTerminalNode(Range(currentDescriptor.InputPosition, graphTargetVertex), terminalSymbol)
-                    let currentlyMatchedRange =
-                        let matchedRange =
-                            MatchedRange(
-                                currentDescriptor.InputPosition
-                                , graphTargetVertex
-                                , currentDescriptor.RsmState
-                                , rsmTargetVertex
-                            )
-                        let rangeNode = matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.TerminalNode currentlyCreatedNode)
-                        MatchedRangeWithNode(matchedRange, rangeNode)                                            
-                    matchedRanges.AddIntermediateNode (currentDescriptor.MatchedRange, currentlyMatchedRange)
-                else emptyRange                
+            let newMatchedRange =                
+                let currentlyMatchedRange =
+                    let matchedRange =
+                        MatchedRange(
+                            currentDescriptor.InputPosition
+                            , graphTargetVertex
+                            , currentDescriptor.RsmState
+                            , rsmTargetVertex
+                        )
+                    let rangeNode =
+                        if buildSppf
+                        then
+                            let currentlyCreatedNode = matchedRanges.AddTerminalNode(Range(currentDescriptor.InputPosition, graphTargetVertex), terminalSymbol)
+                            matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.TerminalNode currentlyCreatedNode)
+                        else dummyRangeNode
+                    MatchedRangeWithNode(matchedRange, rangeNode)                                            
+                makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
+                
             Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange) |> addDescriptor
         
         let handleEdge terminalSymbol finalVertex =

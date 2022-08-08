@@ -284,9 +284,11 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
 let runAllPairs (graph:InputGraph) q mode =     
     let start = System.DateTime.Now
     let startVertices,_ = graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
-    eval startVertices q mode    
-    |> ignore
-    let reachable = q.OriginalStartState.NonTerminalNodes.ToArray().Length
+    let res = eval startVertices q mode
+    let reachable =
+        match res with
+        | QueryResult.MatchedRanges _ -> q.OriginalStartState.NonTerminalNodes.ToArray().Length
+        | QueryResult.ReachabilityFacts x -> x |> Seq.fold (fun x v -> x + v.Value.Count) 0 
     printfn $"Reachable: %A{reachable}."
     printfn $"Total processing time: %A{(System.DateTime.Now - start).TotalMilliseconds} milliseconds"
 
