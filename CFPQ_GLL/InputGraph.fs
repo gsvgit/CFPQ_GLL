@@ -12,11 +12,13 @@ type InputGraphVertexBase () =
     let nonTerminalNodes = Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()
     let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
     let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>()
+    let nonTerminalsWithStartHere = HashSet<_>()
     interface IInputGraphVertex with
         member this.OutgoingEdges = outgoingEdges
         member this.Descriptors = descriptors
         member this.TerminalNodes = terminalNodes
-        member this.NonTerminalNodes = nonTerminalNodes    
+        member this.NonTerminalNodesWithEndHere = nonTerminalNodes
+        member this.NonTerminalNodesWithStartHere = nonTerminalsWithStartHere
         member this.RangeNodes = rangeNodes
         member this.IntermediateNodes = intermediateNodes
     

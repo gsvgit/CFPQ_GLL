@@ -23,15 +23,13 @@ type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<IInputGraphV
             with get () = distance
             and set v = distance <- v
 
-and [<Struct>] EpsilonNode =    
-    val Position : IInputGraphVertex
-    val NonTerminalStartState : IRsmState
-    new (position, nonTerminalStartState)  =
-        {            
-            Position = position
-            NonTerminalStartState = nonTerminalStartState
-        }
-    interface IEpsilonNode
+and EpsilonNode (position:IInputGraphVertex, nonTerminalStartState:IRsmState) =    
+    let parents = HashSet<IRangeNode>()
+    member this.Position = position
+    member this.NonTerminalStartState = nonTerminalStartState
+    
+    interface IEpsilonNode with
+        member this.Parents = parents
 
 and IntermediateNode (rsmState:IRsmState
                        , inputPosition:IInputGraphVertex
@@ -100,7 +98,7 @@ and [<RequireQualifiedAccess>]NonRangeNode =
             | NonRangeNode.TerminalNode t -> t.Parents
             | NonRangeNode.NonTerminalNode n -> n.Parents
             | NonRangeNode.IntermediateNode i -> i.Parents
-            | NonRangeNode.EpsilonNode e -> failwithf $"Attempt to get parents for epsilon node: %A{e}"
+            | NonRangeNode.EpsilonNode e -> e.Parents
     
     
 type MatchedRanges () =    
@@ -172,7 +170,7 @@ type MatchedRanges () =
                 
     member internal this.AddNonTerminalNode (range:Range<IInputGraphVertex>, nonTerminalStartState:IRsmState) =
         let rangeNodes = range.EndPosition.RangeNodes
-        let nonTerminalNodes = range.EndPosition.NonTerminalNodes
+        let nonTerminalNodes = range.EndPosition.NonTerminalNodesWithEndHere
         let exists, nodes = nonTerminalNodes.TryGetValue range.StartPosition        
         let mkNewNonTerminal () =
             let rangeNodes =
@@ -185,6 +183,8 @@ type MatchedRanges () =
             let node = NonTerminalNode(nonTerminalStartState, range, rangeNodes)
             rangeNodes |> ResizeArray.iter (fun n -> n.Parents.Add (NonRangeNode.NonTerminalNode node) |> ignore)
             nonTerminalStartState.NonTerminalNodes.Add node
+            let added = range.StartPosition.NonTerminalNodesWithStartHere.Add ((range.EndPosition, node :> INonTerminalNode))
+            assert added
             node :> INonTerminalNode
             
         if exists

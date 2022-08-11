@@ -17,10 +17,11 @@ type QueryResult =
     | ReachabilityFacts of Dictionary<IInputGraphVertex,HashSet<IInputGraphVertex>>
     | MatchedRanges of MatchedRanges
 
-let evalFromState
+let run
         (reachableVertices:Dictionary<_,HashSet<_>>)
         (gss:GSS)
-        (matchedRanges:MatchedRanges)        
+        (matchedRanges:MatchedRanges)
+        (descriptorToProcess: Stack<Descriptor>)
         (startVertices:HashSet<IInputGraphVertex>)
         (query:RSM) mode =
     
@@ -28,8 +29,6 @@ let evalFromState
         match mode with
         | ReachabilityOnly -> false
         | AllPaths -> true
-        
-    let descriptorToProcess = Stack<_>()
     
     let inline addDescriptor (descriptor:Descriptor) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
@@ -44,14 +43,7 @@ let evalFromState
                   , Unchecked.defaultof<IRsmState>
                )
 
-    let dummyRangeNode = Unchecked.defaultof<RangeNode>
-    
-    startVertices
-    |> Seq.iter (fun v ->        
-        let gssVertex = gss.AddNewVertex(v, query.StartState)            
-        Descriptor(query.StartState, v, gssVertex, emptyRange)
-        |> descriptorToProcess.Push
-        )
+    let dummyRangeNode = Unchecked.defaultof<RangeNode>    
     
     let makeIntermediateNode (leftSubRange: MatchedRangeWithNode) (rightSubRange: MatchedRangeWithNode) =
         if buildSppf
@@ -201,6 +193,39 @@ let evalFromState
     | ReachabilityOnly -> QueryResult.ReachabilityFacts reachableVertices
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
 
+let evalFromState
+        (reachableVertices:Dictionary<_,HashSet<_>>)
+        (gss:GSS)
+        (matchedRanges:MatchedRanges)
+        (startVertices:HashSet<IInputGraphVertex>)
+        (query:RSM) mode =
+    
+    let descriptorToProcess = Stack<_>()
+    
+    let emptyRange =
+        MatchedRangeWithNode
+            (
+                    Unchecked.defaultof<IInputGraphVertex>
+                  , Unchecked.defaultof<IInputGraphVertex>
+                  , Unchecked.defaultof<IRsmState>
+                  , Unchecked.defaultof<IRsmState>
+               )
+    startVertices
+    |> Seq.iter (fun v ->        
+        let gssVertex = gss.AddNewVertex(v, query.StartState)            
+        Descriptor(query.StartState, v, gssVertex, emptyRange)
+        |> descriptorToProcess.Push
+        )
+
+    run
+        reachableVertices
+        gss
+        matchedRanges
+        descriptorToProcess
+        startVertices
+        query
+        mode
+    
 let eval<'inputVertex when 'inputVertex: equality> (startVertices:HashSet<_>) (query:RSM) mode =
     let reachableVertices =
         let d = Dictionary<_,_>(startVertices.Count)
@@ -210,3 +235,31 @@ let eval<'inputVertex when 'inputVertex: equality> (startVertices:HashSet<_>) (q
     let gss = GSS()
     let matchedRanges = MatchedRanges()
     evalFromState reachableVertices gss matchedRanges (startVertices:HashSet<_>) (query:RSM) mode
+
+let onInputGraphChanged (changedVertices:seq<IInputGraphVertex>) =
+    let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.Descriptors) |> Array.ofSeq
+    descriptorsToContinueFrom
+    |> Array.iter (fun descriptor ->
+        let removed = descriptor.GssVertex.HandledDescriptors.Remove descriptor
+        assert removed
+        let removed = descriptor.InputPosition.Descriptors.Remove descriptor
+        assert removed
+        let removed = descriptor.RsmState.Descriptors.Remove descriptor
+        assert removed
+        )
+    fun
+        reachableVertices
+        gss
+        matchedRanges        
+        startVertices
+        query
+        mode
+         ->
+            run
+                reachableVertices
+                gss
+                matchedRanges
+                (Stack descriptorsToContinueFrom)
+                startVertices
+                query
+                mode 
