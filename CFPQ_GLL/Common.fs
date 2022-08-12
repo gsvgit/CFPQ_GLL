@@ -37,7 +37,7 @@ and IRsmBox =
     
 and IInputGraphVertex =
     abstract OutgoingEdges: Dictionary<int<terminalSymbol>, HashSet<IInputGraphVertex>>
-    abstract Descriptors: ResizeArray<Descriptor>
+    abstract Descriptors: HashSet<Descriptor>
     abstract TerminalNodes: Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>
     abstract NonTerminalNodesWithEndHere: Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>
     abstract NonTerminalNodesWithStartHere: HashSet<IInputGraphVertex * INonTerminalNode>
@@ -71,9 +71,10 @@ and IEpsilonNode =
 and INonTerminalNode =
     abstract Distance: int<distance> with get, set
     abstract Parents: HashSet<IRangeNode>
+    abstract RangeNodes: ResizeArray<IRangeNode>
 and IIntermediateNode =
     abstract Distance: int<distance> with get, set
-    abstract Parents: HashSet<IRangeNode>
+    abstract Parents: HashSet<IRangeNode>    
 and IRangeNode =
     abstract Distance: int<distance> with get, set
     abstract Parents: HashSet<INonRangeNode>

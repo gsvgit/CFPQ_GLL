@@ -7,7 +7,7 @@ open CFPQ_GLL.Common
 
 type InputGraphVertexBase () =
     let outgoingEdges = Dictionary<int<terminalSymbol>, HashSet<IInputGraphVertex>>()
-    let descriptors = ResizeArray<Descriptor>()
+    let descriptors = HashSet<Descriptor>()
     let terminalNodes = Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>()
     let nonTerminalNodes = Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()
     let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
