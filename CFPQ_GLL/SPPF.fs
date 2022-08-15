@@ -121,8 +121,8 @@ type MatchedRanges () =
                     rangeNode.Distance <- newDistance
                     rangeNode.Parents
                     |> Seq.iter handleNonRangeNode
-            let removed = cycle.Remove rangeNode
-            assert removed
+                let removed = cycle.Remove rangeNode
+                assert removed
             
         and handleNonRangeNode (node:INonRangeNode) =
             match (node :?> NonRangeNode) with
