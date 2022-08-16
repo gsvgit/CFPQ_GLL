@@ -75,7 +75,7 @@ type RSMVertexMutableContent =
 
 type RSMBox() =
     let mutable startState = None
-    let finalStates = HashSet<IRsmState>()    
+    let finalStates = HashSet<IRsmState>()
     member this.AddState (state:IRsmState) =
         state.Box <- this
         if state.IsFinal
