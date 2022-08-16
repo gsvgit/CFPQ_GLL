@@ -71,7 +71,10 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
 and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
     let parents = HashSet<IRangeNode>()
     let mutable distance =
-        rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>) 
+        //assert (rangeNodes.Count > 0)
+        let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
+        //assert (res < Int32.MaxValue * 1<distance>)
+        res
     member this.NonTerminalStartState = nonTerminalStartState
     member this.LeftPosition =graphRange.StartPosition
     member this.RightPosition =graphRange.EndPosition

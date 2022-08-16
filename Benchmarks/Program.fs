@@ -233,17 +233,17 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
         let mapping = Dictionary()
         
         let pointsTo = RSMBox()
-        let pointsToStartState = RsmVertex(true,false)
+        let pointsToStartState = RsmState(true,false)
         pointsTo.AddState pointsToStartState
         mapping.Add(0<rsmState>, pointsToStartState :> IRsmState)
         
         let flowsTo = RSMBox()
-        let flowsToStartState = RsmVertex(true,false)
+        let flowsToStartState = RsmState(true,false)
         flowsTo.AddState flowsToStartState
         mapping.Add(2<rsmState>, flowsToStartState)
         
         let alias = RSMBox()
-        let aliasStartState = RsmVertex(true,false)
+        let aliasStartState = RsmState(true,false)
         alias.AddState aliasStartState    
         mapping.Add(4<rsmState>, aliasStartState)
          
@@ -302,12 +302,12 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
         let mapping = Dictionary()
         
         let pointsTo = RSMBox()
-        let pointsToStartState = RsmVertex(true,false)
+        let pointsToStartState = RsmState(true,false)
         pointsTo.AddState pointsToStartState
         mapping.Add(0<rsmState>, pointsToStartState :> IRsmState)
         
         let flowsTo = RSMBox()
-        let flowsToStartState = RsmVertex(true,false)
+        let flowsToStartState = RsmState(true,false)
         flowsTo.AddState flowsToStartState
         mapping.Add(2<rsmState>, flowsToStartState)
                          

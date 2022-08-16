@@ -41,13 +41,13 @@ type TerminalEdgesStorage =
     | Small of array<RSMTerminalEdge>
     | Big of Dictionary<int<terminalSymbol>,ResizeArray<int<rsmState>>>
     
-type RsmVertex (isStart: bool, isFinal: bool) =
+type RsmState (isStart: bool, isFinal: bool) =
     let descriptors = ResizeArray<Descriptor>()
     let outgoingTerminalEdges = Dictionary<int<terminalSymbol>, HashSet<IRsmState>>()
     let outgoingNonTerminalEdges= Dictionary<IRsmState, HashSet<IRsmState>>()
     let nonTerminalNodes = ResizeArray()
     let mutable rsmBox = None
-    new () = RsmVertex(false,false)        
+    new () = RsmState(false,false)        
     
     interface IRsmState with
         member this.OutgoingTerminalEdges = outgoingTerminalEdges
@@ -96,12 +96,12 @@ type RSMBox() =
 type RSM(boxes:array<RSMBox>, startBox:RSMBox) =    
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM = RsmVertex() :> IRsmState
+    let startStateOfExtendedRSM = RsmState() :> IRsmState
         
     let extensionBox =
         let originalStartState = startBox.StartState        
-        let finalState = RsmVertex() :> IRsmState
-        let intermediateState = RsmVertex() :> IRsmState        
+        let finalState = RsmState() :> IRsmState
+        let intermediateState = RsmState() :> IRsmState        
         startStateOfExtendedRSM.OutgoingNonTerminalEdges.Add(originalStartState, HashSet[|intermediateState|])
         intermediateState.OutgoingTerminalEdges.Add(EOF, HashSet[|finalState|]) 
         let box = RSMBox()
@@ -113,23 +113,52 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     member this.IsFinalStateForOriginalStartBox state = (startBox :> IRsmBox).FinalStates.Contains state
     member this.OriginalStartState = startBox.StartState
 
-    (*        
     member this.ToDot filePath =
+        let visited = HashSet<_>()
+        let vertexId = 
+            let mutable firstFreeVertexId = 0
+            let visitedVertices = Dictionary<_,_>()
+            fun (v:IRsmState) ->
+                let exists, id = visitedVertices.TryGetValue v
+                if exists
+                then id
+                else
+                    let id = firstFreeVertexId
+                    firstFreeVertexId <- firstFreeVertexId + 1
+                    visitedVertices.Add (v,id)
+                    id
+                    
+        let rec toDot (v: IRsmState) =
+            let id = vertexId v
+            if not <| visited.Contains v
+            then
+                let added = visited.Add v
+                assert added
+                seq {
+                        if v.IsFinal
+                        then
+                            if v.IsStart
+                            then yield $"%i{id} [shape = doublecircle style = filled fillcolor=green]"
+                            else yield $"%i{id} [shape = doublecircle]"
+                        elif v.IsStart
+                        then yield $"%i{id} [style = filled fillcolor=green]"
+                        for e in v.OutgoingTerminalEdges do
+                            for target in e.Value do
+                                yield $"%i{id} -> %i{vertexId target} [label = t_%i{e.Key}]"
+                                yield! toDot target
+                                
+                        for e in v.OutgoingNonTerminalEdges do
+                            for target in e.Value do
+                                yield $"%i{id} -> %i{vertexId target} [label = N_%i{vertexId e.Key}]"
+                                yield! toDot target
+                    }
+            else Seq.empty
+                    
         seq {
          yield "digraph g {"
-         for kvp in vertices do                              
-             for nonTerminalEdge in kvp.Value.OutgoingNonTerminalEdges do
-                yield $"%i{kvp.Key} -> %i{nonTerminalEdge.State} [label = N_%i{nonTerminalEdge.NonTerminalSymbolStartState}]"             
-             match kvp.Value.OutgoingTerminalEdges with
-             | Small a ->
-                 for t in a do
-                     yield $"%i{kvp.Key} -> %i{t.State} [label = t_%i{t.TerminalSymbol}]"
-             | Big a ->
-                 for _kvp in a do
-                     for _to in _kvp.Value do
-                        yield $"%i{kvp.Key} -> %i{_to} [label = t_%i{_kvp.Key}]"                               
+         for box in boxes do
+            yield! toDot box.StartState                                
          yield "}"
         }
         |> fun x -> System.IO.File.WriteAllLines(filePath, x)
         
-        *)

@@ -11,6 +11,7 @@ type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVerte
         hash <- hash * 23 + rsmState.GetHashCode()
         hash <- hash * 23 + inputPosition.GetHashCode()
         hash <- hash * 23 + gssVertex.GetHashCode()
+        //hash <- hash * 23 + matchedRange.GetHashCode()
         hash
     member this.RsmState = rsmState
     member this.InputPosition = inputPosition
@@ -22,6 +23,7 @@ type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVerte
         && (y :?> Descriptor).RsmState = this.RsmState
         && (y :?> Descriptor).InputPosition = this.InputPosition
         && (y :?> Descriptor).GssVertex = this.GssVertex
+       // && (y :?> Descriptor).MatchedRange = this.MatchedRange
 
 and IRsmState =
     abstract OutgoingTerminalEdges : Dictionary<int<terminalSymbol>,HashSet<IRsmState>>

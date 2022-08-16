@@ -15,11 +15,9 @@ let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, IRsmState>,
     let getState stateId =
         let exists, state = statesMapping.TryGetValue stateId                        
         if exists
-        then
-            //box.AddState state
-            state            
+        then state            
         else
-            let state = RsmVertex((stateId = startSate), finalStates.Contains stateId)
+            let state = RsmState((stateId = startSate), finalStates.Contains stateId)
             statesMapping.Add(stateId, state)
             box.AddState state
             state
@@ -64,25 +62,26 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
         | TriplesStoredSPPFNode.IntermediateNode (_pos, _rsm) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.IntermediateNode (%i{_pos}<inputGraphVertex>,%i{_rsm}<rsmState>))"
         )
 
-
-let runGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
-    let validDotFileName =
-        testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
-    let startVertices,_ = graph.ToCfpqCoreGraph (HashSet startV)
+let runGLLAndCheckResultForManuallyCreatedGraph (testName:string) startVertices (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
+    let validDotFileName = testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
     let result = eval startVertices q AllPaths
     match result with
     | QueryResult.MatchedRanges ranges ->        
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
         let distances = sppf |> Array.map (fun n -> n.Distance) |> Array.sort
-        //printfn $"D for %s{validDotFileName}: %A{distances}"
+        printfn $"D for %s{validDotFileName}: %A{distances}"
         let actual = TriplesStoredSPPF(sppf, Dictionary())
-        //dumpResultToConsole actual
-        //actual.ToDot validDotFileName
+        dumpResultToConsole actual
+        actual.ToDot validDotFileName
         Expect.sequenceEqual actual.Nodes expectedNodes "Nodes should be equals."
         Expect.sequenceEqual actual.Edges expectedEdges "Edges should be equals."
         Expect.sequenceEqual distances expectedDistances "Distances should be equals."
     | _ -> failwith "Result should be MatchedRanges"
 
+let runGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
+    let startVertices,_ = graph.ToCfpqCoreGraph (HashSet startV)
+    runGLLAndCheckResultForManuallyCreatedGraph testName startVertices q (expectedNodes, expectedEdges, expectedDistances)
+    
 let simpleLoopRSMForDyckLanguage () =
     let box,_ =
         makeRsmBox (
@@ -95,6 +94,158 @@ let simpleLoopRSMForDyckLanguage () =
               RSM.TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
             |])
     RSM([|box|],box)
+
+let ``One edge linear graph, chained RSM with loop`` =
+    let testName = "One edge linear graph, chained RSM with loop"
+    testCase testName <| fun () ->
+        let terminalForCFGEdge = 0<terminalSymbol>
+        let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, terminalForCFGEdge, 1<inputGraphVertex>)|])
+        let startV = [|0<inputGraphVertex>|]    
+        let balancedBracketsRsmBoxStartState = RsmState(true,true) :> IRsmState
+        let balancedBracketsRsmBoxFinalState = balancedBracketsRsmBoxStartState
+        let callImbalanceRsmBoxStartState = RsmState(true,false) :> IRsmState
+        let callImbalanceRsmBoxFinalState = RsmState(false,true) :> IRsmState
+        let historyRsmBoxStartState = RsmState(true,false) :> IRsmState
+        let historyRsmBoxDefaultFinalState = RsmState(false,true) :> IRsmState
+        let historyRsmBoxHistoryStartState = RsmState(false,true) :> IRsmState
+        
+        (*let historyRsmBox =
+            let box = RSMBox()
+            box.AddState historyRsmBoxStartState
+            box.AddState historyRsmBoxDefaultFinalState
+            historyRsmBoxStartState.OutgoingNonTerminalEdges.Add(callImbalanceRsmBoxStartState, HashSet [|historyRsmBoxDefaultFinalState|])
+            historyRsmBoxStartState.OutgoingNonTerminalEdges.Add(balancedBracketsRsmBoxStartState, HashSet [|historyRsmBoxHistoryStartState|])        
+            box*)
+        let balancedBracketsRsmBox =         
+            let box = RSMBox()
+            box.AddState balancedBracketsRsmBoxStartState
+            balancedBracketsRsmBoxStartState.OutgoingTerminalEdges.Add(terminalForCFGEdge, HashSet [|balancedBracketsRsmBoxFinalState|])
+            box 
+        let callImbalanceBracketsRsmBox =         
+            let box = RSMBox()
+            box.AddState callImbalanceRsmBoxStartState
+            box.AddState callImbalanceRsmBoxFinalState
+            callImbalanceRsmBoxStartState.OutgoingNonTerminalEdges.Add(balancedBracketsRsmBoxStartState, HashSet [|callImbalanceRsmBoxFinalState|])
+            box
+            
+        let q = RSM([|balancedBracketsRsmBox; callImbalanceBracketsRsmBox|], callImbalanceBracketsRsmBox)
+        
+        q.ToDot "vsharp_query.dot"
+        
+        let expected =
+          let nodes = Dictionary<_,_>()
+          nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,0<inputGraphVertex>))
+          nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,0<inputGraphVertex>))
+          
+          let edges = ResizeArray<_>([|(0,1); (1,2); (1,3);|])
+          let distances = [|0<distance>|]
+          (nodes,edges,distances)
+          
+        runGLLAndCheckResult testName graph startV q expected
+
+let ``Form V# 2`` =
+    let testName = "From V# 2"
+    testCase testName <| fun () ->
+        let terminalForCFGEdge = 0<terminalSymbol>
+        let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, terminalForCFGEdge, 1<inputGraphVertex>)|])
+        let startV = [|0<inputGraphVertex>|]    
+        let balancedBracketsRsmBoxStartState = RsmState(true,true) :> IRsmState
+        let balancedBracketsRsmBoxFinalState = balancedBracketsRsmBoxStartState
+        let callImbalanceRsmBoxStartState = RsmState(true,false) :> IRsmState
+        let callImbalanceRsmBoxFinalState = RsmState(false,true) :> IRsmState
+        let historyRsmBoxStartState = RsmState(true,false) :> IRsmState
+        let historyRsmBoxDefaultFinalState = RsmState(false,true) :> IRsmState
+        let historyRsmBoxHistoryStartState = RsmState(false,true) :> IRsmState
+        
+        let historyRsmBox =
+            let box = RSMBox()
+            box.AddState historyRsmBoxStartState
+            box.AddState historyRsmBoxDefaultFinalState
+            historyRsmBoxStartState.OutgoingNonTerminalEdges.Add(callImbalanceRsmBoxStartState, HashSet [|historyRsmBoxDefaultFinalState|])
+            //historyRsmBoxStartState.OutgoingNonTerminalEdges.Add(balancedBracketsRsmBoxStartState, HashSet [|historyRsmBoxHistoryStartState|])        
+            box
+        let balancedBracketsRsmBox =         
+            let box = RSMBox()
+            box.AddState balancedBracketsRsmBoxStartState
+            balancedBracketsRsmBoxStartState.OutgoingTerminalEdges.Add(terminalForCFGEdge, HashSet [|balancedBracketsRsmBoxFinalState|])
+            box 
+        let callImbalanceBracketsRsmBox =         
+            let box = RSMBox()
+            box.AddState callImbalanceRsmBoxStartState
+            box.AddState callImbalanceRsmBoxFinalState
+            callImbalanceRsmBoxStartState.OutgoingNonTerminalEdges.Add(balancedBracketsRsmBoxStartState, HashSet [|callImbalanceRsmBoxFinalState|])
+            box
+            
+        let q = RSM([|historyRsmBox; balancedBracketsRsmBox; callImbalanceBracketsRsmBox|], historyRsmBox)
+        
+        q.ToDot "vsharp_query.dot"
+        
+        let expected =
+          let nodes = Dictionary<_,_>()
+          nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,0<inputGraphVertex>))
+          nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,0<inputGraphVertex>))
+          
+          let edges = ResizeArray<_>([|(0,1); (1,2); (1,3);|])
+          let distances = [|0<distance>|]
+          (nodes,edges,distances)
+          
+        runGLLAndCheckResult testName graph startV q expected
+
+
+let ``Form V#`` =
+    let testName = "From V#"
+    testCase testName <| fun () ->
+        let terminalForCFGEdge = 0<terminalSymbol>
+        let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, terminalForCFGEdge, 1<inputGraphVertex>)|])
+        let startV = [|0<inputGraphVertex>|]    
+        let balancedBracketsRsmBoxStartState = RsmState(true,true) :> IRsmState
+        let balancedBracketsRsmBoxFinalState = balancedBracketsRsmBoxStartState
+        let callImbalanceRsmBoxStartState = RsmState(true,false) :> IRsmState
+        let callImbalanceRsmBoxFinalState = RsmState(false,true) :> IRsmState
+        let historyRsmBoxStartState = RsmState(true,false) :> IRsmState
+        let historyRsmBoxDefaultFinalState = RsmState(false,true) :> IRsmState
+        let historyRsmBoxHistoryStartState = RsmState(false,true) :> IRsmState
+        
+        let historyRsmBox =
+            let box = RSMBox()
+            box.AddState historyRsmBoxStartState
+            box.AddState historyRsmBoxDefaultFinalState
+            box.AddState historyRsmBoxHistoryStartState
+            historyRsmBoxStartState.OutgoingNonTerminalEdges.Add(callImbalanceRsmBoxStartState, HashSet [|historyRsmBoxDefaultFinalState|])
+            historyRsmBoxStartState.OutgoingNonTerminalEdges.Add(balancedBracketsRsmBoxStartState, HashSet [|historyRsmBoxHistoryStartState|])        
+            box
+        let balancedBracketsRsmBox =         
+            let box = RSMBox()
+            box.AddState balancedBracketsRsmBoxStartState
+            balancedBracketsRsmBoxStartState.OutgoingTerminalEdges.Add(terminalForCFGEdge, HashSet [|balancedBracketsRsmBoxFinalState|])
+            box 
+        let callImbalanceBracketsRsmBox =         
+            let box = RSMBox()
+            box.AddState callImbalanceRsmBoxStartState
+            box.AddState callImbalanceRsmBoxFinalState
+            callImbalanceRsmBoxStartState.OutgoingNonTerminalEdges.Add(balancedBracketsRsmBoxStartState, HashSet [|callImbalanceRsmBoxFinalState|])
+            box
+            
+        let q = RSM([|historyRsmBox; balancedBracketsRsmBox; callImbalanceBracketsRsmBox|], historyRsmBox)
+        
+        q.ToDot "vsharp_query.dot"
+        
+        let expected =
+          let nodes = Dictionary<_,_>()
+          nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,0<inputGraphVertex>))
+          nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,0<inputGraphVertex>))
+          
+          let edges = ResizeArray<_>([|(0,1); (1,2); (1,3);|])
+          let distances = [|0<distance>|]
+          (nodes,edges,distances)
+          
+        runGLLAndCheckResult testName graph startV q expected
 
 let ``One edge loop graph, one edge loop RSM`` =
     let testName = "One edge loop graph, one edge loop RSM"

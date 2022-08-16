@@ -36,9 +36,9 @@ let go() =
  
 [<EntryPoint>]
 let main argv =
-    //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Two loops with common vertex, simple loop RSM for Dyck language``])
+    Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Form V#``])
    
-    Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])
+    //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])
     
     //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.DistancesTests.tests])
     //go ()
