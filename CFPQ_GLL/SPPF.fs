@@ -66,15 +66,21 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
 and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
     let parents = HashSet<IRangeNode>()
     let mutable distance =
-        rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>) 
-    member this.NonTerminalStartState = nonTerminalStartState
-    member this.LeftPosition =graphRange.StartPosition
-    member this.RightPosition =graphRange.EndPosition        
+        let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
+        if res = Int32.MaxValue * 1<distance>
+        then printfn "!!!"
+        assert (res < Int32.MaxValue * 1<distance>)
+        res
     interface INonTerminalNode with
+        member this.NonTerminalStartState = nonTerminalStartState
+        member this.LeftPosition = graphRange.StartPosition
+        member this.RightPosition = graphRange.EndPosition
         member this.RangeNodes = rangeNodes
         member this.Distance
             with get () = distance
-            and set v = distance <- v
+            and set v =
+                assert (distance < Int32.MaxValue * 1<distance>)
+                distance <- v
         member this.Parents = parents
         
 and [<RequireQualifiedAccess>]NonRangeNode =
@@ -165,12 +171,12 @@ type MatchedRanges () =
                 
     member internal this.AddNonTerminalNode (range:Range<IInputGraphVertex>, nonTerminalStartState:IRsmState) =
         let rangeNodes = range.EndPosition.RangeNodes
-        let nonTerminalNodes = range.EndPosition.NonTerminalNodesWithEndHere
-        let exists, nodes = nonTerminalNodes.TryGetValue range.StartPosition        
+        let nonTerminalNodes = range.StartPosition.NonTerminalNodesStartedHere
+        let exists, nodes = nonTerminalNodes.TryGetValue range.EndPosition        
         let mkNewNonTerminal () =
             let rangeNodes =
                     let res = ResizeArray()
-                    for final in  nonTerminalStartState.Box.FinalStates do
+                    for final in nonTerminalStartState.Box.FinalStates do
                         let matchedRange = MatchedRange (range, Range<IRsmState>(nonTerminalStartState, final))
                         let exists, rangeNode = rangeNodes.TryGetValue matchedRange
                         if exists then res.Add rangeNode
@@ -178,8 +184,6 @@ type MatchedRanges () =
             let node = NonTerminalNode(nonTerminalStartState, range, rangeNodes)
             rangeNodes |> ResizeArray.iter (fun n -> n.Parents.Add (NonRangeNode.NonTerminalNode node) |> ignore)
             nonTerminalStartState.NonTerminalNodes.Add node
-            let added = range.StartPosition.NonTerminalNodesWithStartHere.Add ((range.EndPosition, node :> INonTerminalNode))
-            assert added
             node :> INonTerminalNode
             
         if exists
@@ -195,7 +199,7 @@ type MatchedRanges () =
             let newNonTerminalNode = mkNewNonTerminal ()
             let d = Dictionary<_,_>()
             d.Add(nonTerminalStartState, newNonTerminalNode)
-            nonTerminalNodes.Add(range.StartPosition, d)
+            nonTerminalNodes.Add(range.EndPosition, d)
             newNonTerminalNode
     
     member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode) =
@@ -290,7 +294,8 @@ type MatchedRanges () =
         
         and handleNonTerminalNode (nonTerminalNode: INonTerminalNode) =
             if nonTerminalNode.RangeNodes.Count = 0
-            then 
+            then
+                nonTerminalNode.LeftPosition.NonTerminalNodesStartedHere.[nonTerminalNode.RightPosition].Remove nonTerminalNode.NonTerminalStartState
                 nonTerminalNode.Parents
                 |> Seq.iter (fun node -> handleRangeNode node)
             else
@@ -377,10 +382,9 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
         if visitedNonTerminalNodes.ContainsKey node
         then addEdge parentId visitedNonTerminalNodes.[node]
         else
-            let _node = node :?> NonTerminalNode
             let currentId = nodesCount
             visitedNonTerminalNodes.Add(node, currentId)
-            nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(getVertexId _node.LeftPosition, getStateId _node.NonTerminalStartState, getVertexId _node.RightPosition))
+            nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(getVertexId node.LeftPosition, getStateId node.NonTerminalStartState, getVertexId node.RightPosition))
             addEdge parentId currentId
             nodesCount <- nodesCount + 1
             node.RangeNodes
