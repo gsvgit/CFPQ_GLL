@@ -103,9 +103,8 @@ and [<RequireQualifiedAccess>]NonRangeNode =
             | NonRangeNode.IntermediateNode i -> i.Parents
             | NonRangeNode.EpsilonNode e -> e.Parents
             
-type MatchedRanges () =    
-    
-    let updateDistances (rangeNode:IRangeNode) =
+type MatchedRanges () =
+    static member private updateDistances (rangeNode:IRangeNode) =
         let cycle = HashSet<IRangeNode>()
         let rec handleRangeNode (rangeNode:IRangeNode) =
             if not <| cycle.Contains rangeNode
@@ -211,7 +210,7 @@ type MatchedRanges () =
             node.Parents.Add rangeNode |> ignore
 
             if node.Distance < rangeNode.Distance
-            then updateDistances rangeNode
+            then MatchedRanges.updateDistances rangeNode
             
             rangeNode
         else
@@ -262,7 +261,7 @@ type MatchedRanges () =
             let newRange = MatchedRangeWithNode(newMatchedRange, rangeNode)
             newRange
 
-    member this.Invalidate (node:ITerminalNode) =
+    static member Invalidate (node:ITerminalNode) =
         let rec handleTerminalNode (terminalNode:ITerminalNode) =
             terminalNode.Parents
             |> Seq.iter (fun node ->
@@ -276,7 +275,7 @@ type MatchedRanges () =
             then 
                 rangeNode.Parents
                 |> Seq.iter (fun node -> handleNonRangeNode (node :?> NonRangeNode))
-            else updateDistances rangeNode
+            else MatchedRanges.updateDistances rangeNode
             
         and handleNonRangeNode (nonRangeNode : NonRangeNode) =
             match nonRangeNode with
@@ -305,7 +304,7 @@ type MatchedRanges () =
                 then
                     node.Distance <- newDistance
                     nonTerminalNode.Parents
-                    |> Seq.iter (fun node -> updateDistances node)                
+                    |> Seq.iter (fun node -> MatchedRanges.updateDistances node)                
                 
         handleTerminalNode node
         
