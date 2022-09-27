@@ -21,5 +21,5 @@ type InputGraphVertexBase () =
         //member this.NonTerminalNodesWithStartHere = nonTerminalsWithStartHere
         member this.RangeNodes = rangeNodes
         member this.IntermediateNodes = intermediateNodes
-    
+
 let EOF:int<terminalSymbol> = System.Int32.MaxValue - 1 |> LanguagePrimitives.Int32WithMeasure

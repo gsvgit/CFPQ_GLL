@@ -15,8 +15,8 @@ type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVerte
         hash
     member this.RsmState = rsmState
     member this.InputPosition = inputPosition
-    member this.GssVertex = gssVertex  
-    member this.MatchedRange = matchedRange    
+    member this.GssVertex = gssVertex
+    member this.MatchedRange = matchedRange
     override this.GetHashCode() = hashCode
     override this.Equals (y:obj) =
         y :? Descriptor
@@ -32,11 +32,11 @@ and IRsmState =
     abstract IsFinal: bool
     abstract IsStart: bool
     abstract Box: IRsmBox with get, set
-    abstract NonTerminalNodes: ResizeArray<INonTerminalNode>  
-    
+    abstract NonTerminalNodes: ResizeArray<INonTerminalNode>
+
 and IRsmBox =
     abstract FinalStates: HashSet<IRsmState>
-    
+
 and IInputGraphVertex =
     abstract OutgoingEdges: Dictionary<int<terminalSymbol>, HashSet<IInputGraphVertex>>
     abstract Descriptors: HashSet<Descriptor>
@@ -50,7 +50,7 @@ and [<Struct>] Range<'position> =
     val StartPosition: 'position
     val EndPosition: 'position
     new (startPosition, endPosition) = {StartPosition = startPosition; EndPosition = endPosition}
-    
+
 and [<Struct>] MatchedRange =
     val InputRange : Range<IInputGraphVertex>
     val RSMRange : Range<IRsmState>
@@ -79,7 +79,7 @@ and INonTerminalNode =
     abstract NonTerminalStartState : IRsmState
 and IIntermediateNode =
     abstract Distance: int<distance> with get, set
-    abstract Parents: HashSet<IRangeNode>    
+    abstract Parents: HashSet<IRangeNode>
 and IRangeNode =
     abstract Distance: int<distance> with get, set
     abstract Parents: HashSet<INonRangeNode>
@@ -88,15 +88,15 @@ and IGssEdge =
     abstract RsmState: IRsmState
     abstract GssVertex: IGssVertex
     abstract MatchedRange: MatchedRangeWithNode
-   
+
 and IGssVertex =
     abstract InputPosition: IInputGraphVertex
     abstract RsmState: IRsmState
-    abstract OutgoingEdges: ResizeArray<IGssEdge> 
+    abstract OutgoingEdges: ResizeArray<IGssEdge>
     abstract Popped: ResizeArray<MatchedRangeWithNode>
     abstract HandledDescriptors: HashSet<Descriptor>
-    
+
 and INonRangeNode =
     abstract Distance: int<distance>
     abstract Parents: HashSet<IRangeNode>
-    
+
