@@ -151,7 +151,9 @@ let run
                        makeIntermediateNode leftSubRange rightSubRange
                    Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange) |> addDescriptor)
 
-        let inline handleTerminalEdge terminalSymbol (graphTargetVertex:IInputGraphVertex) (rsmTargetVertex:IRsmState) =
+        let inline handleTerminalOrEpsilonEdge terminalSymbol (graphTargetVertex:IInputGraphVertex) (rsmTargetVertex: IRsmState) =
+
+
             let newMatchedRange =
                 let currentlyMatchedRange =
                     let matchedRange =
@@ -172,18 +174,26 @@ let run
 
             Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange) |> addDescriptor
 
-        let handleEdge terminalSymbol finalVertex =
-            let exists, finalSates = outgoingTerminalEdgesInRSM.TryGetValue terminalSymbol
-            if exists && finalSates.Count > 0
+        let handleTerminalEdge terminalSymbol graphTargetVertex rsmTargetVertex =
+            handleTerminalOrEpsilonEdge terminalSymbol graphTargetVertex rsmTargetVertex
+
+        let handleEpsilonEdge targetVertex = handleTerminalOrEpsilonEdge Epsilon targetVertex currentDescriptor.RsmState
+
+        let handleEdge terminalSymbol targetVertex =
+            let exists, targetStates = outgoingTerminalEdgesInRSM.TryGetValue terminalSymbol
+            if exists && targetStates.Count > 0
             then
-                    for state in finalSates do
-                        handleTerminalEdge terminalSymbol finalVertex state
+                for state in targetStates do
+                    handleTerminalEdge terminalSymbol targetVertex state
 
         handleEdge EOF currentDescriptor.InputPosition
 
         for kvp in outgoingTerminalEdgesInGraph do
             for vertex in kvp.Value do
-                handleEdge kvp.Key vertex
+                if kvp.Key = Epsilon then
+                    handleEpsilonEdge vertex
+                else
+                    handleEdge kvp.Key vertex
 
     while descriptorToProcess.Count > 0 do
         descriptorToProcess.Pop()
