@@ -34,6 +34,7 @@ let test (graph: InputGraph) q =
 let main argv =
     let tests =
         testList "All tests" [
+            Tests.LinearGraphReader.``Linear graph creating tests``
             Tests.RSMCalculator.``Calculator RSM tests``
             Tests.EpsilonEdge.``Epsilon edges tests``
         ] |> testSequenced

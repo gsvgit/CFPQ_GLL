@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <Compile Include="InputGraph.fs" />
+        <Compile Include="LinearGraphReader.fs" />
         <Compile Include="GLLTests.fs" />
         <Compile Include="DynamicTests.fs" />
         <Compile Include="RSMCalculator.fs" />
