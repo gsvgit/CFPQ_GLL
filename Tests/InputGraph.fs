@@ -11,14 +11,18 @@ open CFPQ_GLL.InputGraph
 type InputGraphEdge =
     val TerminalSymbol: int<terminalSymbol>
     val TargetVertex: int<inputGraphVertex>
-    new (terminal, targetVertex) = {TerminalSymbol = terminal; TargetVertex = targetVertex}
+    val Weight: int<edgeWeight>
+    new (terminal, targetVertex, weight) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = weight}
+    new (terminal, targetVertex) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = 0<edgeWeight>}
 
 type DemoInputGraphEdge =
     | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>
     | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>
+    | ErrorEpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>
+    | ErrorTerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>
 
 [<Struct>]
-type InputGraphTerminalEdge =
+type InputGraphTerminalEdge = // Usages don't found
     val Vertex : int<inputGraphVertex>
     val TerminalSymbol : int<terminalSymbol>
     new (vertex, terminalSymbol) = {Vertex = vertex; TerminalSymbol = terminalSymbol}
@@ -37,6 +41,7 @@ type InputGraph (edges) =
         vertices.[v]
 
     let addEdges edges =
+        let errorEdgeWeight = 1<edgeWeight>
         edges
         |> Array.iter (function
                         | TerminalEdge (_from, smb, _to) ->
@@ -47,6 +52,14 @@ type InputGraph (edges) =
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
                             InputGraphEdge(Epsilon, _to) |> vertexContent.OutgoingTerminalEdges.Add
+                        | ErrorTerminalEdge(_from, smb, _to) ->
+                            let vertexContent = addVertex _from
+                            addVertex _to |> ignore
+                            InputGraphEdge(smb, _to, errorEdgeWeight)  |> vertexContent.OutgoingTerminalEdges.Add
+                        | ErrorEpsilonEdge(_from, _to) ->
+                            let vertexContent = addVertex _from
+                            addVertex _to |> ignore
+                            InputGraphEdge(Epsilon, _to, errorEdgeWeight) |> vertexContent.OutgoingTerminalEdges.Add
                        )
 
     do addEdges edges
@@ -101,9 +114,9 @@ type InputGraph (edges) =
                 let exists, edges = vertex.OutgoingEdges.TryGetValue edge.TerminalSymbol
                 if exists
                 then
-                    let added = edges.Add targetVertex
+                    let added = TerminalEdgeTarget(targetVertex) |> edges.Add
                     assert added
                 else
-                    vertex.OutgoingEdges.Add(edge.TerminalSymbol, HashSet<_>[|targetVertex|])
+                    vertex.OutgoingEdges.Add(edge.TerminalSymbol, HashSet<_>[|TerminalEdgeTarget(targetVertex)|])
 
         newStartVertices,verticesMapping

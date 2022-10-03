@@ -54,7 +54,7 @@ let ``Epsilon edges tests`` =
                     let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (2,9); (9,10);|])
                     let distances = [|3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a epsilon epsilon a`` =
             let testName = "a epsilon epsilon a"
@@ -87,7 +87,7 @@ let ``Epsilon edges tests`` =
                                                  (6,9); (9,10); (4,11); (11,12); (2,13); (13,14);|])
                     let distances = [|4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon a`` =
             let testName = "a b|epsilon a"
@@ -115,7 +115,7 @@ let ``Epsilon edges tests`` =
                     let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (2,9); (9,10);|])
                     let distances = [|3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon c|epsilon a`` =
             let testName = "a b|epsilon c|epsilon a"
@@ -150,7 +150,7 @@ let ``Epsilon edges tests`` =
                                                  (6,9); (9,10); (4,11); (11,12); (2,13); (13,14);|])
                     let distances = [|4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``epsilon a epsilon a epsilon`` =
             let testName = "epsilon a epsilon a epsilon"
@@ -200,7 +200,7 @@ let ``Epsilon edges tests`` =
                                                  (25,26); (26,27); (27,17); (27,14); |])
                     let distances = [|3<distance>; 4<distance>; 4<distance>; 5<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         testList "Epsilon edges tests on aa RSM" [
             ``a epsilon a``
@@ -252,7 +252,7 @@ let ``Epsilon edges tests`` =
                                                  (12,13); (13,7); (13,14); (14,15);|])
                     let distances = [|0<distance>; 1<distance>; 2<distance>; 3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a epsilon epsilon a`` =
             let testName = "a epsilon epsilon a"
@@ -293,7 +293,7 @@ let ``Epsilon edges tests`` =
                                                  (19,20);|])
                     let distances = [|0<distance>; 1<distance>; 2<distance>; 3<distance>; 4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon a`` =
             let testName = "a b|epsilon a"
@@ -328,7 +328,7 @@ let ``Epsilon edges tests`` =
                                                  (12,13); (13,7); (13,14); (14,15); |])
                     let distances = [|0<distance>; 1<distance>; 2<distance>; 3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon c|epsilon a`` =
             let testName = "a b|epsilon c|epsilon a"
@@ -371,7 +371,7 @@ let ``Epsilon edges tests`` =
                                                  (19,20);|])
                     let distances =  [|0<distance>; 1<distance>; 2<distance>; 3<distance>; 4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``epsilon a epsilon a epsilon`` =
             let testName = "epsilon a epsilon a epsilon"
@@ -436,7 +436,7 @@ let ``Epsilon edges tests`` =
                                       2<distance>; 2<distance>; 3<distance>; 3<distance>
                                       4<distance>; 4<distance>; 5<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         testList "Epsilon edges tests on a* RSM" [
             ``a epsilon a``

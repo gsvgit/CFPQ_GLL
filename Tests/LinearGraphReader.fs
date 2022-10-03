@@ -32,12 +32,13 @@ let mkLinearGraph
 
     let mkVertex i = LanguagePrimitives.Int32WithMeasure<inputGraphVertex> i
     let mkEdge v1 t v2 = TerminalEdge(mkVertex v1, t, mkVertex v2)
+    let mkErrorEdge v1 t v2 = ErrorTerminalEdge(mkVertex v1, t, mkVertex v2)
     let mkLinearEdge v t = mkEdge v t (v + 1)
-    let mkLinearEpsilonEdge v = EpsilonEdge(mkVertex v, mkVertex (v + 1))
+    let mkLinearEpsilonEdge v = ErrorEpsilonEdge(mkVertex v, mkVertex (v + 1))
 
     let deletionsEdges = Array.mapi (fun i _ -> mkLinearEpsilonEdge i) terminals
     let insertionEdges =
-        let createInsertionsEdgesForVertex i = Seq.map (fun t -> mkEdge i t i) allLanguageTerminals
+        let createInsertionsEdgesForVertex i = Seq.map (fun t -> mkErrorEdge i t i) allLanguageTerminals
         Array.map createInsertionsEdgesForVertex vertices |> Seq.concat |> Seq.toArray
 
     let linearGraphEdges = Array.mapi mkLinearEdge terminals
@@ -154,7 +155,7 @@ let ``Linear graph creating tests`` =
             <| [|
                 TerminalEdge(0<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
 
-                EpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
+                ErrorEpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
             |]
             <| aInputString |> testCase "a"
 
@@ -164,8 +165,8 @@ let ``Linear graph creating tests`` =
                 TerminalEdge(0<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
                 TerminalEdge(1<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
 
-                EpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
-                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
+                ErrorEpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
+                ErrorEpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
             |]
             <| abInputString |> testCase "ab"
 
@@ -176,9 +177,9 @@ let ``Linear graph creating tests`` =
                 TerminalEdge(1<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
                 TerminalEdge(2<inputGraphVertex>, aTerminal, 3<inputGraphVertex>)
 
-                EpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
-                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
+                ErrorEpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
+                ErrorEpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
+                ErrorEpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
             |]
             <| abaInputString |> testCase "aba"
 
@@ -196,10 +197,10 @@ let ``Linear graph creating tests`` =
             <| [|
                 TerminalEdge(0<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
 
-                TerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
-                TerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
             |]
             <| aInputString |> testCase "a"
 
@@ -209,12 +210,12 @@ let ``Linear graph creating tests`` =
                 TerminalEdge(0<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
                 TerminalEdge(1<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
 
-                TerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
-                TerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
             |]
             <| abInputString |> testCase "ab"
 
@@ -225,14 +226,14 @@ let ``Linear graph creating tests`` =
                 TerminalEdge(1<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
                 TerminalEdge(2<inputGraphVertex>, aTerminal, 3<inputGraphVertex>)
 
-                TerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
-                TerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
-                TerminalEdge(3<inputGraphVertex>, aTerminal, 3<inputGraphVertex>)
-                TerminalEdge(3<inputGraphVertex>, bTerminal, 3<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(3<inputGraphVertex>, aTerminal, 3<inputGraphVertex>)
+                ErrorTerminalEdge(3<inputGraphVertex>, bTerminal, 3<inputGraphVertex>)
             |]
             <| abaInputString |> testCase "aba"
 
@@ -250,12 +251,12 @@ let ``Linear graph creating tests`` =
             <| [|
                 TerminalEdge(0<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
 
-                TerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
-                TerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
 
-                EpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
+                ErrorEpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
             |]
             <| aInputString |> testCase "a"
 
@@ -265,15 +266,15 @@ let ``Linear graph creating tests`` =
                 TerminalEdge(0<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
                 TerminalEdge(1<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
 
-                TerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
-                TerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
 
-                EpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
-                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
+                ErrorEpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
+                ErrorEpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
             |]
             <| abInputString |> testCase "ab"
 
@@ -284,18 +285,18 @@ let ``Linear graph creating tests`` =
                 TerminalEdge(1<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
                 TerminalEdge(2<inputGraphVertex>, aTerminal, 3<inputGraphVertex>)
 
-                TerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
-                TerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
-                TerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
-                TerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
-                TerminalEdge(3<inputGraphVertex>, aTerminal, 3<inputGraphVertex>)
-                TerminalEdge(3<inputGraphVertex>, bTerminal, 3<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, aTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(0<inputGraphVertex>, bTerminal, 0<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, aTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(1<inputGraphVertex>, bTerminal, 1<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, aTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(2<inputGraphVertex>, bTerminal, 2<inputGraphVertex>)
+                ErrorTerminalEdge(3<inputGraphVertex>, aTerminal, 3<inputGraphVertex>)
+                ErrorTerminalEdge(3<inputGraphVertex>, bTerminal, 3<inputGraphVertex>)
 
-                EpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
-                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
+                ErrorEpsilonEdge(0<inputGraphVertex>, 1<inputGraphVertex>)
+                ErrorEpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
+                ErrorEpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
             |]
             <| abaInputString |> testCase "aba"
 

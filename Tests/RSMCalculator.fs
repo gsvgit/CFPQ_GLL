@@ -254,7 +254,7 @@ let ``Calculator RSM tests`` =
                                                  (42,43); (43,44); (2,45); (45,46);|])
                     let distances = [|6<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``ab = 11 + 22;`` =
             let testName = "ab = 11 + 22;"
@@ -343,7 +343,7 @@ let ``Calculator RSM tests`` =
                                                  (50,51); (51,52); (52,53); (53,54); (52,55); (55,56); (2,57); (57,58);|])
                     let distances = [|9<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a = b + 2 ^ 5 * 3;`` =
             let testName = "a = b + 2 ^ 5 * 3;"
@@ -454,7 +454,7 @@ let ``Calculator RSM tests`` =
                                                  (2,75); (75,76);|])
                     let distances = [|10<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a = (1 + 2) ^ 5; b = 3; c = 4 * 8;`` =
             let testName = "a = (1 + 2) ^ 5; b = 3; c = 4 * 8;"
@@ -663,7 +663,7 @@ let ``Calculator RSM tests`` =
                                                  (147,148); (148,149); (149,150); (150,151); (151,152); (110,153); (153,154)|])
                     let distances = [|10<distance>; 14<distance>; 20<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         testList "Calculator RSM tests on linear input" [
             ``a = 1 + 2;``
@@ -777,7 +777,7 @@ let ``Calculator RSM tests`` =
                                                  (53,54); (54,55); (55,56); (56,57); (55,29); (2,58); (58,59); |])
                     let distances = [|5<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a = a1;`` =
             let testName = "a = a1;"
@@ -911,7 +911,7 @@ let ``Calculator RSM tests`` =
                                                  (94,86); (92,95); (95,96); (2,97); (97,98); |])
                     let distances = [|5<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         testList "Calculator RSM tests on linear input with symbol deletions" [
             ``a =; 1;``

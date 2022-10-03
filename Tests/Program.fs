@@ -16,7 +16,27 @@ let test (graph: InputGraph) q =
     let startV = [|0<inputGraphVertex>|]
     graph.ToDot (0, "graph.dot")
     let startVertices,_ = graph.ToCfpqCoreGraph (HashSet startV)
-    let result = GLL.eval startVertices q GLL.AllPaths
+    let result = GLL.defaultEval startVertices q GLL.AllPaths
+
+    match result with
+    | QueryResult.MatchedRanges ranges ->
+      let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
+      let actual = TriplesStoredSPPF (sppf, Dictionary())
+
+      actual.ToDot "sppf.dot"
+
+      Tests.GLLTests.dumpResultToConsole actual
+    | _ -> failwith "Unexpected result."
+    0
+
+let test2 (graph: InputGraph) q =
+
+    let startV = [|0<inputGraphVertex>|]
+    let finalV = [|LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)|]
+    graph.ToDot (0, "graph.dot")
+    let startVertices,mapping = graph.ToCfpqCoreGraph (HashSet startV)
+    let finalVertices = Array.map (fun x -> mapping[x]) finalV |> HashSet
+    let result = GLL.errorRecoveringEval finalVertices startVertices q GLL.AllPaths
 
     match result with
     | QueryResult.MatchedRanges ranges ->
@@ -30,15 +50,19 @@ let test (graph: InputGraph) q =
     0
 
 
+
+
 [<EntryPoint>]
 let main argv =
-    let tests =
-        testList "All tests" [
-            Tests.LinearGraphReader.``Linear graph creating tests``
-            Tests.RSMCalculator.``Calculator RSM tests``
-            Tests.EpsilonEdge.``Epsilon edges tests``
-        ] |> testSequenced
-    Tests.runTestsWithCLIArgs [] [||] tests
+    Tests.runTestsWithCLIArgs [] [||] Tests.ErrorRecoveringTest.``Error recovering tests``
+//    let tests =
+//        testList "All tests" [
+//            Tests.LinearGraphReader.``Linear graph creating tests``
+//            Tests.RSMCalculator.``Calculator RSM tests``
+//            Tests.EpsilonEdge.``Epsilon edges tests``
+//        ] |> testSequenced
+//    Tests.runTestsWithCLIArgs [] [||] tests
+
 
     //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Form V#``])
     //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])

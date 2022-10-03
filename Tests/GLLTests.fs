@@ -62,9 +62,9 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
         | TriplesStoredSPPFNode.IntermediateNode (_pos, _rsm) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.IntermediateNode (%i{_pos}<inputGraphVertex>,%i{_rsm}<rsmState>))"
         )
 
-let runGLLAndCheckResultForManuallyCreatedGraph (testName:string) startVertices (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
+let private runGLLAndCheckResultForManuallyCreatedGraph evalFunction (testName:string) startVertices (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
     let validDotFileName = testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
-    let result = eval startVertices q AllPaths
+    let result = evalFunction startVertices q AllPaths
     match result with
     | QueryResult.MatchedRanges ranges ->
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
@@ -78,9 +78,16 @@ let runGLLAndCheckResultForManuallyCreatedGraph (testName:string) startVertices 
         Expect.sequenceEqual distances expectedDistances "Distances should be equals."
     | _ -> failwith "Result should be MatchedRanges"
 
-let runGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
+let runDefaultGLLAndCheckResultForManuallyCreatedGraph = runGLLAndCheckResultForManuallyCreatedGraph defaultEval
+
+let runDefaultGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
     let startVertices,_ = graph.ToCfpqCoreGraph (HashSet startV)
-    runGLLAndCheckResultForManuallyCreatedGraph testName startVertices q (expectedNodes, expectedEdges, expectedDistances)
+    runDefaultGLLAndCheckResultForManuallyCreatedGraph testName startVertices q (expectedNodes, expectedEdges, expectedDistances)
+
+let runErrorRecoveringGLLAndCheckResult (testName:string) (graph:InputGraph) (startV:array<_>) (finalV:array<_>) (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
+    let startVertices,mapping = graph.ToCfpqCoreGraph (HashSet startV)
+    let finalVertices = Array.map (fun x -> mapping[x]) finalV |> HashSet
+    runGLLAndCheckResultForManuallyCreatedGraph (errorRecoveringEval finalVertices) testName startVertices q (expectedNodes, expectedEdges, expectedDistances)
 
 let simpleLoopRSMForDyckLanguage () =
     let box,_ =
@@ -143,7 +150,7 @@ let ``One edge linear graph, chained RSM with loop`` =
           let distances = [|0<distance>|]
           (nodes,edges,distances)
 
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Form V# 2`` =
     let testName = "From V# 2"
@@ -193,7 +200,7 @@ let ``Form V# 2`` =
           let distances = [|0<distance>|]
           (nodes,edges,distances)
 
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 
 let ``Form V#`` =
@@ -245,7 +252,7 @@ let ``Form V#`` =
           let distances = [|0<distance>|]
           (nodes,edges,distances)
 
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``One edge loop graph, one edge loop RSM`` =
     let testName = "One edge loop graph, one edge loop RSM"
@@ -264,7 +271,7 @@ let ``One edge loop graph, one edge loop RSM`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (1,3);|])
           let distances = [|0<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Empty graph, Epsilon-only RSM`` =
     let testName = "Empty graph, Epsilon-only RSM"
@@ -283,7 +290,7 @@ let ``Empty graph, Epsilon-only RSM`` =
           let edges = ResizeArray<_>([|(0,1); (1,2)|])
           let distances = [|0<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``One edge linear graph, one edge linear RSM`` =
     let testName = "One edge linear graph, one edge linear RSM"
@@ -300,7 +307,7 @@ let ``One edge linear graph, one edge linear RSM`` =
           let edges = ResizeArray<_>([|(0,1); (1,2)|])
           let distances = [|1<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``One edge linear graph, one edge loop RSM`` =
     let testName = "One edge linear graph, one edge loop RSM"
@@ -320,7 +327,7 @@ let ``One edge linear graph, one edge loop RSM`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5)|])
           let distances = [|0<distance>; 1<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Two edge linear graph, one edge loop RSM`` =
     let testName = "Two edge linear graph, one edge loop RSM"
@@ -350,7 +357,7 @@ let ``Two edge linear graph, one edge loop RSM`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,4); (8,9); (9,10)|])
           let distances = [|0<distance>; 1<distance>; 2<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Minimal example of interprocedural control flow`` =
     let testName = "Minimal example of interprocedural control flow"
@@ -515,7 +522,7 @@ let ``Minimal example of interprocedural control flow`` =
                             3<distance>; 4<distance>; 5<distance>; 6<distance>; 6<distance>; 7<distance>; 8<distance>
                             9<distance>; 9<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Two concatenated linear pairs of brackets, simple loop RSM for Dyck language`` =
     let testName = "Two concatenated linear pairs of brackets, simple loop RSM for Dyck language"
@@ -565,7 +572,7 @@ let ``Two concatenated linear pairs of brackets, simple loop RSM for Dyck langua
                                        (23,24); (24,25); (25,7); (25,26); (26,27); (23,28); (28,16); (21,29); (29,30)|])
           let distances = [|0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Two loops with common vertex, simple loop RSM for Dyck language`` =
     let testName = "Two loops with common vertex, simple loop RSM for Dyck language"
@@ -592,7 +599,7 @@ let ``Two loops with common vertex, simple loop RSM for Dyck language`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (1,3); (3,4); (4,5); (5,6); (6,7); (5,8); (8,0); (3,9); (9,10)|])
           let distances = [|0<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Minimal worst case, simple loop RSM for Dyck language`` =
     let testName = "Minimal worst case, simple loop RSM for Dyck language"
@@ -628,7 +635,7 @@ let ``Minimal worst case, simple loop RSM for Dyck language`` =
                                        (11,12); (12,13); (13,6); (13,14); (14,0); (11,15); (15,16); (3,17); (17,18)|])
           let distances = [|0<distance>; 2<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Second worst case, simple loop RSM for Dyck language`` =
     let testName = "Second worst case, simple loop RSM for Dyck language"
@@ -718,7 +725,7 @@ let ``Second worst case, simple loop RSM for Dyck language`` =
           let distances = [|0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>; 6<distance>; 8<distance>
                             10<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Linear nested brackets, simple loop RSM for Dyck language`` =
     let testName = "Linear nested brackets, simple loop RSM for Dyck language"
@@ -766,7 +773,7 @@ let ``Linear nested brackets, simple loop RSM for Dyck language`` =
                                        (22,23); (23,24); (24,25); (23,26); (26,9); (21,27); (27,28)|])
           let distances = [|0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Complex nested linear brackets, simple loop RSM for Dyck language`` =
     let testName = "Complex nested linear brackets, simple loop RSM for Dyck language"
@@ -834,7 +841,7 @@ let ``Complex nested linear brackets, simple loop RSM for Dyck language`` =
                                        (38,41); (41,22); (36,42); (42,43)|])
           let distances = [|0<distance>; 0<distance>; 0<distance>; 0<distance>; 2<distance>; 4<distance>; 6<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``One edge linear graph, simple chain call RSM`` =
     let testName = "One edge linear graph, simple chain call RSM"
@@ -860,7 +867,7 @@ let ``One edge linear graph, simple chain call RSM`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4)|])
           let distances = [|1<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Two edges linear graph with one pair of brackets, simple loop RSM for Dyck language`` =
     let testName = "Two edges linear graph with one pair of brackets, simple loop RSM for Dyck language"
@@ -892,7 +899,7 @@ let ``Two edges linear graph with one pair of brackets, simple loop RSM for Dyck
                                        (10,13); (13,3); (8,14); (14,15)|])
           let distances = [|0<distance>; 0<distance>; 2<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Graph with branch, RSM with nonterminal, nodes reusing`` =
     let testName = "Graph with branch, RSM with nonterminal, nodes reusing"
@@ -971,7 +978,7 @@ let ``Graph with branch, RSM with nonterminal, nodes reusing`` =
           let distances = [|1<distance>; 1<distance>; 1<distance>; 1<distance>; 1<distance>; 2<distance>; 2<distance>
                             2<distance>; 2<distance>; 4<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let ``Graph with branch, RSM is loop DFA, nodes reusing`` =
     let testName = "Graph with branch, RSM is loop DFA, nodes reusing"
@@ -1019,7 +1026,7 @@ let ``Graph with branch, RSM is loop DFA, nodes reusing`` =
                                        (21,12); (21,22); (22,23)|])
           let distances = [|0<distance>; 1<distance>; 2<distance>; 2<distance>; 3<distance>|]
           (nodes,edges,distances)
-        runGLLAndCheckResult testName graph startV q expected
+        runDefaultGLLAndCheckResult testName graph startV q expected
 
 let tests =
 
