@@ -175,13 +175,13 @@ let ``Calculator RSM tests`` =
     let ``Calculator RSM tests on linear input`` =
 
         let makeLinearInputGraph (arr: int<terminalSymbol> array) =
-            Array.mapi
+            InputGraph(Array.mapi
                 (fun i t -> TerminalEdge(
                     LanguagePrimitives.Int32WithMeasure<inputGraphVertex> i,
                     t,
                     LanguagePrimitives.Int32WithMeasure<inputGraphVertex> (i + 1)
                 ))
-                arr |> InputGraph
+                arr, false)
 
         let ``a = 1 + 2;`` =
             let testName = "a = 1 + 2;"
@@ -675,7 +675,7 @@ let ``Calculator RSM tests`` =
     let ``Calculator RSM tests on linear input with symbol deletions`` =
 
         let makeLinearInputGraphWithSymbolDeletions (arr: int<terminalSymbol> array) =
-            Array.append
+            InputGraph(Array.append
                 (Array.mapi
                     (fun i t -> TerminalEdge(
                         LanguagePrimitives.Int32WithMeasure<inputGraphVertex> i,
@@ -688,8 +688,8 @@ let ``Calculator RSM tests`` =
                         LanguagePrimitives.Int32WithMeasure<inputGraphVertex> i,
                         LanguagePrimitives.Int32WithMeasure<inputGraphVertex> (i + 1)
                     ))
-                    arr)
-           |> InputGraph
+                    arr),
+           false)
 
         let ``a =; 1;`` =
             let testName = "a =; 1;"

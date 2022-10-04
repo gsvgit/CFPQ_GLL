@@ -10,9 +10,9 @@ open FSharpx.Collections
 
 type Distance = Unreachable | Reachable of int
 
-type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<IInputGraphVertex>) =
+type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<IInputGraphVertex>, distance) =
     let parents = HashSet<IRangeNode>()
-    let mutable distance = 1<distance>
+    let mutable distance = distance
     member this.Terminal = terminal
     member this.LeftPosition = graphRange.StartPosition
     member this.RightPosition = graphRange.EndPosition
@@ -149,7 +149,7 @@ type MatchedRanges () =
 
         handleRangeNode rangeNode
 
-    member internal this.AddTerminalNode (range:Range<IInputGraphVertex>, terminal) =
+    member internal this.AddTerminalNode (range:Range<IInputGraphVertex>, terminal, distance) =
         let terminalNodes = range.EndPosition.TerminalNodes
         let exists, nodes = terminalNodes.TryGetValue range.StartPosition
         if exists
@@ -158,11 +158,11 @@ type MatchedRanges () =
             if exists
             then terminalNode
             else
-                let newTerminalNode = TerminalNode(terminal,range) :> ITerminalNode
+                let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
                 nodes.Add(terminal, newTerminalNode)
                 newTerminalNode
         else
-            let newTerminalNode = TerminalNode(terminal,range) :> ITerminalNode
+            let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
             let d = Dictionary<_,_>()
             d.Add(terminal, newTerminalNode)
             terminalNodes.Add(range.StartPosition, d)
@@ -201,24 +201,25 @@ type MatchedRanges () =
             nonTerminalNodes.Add(range.EndPosition, d)
             newNonTerminalNode
 
-    member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode) =
+    member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode, enableErrorRecovering:bool) =
         let rangeNodes = matchedRange.InputRange.EndPosition.RangeNodes
+
         let exists, rangeNode = rangeNodes.TryGetValue matchedRange
         if exists
         then
-            rangeNode.IntermediateNodes.Add node |> ignore
-            node.Parents.Add rangeNode |> ignore
+            if not(enableErrorRecovering && node.Distance > rangeNode.Distance) then
+                rangeNode.IntermediateNodes.Add node |> ignore
+                node.Parents.Add rangeNode |> ignore
 
-            if node.Distance < rangeNode.Distance
-            then MatchedRanges.updateDistances rangeNode
-
+                if node.Distance < rangeNode.Distance
+                then MatchedRanges.updateDistances rangeNode
             rangeNode
         else
             let rangeNode = RangeNode(matchedRange, HashSet<_> [|node|])
             rangeNodes.Add(matchedRange, rangeNode)
             rangeNode
 
-    member internal this.AddIntermediateNode (leftSubRange: MatchedRangeWithNode, rightSubRange: MatchedRangeWithNode) =
+    member internal this.AddIntermediateNode (leftSubRange: MatchedRangeWithNode, rightSubRange: MatchedRangeWithNode, enableErrorRecovering: bool) =
         match leftSubRange.Node with
         | None -> rightSubRange
         | Some n ->
@@ -257,7 +258,7 @@ type MatchedRanges () =
                                         , rightSubRange.Range.InputRange.EndPosition
                                         , leftSubRange.Range.RSMRange.StartPosition
                                         , rightSubRange.Range.RSMRange.EndPosition)
-            let rangeNode = this.AddToMatchedRange (newMatchedRange, NonRangeNode.IntermediateNode intermediateNode)
+            let rangeNode = this.AddToMatchedRange (newMatchedRange, NonRangeNode.IntermediateNode intermediateNode, enableErrorRecovering)
             let newRange = MatchedRangeWithNode(newMatchedRange, rangeNode)
             newRange
 

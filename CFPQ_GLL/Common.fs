@@ -7,7 +7,7 @@ open System.Collections.Generic
 [<Measure>] type edgeWeight
 
 
-type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, pathWeight: int<edgeWeight>) =
+type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) =
     let hashCode =
         let mutable hash = 17
         hash <- hash * 23 + rsmState.GetHashCode()
@@ -19,7 +19,6 @@ type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVerte
     member this.InputPosition = inputPosition
     member this.GssVertex = gssVertex
     member this.MatchedRange = matchedRange
-    member this.PathWeight = pathWeight
     override this.GetHashCode() = hashCode
     override this.Equals (y:obj) =
         y :? Descriptor

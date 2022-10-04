@@ -54,15 +54,14 @@ let test2 (graph: InputGraph) q =
 
 [<EntryPoint>]
 let main argv =
-    Tests.runTestsWithCLIArgs [] [||] Tests.ErrorRecoveringTest.``Error recovering tests``
-//    let tests =
-//        testList "All tests" [
-//            Tests.LinearGraphReader.``Linear graph creating tests``
-//            Tests.RSMCalculator.``Calculator RSM tests``
-//            Tests.EpsilonEdge.``Epsilon edges tests``
-//        ] |> testSequenced
-//    Tests.runTestsWithCLIArgs [] [||] tests
-
+    let tests =
+        testList "All tests" [
+            Tests.LinearGraphReader.``Linear graph creating tests``
+            Tests.RSMCalculator.``Calculator RSM tests``
+            Tests.EpsilonEdge.``Epsilon edges tests``
+            Tests.ErrorRecoveringTest.``Error recovering tests``
+        ] |> testSequenced
+    Tests.runTestsWithCLIArgs [] [||] tests
 
     //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Form V#``])
     //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])

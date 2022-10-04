@@ -11,7 +11,7 @@ open FSharpx.Collections
 open GLLTests
 open Tests.InputGraph
 let ``Epsilon edges tests`` =
-
+    let defaultInputGraph edges = InputGraph(edges, false)
     let character = [|for i in [0..26] do LanguagePrimitives.Int32WithMeasure<terminalSymbol> i|]
 
     let ``Epsilon edges tests on (S -> aa) RSM`` =
@@ -34,7 +34,7 @@ let ``Epsilon edges tests`` =
             testCase testName <| fun () ->
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -62,7 +62,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
-                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -95,7 +95,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -125,7 +125,7 @@ let ``Epsilon edges tests`` =
                                 TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                 EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                 TerminalEdge(2<inputGraphVertex>, character[2], 3<inputGraphVertex>)
-                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -159,7 +159,7 @@ let ``Epsilon edges tests`` =
                                TerminalEdge(1<inputGraphVertex>, character[0], 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>)
-                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> InputGraph
+                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -225,7 +225,7 @@ let ``Epsilon edges tests`` =
             testCase testName <| fun () ->
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -260,7 +260,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
-                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -301,7 +301,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -338,7 +338,7 @@ let ``Epsilon edges tests`` =
                                 TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                 EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                 TerminalEdge(2<inputGraphVertex>, character[2], 3<inputGraphVertex>)
-                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -380,7 +380,7 @@ let ``Epsilon edges tests`` =
                                TerminalEdge(1<inputGraphVertex>, character[0], 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>)
-                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> InputGraph
+                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =

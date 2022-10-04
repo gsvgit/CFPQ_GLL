@@ -13,13 +13,12 @@ type InputGraphEdge =
     val TargetVertex: int<inputGraphVertex>
     val Weight: int<edgeWeight>
     new (terminal, targetVertex, weight) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = weight}
-    new (terminal, targetVertex) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = 0<edgeWeight>}
 
 type DemoInputGraphEdge =
     | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>
     | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>
-    | ErrorEpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>
-    | ErrorTerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>
+    | ErrorEpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex> // delete
+    | ErrorTerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex> // delete
 
 [<Struct>]
 type InputGraphTerminalEdge = // Usages don't found
@@ -32,7 +31,7 @@ type InputGraphVertexMutableContent =
     val OutgoingTerminalEdges : ResizeArray<InputGraphEdge>
     new (terminalEdges) = {OutgoingTerminalEdges = terminalEdges}
 
-type InputGraph (edges) =
+type InputGraph (edges, enableErrorRecovering) =
     let vertices = System.Collections.Generic.Dictionary<int<inputGraphVertex>, InputGraphVertexMutableContent>()
 
     let addVertex v =
@@ -42,21 +41,24 @@ type InputGraph (edges) =
 
     let addEdges edges =
         let errorEdgeWeight = 1<edgeWeight>
+        let defaultEdgeWeight = if enableErrorRecovering then 0<edgeWeight> else 1<edgeWeight>
         edges
         |> Array.iter (function
                         | TerminalEdge (_from, smb, _to) ->
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
-                            InputGraphEdge(smb, _to)  |> vertexContent.OutgoingTerminalEdges.Add
+                            InputGraphEdge(smb, _to, defaultEdgeWeight)  |> vertexContent.OutgoingTerminalEdges.Add
                         | EpsilonEdge(_from, _to) ->
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
-                            InputGraphEdge(Epsilon, _to) |> vertexContent.OutgoingTerminalEdges.Add
+                            InputGraphEdge(Epsilon, _to, defaultEdgeWeight) |> vertexContent.OutgoingTerminalEdges.Add
                         | ErrorTerminalEdge(_from, smb, _to) ->
+                            if not enableErrorRecovering then failwith "Unexpected error edge without error recovering"
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
                             InputGraphEdge(smb, _to, errorEdgeWeight)  |> vertexContent.OutgoingTerminalEdges.Add
                         | ErrorEpsilonEdge(_from, _to) ->
+                            if not enableErrorRecovering then failwith "Unexpected error edge without error recovering"
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
                             InputGraphEdge(Epsilon, _to, errorEdgeWeight) |> vertexContent.OutgoingTerminalEdges.Add
@@ -64,7 +66,7 @@ type InputGraph (edges) =
 
     do addEdges edges
 
-    new () = InputGraph([||])
+    new (enableErrorRecovering) = InputGraph([||], enableErrorRecovering)
 
 
     member this.OutgoingTerminalEdges v =
@@ -114,9 +116,9 @@ type InputGraph (edges) =
                 let exists, edges = vertex.OutgoingEdges.TryGetValue edge.TerminalSymbol
                 if exists
                 then
-                    let added = TerminalEdgeTarget(targetVertex) |> edges.Add
+                    let added = TerminalEdgeTarget(targetVertex, edge.Weight) |> edges.Add
                     assert added
                 else
-                    vertex.OutgoingEdges.Add(edge.TerminalSymbol, HashSet<_>[|TerminalEdgeTarget(targetVertex)|])
+                    vertex.OutgoingEdges.Add(edge.TerminalSymbol, HashSet<_>[|TerminalEdgeTarget(targetVertex, edge.Weight)|])
 
         newStartVertices,verticesMapping

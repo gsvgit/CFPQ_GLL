@@ -47,11 +47,11 @@ let mkLinearGraph
     let linearGraphWithDeletionsAndInsertions = Array.append linearGraphWithDeletionsEdges insertionEdges
 
     match config with
-    | LinearGraph -> linearGraphEdges
-    | LinearGraphWithDeletions -> linearGraphWithDeletionsEdges
-    | LinearGraphWithInsertions -> linearGraphWithInsertionsEdges
-    | LinearGraphWithDeletionsAndInsertions -> linearGraphWithDeletionsAndInsertions
-    |> InputGraph
+    | LinearGraph -> InputGraph(linearGraphEdges, false)
+    | LinearGraphWithDeletions -> InputGraph(linearGraphWithDeletionsEdges, true)
+    | LinearGraphWithInsertions -> InputGraph(linearGraphWithInsertionsEdges, true)
+    | LinearGraphWithDeletionsAndInsertions -> InputGraph(linearGraphWithDeletionsAndInsertions, true)
+
 
 let readLinearGraph
     (onText: string -> string)
@@ -99,8 +99,11 @@ let ``Linear graph creating tests`` =
     let mkGraph = mkLinearGraph id terminalsMapping
 
     let mkTest config edges input () =
-        let expected = InputGraph()
-        expected.AddEdges(edges)
+        let enableErrorRecovering =
+            match config with
+            | LinearGraph -> false
+            | _ -> true
+        let expected = InputGraph(edges, enableErrorRecovering)
 
         let actual = mkGraph config input
 
