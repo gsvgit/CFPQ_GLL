@@ -8,6 +8,7 @@ open CFPQ_GLL.RSM
 open Tests.InputGraph
 open CFPQ_GLL.SPPF
 open Expecto
+open CFPQ_GLL.RsmBuilder
 
 
 let config = {FsCheckConfig.defaultConfig with maxTest = 10000}
@@ -36,7 +37,32 @@ let go() =
  
 [<EntryPoint>]
 let main argv =
-    Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Form V#``])
+    let re1 = RsmBuilder.Sequence (RsmBuilder.Terminal "a", RsmBuilder.Many (RsmBuilder.Terminal "b"))
+    let re2 =
+        (RsmBuilder.Sequence (RsmBuilder.Terminal "a", RsmBuilder.Many (RsmBuilder.Terminal "b")))
+        |> RsmBuilder.Many
+        
+    let re3 =
+        (RsmBuilder.Sequence (RsmBuilder.Terminal "a", RsmBuilder.Terminal "b"))
+        |> RsmBuilder.Many
+    
+    let re4 = many((t "a" ++ t "a") *|* (t "b" ++ t "b"))
+    let re5 = opt((t "a" ++ t "a") *|* (t "b" ++ t "b"))
+    let re6 = (t "a" *|* t "b" *|* t "c")
+              ++ (t "1" *|* t "2" *|* t "3")
+              ++ (t "x" *|* t "y" *|* t "z")
+              |> many
+    
+    let startState,finalStates,edges = RsmBuilder.buildRSM re6
+    printfn $"StartState: %A{startState}"
+    printfn "Final states:"
+    for state in finalStates do printf $"%A{state} "
+    printfn ""
+    printfn "Edges:"
+    for edge in edges do
+        printfn $"%A{edge}"
+    0
+    //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.DynamicTests.``Simple call``])
    
     //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])
     

@@ -12,6 +12,7 @@
         <Compile Include="SPPF.fs" />
         <Compile Include="GSS.fs" />
         <Compile Include="GLL.fs" />
+        <Compile Include="RsmBuilder.fs" />
     </ItemGroup>
 
     <ItemGroup>
