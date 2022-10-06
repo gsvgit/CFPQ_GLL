@@ -110,7 +110,12 @@ let many x = Many x
 let (++) x y = Sequence (x,y)
 let opt x = Option x
 let literal (x:string) = x.ToCharArray() |> Array.map (string >> t) |> Array.reduce (++)
-let (=>) lhs rhs = Rule(lhs, rhs)
+let (=>) lhs rhs =
+    match lhs with     
+    | Symbol(NonTerminal s) -> Rule(s, rhs)
+    | x -> failwithf $"Left hand side of production should be nonterminal, but %A{x} used."
+    
+let nonemptyList elem sep = elem ++ many (sep ++ elem)
 
 let build rules =
     let nonTerminalToStartState = Dictionary<_,_>()

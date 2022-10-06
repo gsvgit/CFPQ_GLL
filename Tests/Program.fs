@@ -44,15 +44,41 @@ let main argv =
               |> many
     
     let rsm =
+        let Num = nt "Num"
+        let S = nt "S"
         [
-            "S"   =>     (nt "Num" ++ t "+" ++ nt "S")
-                     *|* nt "Num"
-                     *|* (t "(" ++ nt "S" ++ t ")")
-            "Num" =>    ([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+            S   =>     (Num ++ t "+" ++ S)
+                     *|* Num
+                     *|* (t "(" ++ S ++ t ")")
+            Num =>    ([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
                      ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
         ]
         |> build
-    rsm.ToDot "rsm.dot"
+        
+    let rsm2 =
+        let Num = nt "Num"        
+        let Expr = nt "Expr"
+        let Var = nt "Var"
+        let Atom = nt "Atom"
+        let Prod = nt "Prod"
+        let Stmt = nt "Stmt"
+        let Program = nt "Program"
+       
+        [
+            Program =>  nonemptyList Stmt (t ";")
+            
+            Num  => ([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                     ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))            
+            Var  => ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                    ++ many ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))            
+            Atom => Num *|* Var *|* (t "(" ++ Expr ++ t ")")
+            Prod => nonemptyList Atom (t "*" *|* t "/")
+            Expr => nonemptyList Prod (t "+" *|* t "-")
+            Stmt => literal "let" ++ t "=" ++ Expr
+        ]
+        |> build
+        
+    rsm2.ToDot "rsm2.dot"
     0
     //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.DynamicTests.``Simple call``])
    
