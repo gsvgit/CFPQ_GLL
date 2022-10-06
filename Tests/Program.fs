@@ -37,15 +37,9 @@ let go() =
  
 [<EntryPoint>]
 let main argv =
-    let re1 = RsmBuilder.Sequence (RsmBuilder.Terminal "a", RsmBuilder.Many (RsmBuilder.Terminal "b"))
-    let re2 =
-        (RsmBuilder.Sequence (RsmBuilder.Terminal "a", RsmBuilder.Many (RsmBuilder.Terminal "b")))
-        |> RsmBuilder.Many
-        
-    let re3 =
-        (RsmBuilder.Sequence (RsmBuilder.Terminal "a", RsmBuilder.Terminal "b"))
-        |> RsmBuilder.Many
-    
+    let re1 = t "a" ++ many (t "b")
+    let re2 = many (t "a" ++ many (t "b"))                
+    let re3 = many (t "a" ++ t "b")           
     let re4 = many((t "a" ++ t "a") *|* (t "b" ++ t "b"))
     let re5 = opt((t "a" ++ t "a") *|* (t "b" ++ t "b"))
     let re6 = (t "a" *|* t "b" *|* t "c")
@@ -53,14 +47,14 @@ let main argv =
               ++ (t "x" *|* t "y" *|* t "z")
               |> many
     
-    let startState,finalStates,edges = RsmBuilder.buildRSM re6
-    printfn $"StartState: %A{startState}"
-    printfn "Final states:"
-    for state in finalStates do printf $"%A{state} "
-    printfn ""
-    printfn "Edges:"
-    for edge in edges do
-        printfn $"%A{edge}"
+    let rsm =
+        [
+            "S"   => (nt "Num" ++ t "+" ++ nt "S") *|* nt "Num"
+            "Num" => ([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                     ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+        ]
+        |> build
+    rsm.ToDot "rsm.dot"
     0
     //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.DynamicTests.``Simple call``])
    

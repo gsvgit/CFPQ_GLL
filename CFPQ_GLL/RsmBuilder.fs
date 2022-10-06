@@ -2,10 +2,12 @@ module CFPQ_GLL.RsmBuilder
 
 open System.Collections.Generic
 open CFPQ_GLL.Common
+open CFPQ_GLL.RSM
+open FSharpx.Collections
 
+type Symbol = Terminal of string | NonTerminal of string
 type Regexp =
-    | Terminal of string
-    | NonTerminal of string
+    | Symbol of Symbol    
     | Alternative of Regexp * Regexp
     | Option of Regexp
     | Sequence of Regexp * Regexp
@@ -26,8 +28,7 @@ let rec derive regexp symbol =
     match regexp with
     | Empty -> Empty
     | Epsilon -> Empty
-    | Terminal x 
-    | NonTerminal x ->
+    | Symbol x ->    
         if x = symbol
         then Epsilon
         else Empty
@@ -55,51 +56,52 @@ let rec derive regexp symbol =
 and nullable regexp =
     match regexp with
     | Epsilon | Option _ | Many _ -> true
-    | Empty | Terminal _ | NonTerminal _ -> false
+    | Empty | Symbol _ -> false
     | Alternative (left, right) -> nullable left || nullable right
     | Sequence (left, right) -> nullable left && nullable right
     
 let rec getAllSymbols regexp =
     match regexp with
     | Empty | Epsilon -> []
-    | Terminal x | NonTerminal x -> [x]
+    | Symbol x -> [x]
     | Many regexp | Option regexp-> getAllSymbols regexp
     | Alternative (left,right) | Sequence (left,right) -> getAllSymbols left @ getAllSymbols right
         
-let buildRSM regexp =
-    let mutable firstFreeStateIndex = 0    
-    let finalStates = HashSet()
+let buildRSMBox getTerminalFromString regexp =
+    let thisEdgesMustBeAddedLater = ResizeArray()
+    let box = RSMBox()
     let alphabet = HashSet (getAllSymbols regexp)
-    let stateToId = Dictionary()
-    let edges = ResizeArray ()
-    let getId state =
-        if stateToId.ContainsKey state
-        then stateToId[state]
+    let stateToRsmState = Dictionary<_,IRsmState>()    
+    let getRsmState state isStart isFinal =
+        if stateToRsmState.ContainsKey state
+        then stateToRsmState[state]
         else
-            let id = firstFreeStateIndex
-            stateToId.Add(state, id)
-            firstFreeStateIndex <- firstFreeStateIndex + 1
-            id
-    let startState = getId regexp            
+            let rsmState = RsmState(isStart, isFinal)
+            box.AddState rsmState
+            stateToRsmState.Add(state, rsmState)
+            rsmState                  
+    let startState = getRsmState regexp true (nullable regexp)            
     let statesToProcess = Stack [regexp]
     
     while statesToProcess.Count > 0 do
-        let state = statesToProcess.Pop()
-        if nullable state
-        then finalStates.Add (getId state) |> ignore
+        let state = statesToProcess.Pop()        
         for symbol in alphabet do
-            let newState = derive state symbol
-            let fromId = getId state
-            if stateToId.ContainsKey newState |> not
+            let newState = derive state symbol            
+            if stateToRsmState.ContainsKey newState |> not
             then statesToProcess.Push newState
-            let toId = getId newState
-            edges.Add (fromId, symbol,toId)
+            let toRsmState = getRsmState newState false (nullable newState)
+            let fromRsmState = stateToRsmState[state]
+            match symbol with
+            | Terminal x -> fromRsmState.AddTerminalEdge (getTerminalFromString x, toRsmState)
+            | NonTerminal x ->
+                fun getNonTerminalStartState -> fromRsmState.AddNonTerminalEdge (getNonTerminalStartState x, toRsmState)
+                |> thisEdgesMustBeAddedLater.Add
             
-    startState,finalStates,edges            
+    box, thisEdgesMustBeAddedLater            
     
     
-let t s = Terminal s
-let nt s = NonTerminal s
+let t s = Symbol (Terminal s)
+let nt s = Symbol (NonTerminal s)
 let ( *|* ) x y = Alternative (x,y)
 let many x = Many x
 let (++) x y = Sequence (x,y)
@@ -107,7 +109,32 @@ let opt x = Option x
 let literal (x:string) = x.ToCharArray() |> Array.map (string >> t) |> Array.reduce (++)
 let (=>) lhs rhs = Rule(lhs, rhs)
 
-//let build rules =
+let build rules =
+    let nonTerminalToStartState = Dictionary<_,_>()
+    let addEdges = ResizeArray()
+    let terminalMapping = Dictionary()
+    let mutable firstTreeTerminalId = 0<terminalSymbol>
+    let getTerminalFromString terminalStr =
+        let exists, terminal = terminalMapping.TryGetValue terminalStr
+        if exists
+        then terminal
+        else
+            let id = firstTreeTerminalId
+            terminalMapping.Add(terminalStr,id)
+            firstTreeTerminalId <- firstTreeTerminalId + 1<terminalSymbol>
+            id
+
+    let boxes =             
+        rules
+        |> Seq.map ( fun rule ->
+            match rule with
+            | Rule (ntName,ntRegex) ->
+                let box, _addEdges = buildRSMBox getTerminalFromString ntRegex
+                nonTerminalToStartState.Add (ntName, box.StartState)
+                addEdges.AddRange _addEdges
+                box        
+            )
+        |> Array.ofSeq
     
-let d = "S" =>
-            t "a" *|* t "b" ++ t "c"
+    addEdges |> ResizeArray.iter (fun f -> f (fun x -> nonTerminalToStartState.[x]))
+    RSM(boxes, boxes[0])

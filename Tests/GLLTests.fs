@@ -27,21 +27,10 @@ let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, IRsmState>,
         let finalState = getState edge.FinalState 
         match edge with
         | NonTerminalEdge(_from,_nonTerm,_to ) ->
-            let nonTerm = getState _nonTerm 
-            let exists,finalStates = startState.OutgoingNonTerminalEdges.TryGetValue nonTerm
-            if exists
-            then
-                finalStates.Add finalState |> ignore
-            else 
-                startState.OutgoingNonTerminalEdges.Add(nonTerm, HashSet [|finalState|])
-        | RSMEdges.TerminalEdge (_from,_term,_to ) ->            
-            let exists,finalStates = startState.OutgoingTerminalEdges.TryGetValue _term
-            if exists
-            then
-                finalStates.Add finalState |> ignore
-            else 
-                startState.OutgoingTerminalEdges.Add(_term, HashSet [|finalState|])
-                
+            let nonTerm = getState _nonTerm
+            startState.AddNonTerminalEdge(nonTerm, finalState)            
+        | RSMEdges.TerminalEdge (_from,_term,_to ) ->
+            startState.AddTerminalEdge(_term, finalState)                
     statesMapping
 
 let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =

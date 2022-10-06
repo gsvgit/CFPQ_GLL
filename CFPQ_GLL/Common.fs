@@ -33,7 +33,8 @@ and IRsmState =
     abstract IsStart: bool
     abstract Box: IRsmBox with get, set
     abstract NonTerminalNodes: ResizeArray<INonTerminalNode>  
-    
+    abstract AddTerminalEdge: int<terminalSymbol>*IRsmState -> unit
+    abstract AddNonTerminalEdge: IRsmState*IRsmState -> unit
 and IRsmBox =
     abstract FinalStates: HashSet<IRsmState>
     

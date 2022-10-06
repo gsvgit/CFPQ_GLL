@@ -47,7 +47,7 @@ type RsmState (isStart: bool, isFinal: bool) =
     let outgoingNonTerminalEdges= Dictionary<IRsmState, HashSet<IRsmState>>()
     let nonTerminalNodes = ResizeArray()
     let mutable rsmBox = None
-    new () = RsmState(false,false)        
+    new () = RsmState(false,false)    
     
     interface IRsmState with
         member this.OutgoingTerminalEdges = outgoingTerminalEdges
@@ -56,6 +56,20 @@ type RsmState (isStart: bool, isFinal: bool) =
         member this.IsStart = isStart
         member this.IsFinal = isFinal
         member this.NonTerminalNodes = nonTerminalNodes
+        member this.AddTerminalEdge (terminal, targetState) =
+            let exists,targetStates = (this:>IRsmState).OutgoingTerminalEdges.TryGetValue terminal
+            if exists
+            then
+                targetStates.Add targetState |> ignore
+            else 
+                (this:>IRsmState).OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
+        member this.AddNonTerminalEdge (nonTerminal, targetState) =
+            let exists,targetStates = (this:>IRsmState).OutgoingNonTerminalEdges.TryGetValue nonTerminal
+            if exists
+            then
+                targetStates.Add targetState |> ignore
+            else 
+                (this:>IRsmState).OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])    
         member this.Box
             with get () =
                     match rsmBox with
