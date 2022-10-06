@@ -49,8 +49,10 @@ let main argv =
     
     let rsm =
         [
-            "S"   => (nt "Num" ++ t "+" ++ nt "S") *|* nt "Num"
-            "Num" => ([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+            "S"   =>     (nt "Num" ++ t "+" ++ nt "S")
+                     *|* nt "Num"
+                     *|* (t "(" ++ nt "S" ++ t ")")
+            "Num" =>    ([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
                      ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
         ]
         |> build

@@ -86,16 +86,19 @@ let buildRSMBox getTerminalFromString regexp =
     while statesToProcess.Count > 0 do
         let state = statesToProcess.Pop()        
         for symbol in alphabet do
-            let newState = derive state symbol            
-            if stateToRsmState.ContainsKey newState |> not
-            then statesToProcess.Push newState
-            let toRsmState = getRsmState newState false (nullable newState)
-            let fromRsmState = stateToRsmState[state]
-            match symbol with
-            | Terminal x -> fromRsmState.AddTerminalEdge (getTerminalFromString x, toRsmState)
-            | NonTerminal x ->
-                fun getNonTerminalStartState -> fromRsmState.AddNonTerminalEdge (getNonTerminalStartState x, toRsmState)
-                |> thisEdgesMustBeAddedLater.Add
+            let newState = derive state symbol
+            match newState with
+            | Empty -> ()
+            | _ -> 
+                if stateToRsmState.ContainsKey newState |> not
+                then statesToProcess.Push newState
+                let toRsmState = getRsmState newState false (nullable newState)
+                let fromRsmState = stateToRsmState[state]
+                match symbol with
+                | Terminal x -> fromRsmState.AddTerminalEdge (getTerminalFromString x, toRsmState)
+                | NonTerminal x ->
+                    fun getNonTerminalStartState -> fromRsmState.AddNonTerminalEdge (getNonTerminalStartState x, toRsmState)
+                    |> thisEdgesMustBeAddedLater.Add
             
     box, thisEdgesMustBeAddedLater            
     
