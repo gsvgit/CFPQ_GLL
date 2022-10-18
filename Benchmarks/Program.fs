@@ -119,7 +119,7 @@ let example10_go_hierarchy () =
     nodes
     |> Array.iter (fun n ->
         let startVertices,_ = graph.ToCfpqCoreGraph (HashSet [|n|])
-        let reachable = GLL.eval startVertices g1
+        let reachable = GLL.defaultEval startVertices g1
         printfn $"Reachable: %A{reachable}")
 
 type LoadStorePairsInfo =
@@ -358,7 +358,7 @@ let javaRsm (terminalSymbolsMapping:SortedDictionary<string,_>) =
 let runAllPairs (graph:InputGraph) q mode =
     let start = System.DateTime.Now
     let startVertices,_ = graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
-    let res = eval startVertices q mode
+    let res = defaultEval startVertices q mode
     let reachable =
         match res with
         | QueryResult.MatchedRanges _ -> q.OriginalStartState.NonTerminalNodes.ToArray().Length
@@ -382,7 +382,7 @@ let singleSourceForAllContinuously (graph:InputGraph) q mode =
             startVertices
             |> Seq.iter (fun v -> d.Add(v, HashSet<_>()))
             d
-        let res = evalFromState reachableVertices gss matchedRanges startVertices q mode
+        let res = defaultEvalFromState reachableVertices gss matchedRanges startVertices (HashSet())q mode
         match res with
         | QueryResult.MatchedRanges ranges -> matchedRanges <- ranges
         | _ -> ()
@@ -391,7 +391,7 @@ let singleSourceForAll (graph:InputGraph) q mode =
     let startVertices,_ =  graph.ToCfpqCoreGraph (HashSet (graph.AllVertices()))
     for n in startVertices do
         let startVertices =  HashSet [|n|]
-        let res = eval startVertices q mode |> ignore
+        let res = defaultEval startVertices q mode |> ignore
         printfn $"%A{res}"
 
 [<EntryPoint>]

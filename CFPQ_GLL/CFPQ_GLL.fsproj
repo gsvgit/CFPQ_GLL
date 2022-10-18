@@ -11,6 +11,7 @@
         <Compile Include="RSM.fs" />
         <Compile Include="SPPF.fs" />
         <Compile Include="GSS.fs" />
+        <Compile Include="DescriptorsStack.fs" />
         <Compile Include="GLL.fs" />
         <Compile Include="RsmBuilder.fs" />
     </ItemGroup>

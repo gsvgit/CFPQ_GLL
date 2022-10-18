@@ -11,7 +11,7 @@ open FSharpx.Collections
 open GLLTests
 open Tests.InputGraph
 let ``Epsilon edges tests`` =
-
+    let defaultInputGraph edges = InputGraph(edges, false)
     let character = [|for i in [0..26] do LanguagePrimitives.Int32WithMeasure<terminalSymbol> i|]
 
     let ``Epsilon edges tests on (S -> aa) RSM`` =
@@ -34,7 +34,7 @@ let ``Epsilon edges tests`` =
             testCase testName <| fun () ->
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -54,7 +54,7 @@ let ``Epsilon edges tests`` =
                     let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (2,9); (9,10);|])
                     let distances = [|3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a epsilon epsilon a`` =
             let testName = "a epsilon epsilon a"
@@ -62,7 +62,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
-                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -87,7 +87,7 @@ let ``Epsilon edges tests`` =
                                                  (6,9); (9,10); (4,11); (11,12); (2,13); (13,14);|])
                     let distances = [|4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon a`` =
             let testName = "a b|epsilon a"
@@ -95,7 +95,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -115,7 +115,7 @@ let ``Epsilon edges tests`` =
                     let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (2,9); (9,10);|])
                     let distances = [|3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon c|epsilon a`` =
             let testName = "a b|epsilon c|epsilon a"
@@ -125,7 +125,7 @@ let ``Epsilon edges tests`` =
                                 TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                 EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                 TerminalEdge(2<inputGraphVertex>, character[2], 3<inputGraphVertex>)
-                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -150,7 +150,7 @@ let ``Epsilon edges tests`` =
                                                  (6,9); (9,10); (4,11); (11,12); (2,13); (13,14);|])
                     let distances = [|4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``epsilon a epsilon a epsilon`` =
             let testName = "epsilon a epsilon a epsilon"
@@ -159,7 +159,7 @@ let ``Epsilon edges tests`` =
                                TerminalEdge(1<inputGraphVertex>, character[0], 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>)
-                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> InputGraph
+                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aaRSM ()
                 let expected =
@@ -200,7 +200,7 @@ let ``Epsilon edges tests`` =
                                                  (25,26); (26,27); (27,17); (27,14); |])
                     let distances = [|3<distance>; 4<distance>; 4<distance>; 5<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         testList "Epsilon edges tests on aa RSM" [
             ``a epsilon a``
@@ -225,7 +225,7 @@ let ``Epsilon edges tests`` =
             testCase testName <| fun () ->
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -252,7 +252,7 @@ let ``Epsilon edges tests`` =
                                                  (12,13); (13,7); (13,14); (14,15);|])
                     let distances = [|0<distance>; 1<distance>; 2<distance>; 3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a epsilon epsilon a`` =
             let testName = "a epsilon epsilon a"
@@ -260,7 +260,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
-                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -293,7 +293,7 @@ let ``Epsilon edges tests`` =
                                                  (19,20);|])
                     let distances = [|0<distance>; 1<distance>; 2<distance>; 3<distance>; 4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon a`` =
             let testName = "a b|epsilon a"
@@ -301,7 +301,7 @@ let ``Epsilon edges tests`` =
                 let graph = [| TerminalEdge(0<inputGraphVertex>, character[0], 1<inputGraphVertex>)
                                TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                EpsilonEdge(1<inputGraphVertex>, 2<inputGraphVertex>)
-                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> InputGraph
+                               TerminalEdge(2<inputGraphVertex>, character[0], 3<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -328,7 +328,7 @@ let ``Epsilon edges tests`` =
                                                  (12,13); (13,7); (13,14); (14,15); |])
                     let distances = [|0<distance>; 1<distance>; 2<distance>; 3<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``a b|epsilon c|epsilon a`` =
             let testName = "a b|epsilon c|epsilon a"
@@ -338,7 +338,7 @@ let ``Epsilon edges tests`` =
                                 TerminalEdge(1<inputGraphVertex>, character[1], 2<inputGraphVertex>)
                                 EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                 TerminalEdge(2<inputGraphVertex>, character[2], 3<inputGraphVertex>)
-                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> InputGraph
+                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>) |] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -371,7 +371,7 @@ let ``Epsilon edges tests`` =
                                                  (19,20);|])
                     let distances =  [|0<distance>; 1<distance>; 2<distance>; 3<distance>; 4<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         let ``epsilon a epsilon a epsilon`` =
             let testName = "epsilon a epsilon a epsilon"
@@ -380,7 +380,7 @@ let ``Epsilon edges tests`` =
                                TerminalEdge(1<inputGraphVertex>, character[0], 2<inputGraphVertex>)
                                EpsilonEdge(2<inputGraphVertex>, 3<inputGraphVertex>)
                                TerminalEdge(3<inputGraphVertex>, character[0], 4<inputGraphVertex>)
-                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> InputGraph
+                               EpsilonEdge(4<inputGraphVertex>, 5<inputGraphVertex>)|] |> defaultInputGraph
                 let startV = [|0<inputGraphVertex>|]
                 let q = aStarRSM ()
                 let expected =
@@ -436,7 +436,7 @@ let ``Epsilon edges tests`` =
                                       2<distance>; 2<distance>; 3<distance>; 3<distance>
                                       4<distance>; 4<distance>; 5<distance>|]
                     (nodes,edges,distances)
-                runGLLAndCheckResult testName graph startV q expected
+                runDefaultGLLAndCheckResult testName graph startV q expected
 
         testList "Epsilon edges tests on a* RSM" [
             ``a epsilon a``

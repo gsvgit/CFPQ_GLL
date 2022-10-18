@@ -28,7 +28,7 @@ let checkResult (testName:string) startVertices (q:RSM) (expectedNodes, expected
 
 
 let runGLLAndCheckResultForManuallyCreatedGraph (reachableVertices, gss, matchedRanges) (testName:string) startVertices (q:RSM) (expectedNodes, expectedEdges, expectedDistances) =
-    let result = evalFromState reachableVertices gss matchedRanges startVertices q AllPaths
+    let result = defaultEvalFromState reachableVertices gss matchedRanges startVertices (HashSet()) q AllPaths
     checkResult (testName:string) startVertices (q:RSM) (expectedNodes, expectedEdges, expectedDistances) result
 
 let ``Simple call`` =
@@ -37,7 +37,7 @@ let ``Simple call`` =
         let terminalForCFGEdge = 0<terminalSymbol>
         let graphEntryPoint = InputGraphVertexBase() :> IInputGraphVertex
         let graphExit = InputGraphVertexBase() :> IInputGraphVertex
-        graphEntryPoint.OutgoingEdges.Add(terminalForCFGEdge, HashSet [|graphExit|])
+        graphEntryPoint.OutgoingEdges.Add(terminalForCFGEdge, HashSet [|TerminalEdgeTarget graphExit|])
 
         let balancedBracketsRsmBoxStartState = RsmState(true,true) :> IRsmState
         let balancedBracketsRsmBoxFinalState = balancedBracketsRsmBoxStartState
@@ -99,9 +99,9 @@ let ``Simple call`` =
         graphEntryPoint.OutgoingEdges.Clear()
         let secondMethodEntryPoint = InputGraphVertexBase () :> IInputGraphVertex
         let secondMethodExit = InputGraphVertexBase () :> IInputGraphVertex
-        secondMethodEntryPoint.OutgoingEdges.Add(terminalForCFGEdge, HashSet [|secondMethodExit|])
-        graphEntryPoint.OutgoingEdges.Add(1<terminalSymbol>, HashSet [|secondMethodEntryPoint|])
-        secondMethodExit.OutgoingEdges.Add(2<terminalSymbol>, HashSet [|graphExit|])
+        secondMethodEntryPoint.OutgoingEdges.Add(terminalForCFGEdge, HashSet [|TerminalEdgeTarget secondMethodExit|])
+        graphEntryPoint.OutgoingEdges.Add(1<terminalSymbol>, HashSet [|TerminalEdgeTarget secondMethodEntryPoint|])
+        secondMethodExit.OutgoingEdges.Add(2<terminalSymbol>, HashSet [|TerminalEdgeTarget graphExit|])
         let verticesWithChanges = HashSet [|graphEntryPoint|]
 
         callImbalanceRsmBoxFinalState.OutgoingTerminalEdges.Add(1<terminalSymbol>, HashSet [|callImbalanceRsmBoxStartState|])

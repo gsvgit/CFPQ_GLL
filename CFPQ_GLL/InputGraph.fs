@@ -6,7 +6,7 @@ open CFPQ_GLL.Common
 [<Measure>] type inputGraphVertex
 
 type InputGraphVertexBase () =
-    let outgoingEdges = Dictionary<int<terminalSymbol>, HashSet<IInputGraphVertex>>()
+    let outgoingEdges = Dictionary<int<terminalSymbol>, HashSet<TerminalEdgeTarget>>()
     let descriptors = HashSet<Descriptor>()
     let terminalNodes = Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>()
     let nonTerminalNodes = Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()

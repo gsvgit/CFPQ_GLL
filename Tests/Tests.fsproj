@@ -13,6 +13,7 @@
         <Compile Include="DynamicTests.fs" />
         <Compile Include="RSMCalculator.fs" />
         <Compile Include="EpsilonEdges.fs" />
+        <Compile Include="ErrorRecoveringTest.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

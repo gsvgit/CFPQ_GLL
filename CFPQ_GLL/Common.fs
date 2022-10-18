@@ -4,6 +4,8 @@ open System.Collections.Generic
 
 [<Measure>] type terminalSymbol
 [<Measure>] type distance
+[<Measure>] type edgeWeight
+
 
 type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) =
     let hashCode =
@@ -39,13 +41,18 @@ and IRsmBox =
     abstract FinalStates: HashSet<IRsmState>
 
 and IInputGraphVertex =
-    abstract OutgoingEdges: Dictionary<int<terminalSymbol>, HashSet<IInputGraphVertex>>
+    abstract OutgoingEdges: Dictionary<int<terminalSymbol>, HashSet<TerminalEdgeTarget>>
     abstract Descriptors: HashSet<Descriptor>
     abstract TerminalNodes: Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>
     abstract NonTerminalNodesStartedHere: Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>
     //abstract NonTerminalNodesWithStartHere: HashSet<IInputGraphVertex * INonTerminalNode>
     abstract RangeNodes: Dictionary<MatchedRange, IRangeNode>
     abstract IntermediateNodes: Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>
+and [<Struct>] TerminalEdgeTarget =
+    val TargetVertex: IInputGraphVertex
+    val Weight: int<edgeWeight>
+    new (targetVertex, weight) = {TargetVertex = targetVertex; Weight = weight}
+    new (targetVertex) = {TargetVertex = targetVertex; Weight = 0<edgeWeight>}
 
 and [<Struct>] Range<'position> =
     val StartPosition: 'position
