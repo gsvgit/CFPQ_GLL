@@ -42,6 +42,15 @@ let main argv =
               ++ (t "1" *|* t "2" *|* t "3")
               ++ (t "x" *|* t "y" *|* t "z")
               |> many
+              
+    let ws x =
+            let space = t " " //*|* t "\n"
+            many space ++ x ++ many space
+            
+    let rsmTest =
+        [
+            nt "S" => (ws (opt(t ">" *|* t "<") ++ opt (t "=")))
+        ] |> build
     
     let rsm =
         let Num = nt "Num"
@@ -70,7 +79,8 @@ let main argv =
             Num  => ([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
                      ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))            
             Var  => ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
-                    ++ many ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))            
+                    ++ many (    ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                             *|* ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* )))            
             Atom => Num *|* Var *|* (t "(" ++ Expr ++ t ")")
             Prod => nonemptyList Atom (t "*" *|* t "/")
             Expr => nonemptyList Prod (t "+" *|* t "-")
@@ -78,8 +88,54 @@ let main argv =
         ]
         |> build
         
-    rsm2.ToDot "rsm2.dot"
-    0
+    //rsm2.ToDot "rsm2.dot"
+    let miniML,terminalMapping =
+        let Num = nt "Num"        
+        let Arithmetic = nt "Arithmetic"
+        let Var = nt "Var"
+        let Atom = nt "Atom"
+        let Prod = nt "Prod"        
+        let Program = nt "Program"
+        let Expr = nt "Expr"
+        let Compare = nt "Compare"
+        let space = t " " *|* t "\n" *|* t "\r" *|* t "\t"
+        let ws x = many space ++ x 
+       
+        [
+            Program =>  many Expr ++ many space
+                        
+            Num  => ws(([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                     ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* )))            
+            Var  => ws(([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                    ++ many (    ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                             *|* ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))))            
+            Atom => Num
+                    *|* (Var ++ many (space ++ Atom))
+                    *|* (ws (t "(") ++ Expr ++ ws (t ")"))
+                    *|* (Var ++ t "[" ++ Expr ++ t"]")
+            Prod => nonemptyList Atom (ws (t "*" *|* t "/"))
+            Arithmetic => nonemptyList Prod (ws(t "+" *|* t "-"))
+            Compare => nonemptyList Arithmetic (ws ((opt (t"!") ++ t "=") *|* ((t ">" *|* t "<") ++ opt (t "="))))
+            Expr =>
+                Compare
+                *|* (ws(literal "let") ++ opt(ws(literal "rec")) ++ space ++ Var ++ many (space ++ Var) ++ ws(t "=") ++ Expr ++ ws(literal "in") ++ Expr)
+                *|* (ws(literal "if") ++ Expr ++ ws(literal "then") ++ Expr ++ opt (ws(literal "else") ++ Expr))
+                *|* (ws(literal "while") ++ Expr ++ ws(literal "do") ++ Expr)                 
+        ]
+        |> build
+    miniML.ToDot "rsmMiniML.dot"
+    let g = InputGraph([|
+        TerminalEdge(0<inputGraphVertex>, terminalMapping["l"], 1<inputGraphVertex>)
+        TerminalEdge(1<inputGraphVertex>, terminalMapping["e"], 2<inputGraphVertex>)
+        TerminalEdge(2<inputGraphVertex>, terminalMapping["t"], 3<inputGraphVertex>)
+        TerminalEdge(3<inputGraphVertex>, terminalMapping[" "], 4<inputGraphVertex>)
+        TerminalEdge(4<inputGraphVertex>, terminalMapping["x"], 5<inputGraphVertex>)
+        TerminalEdge(5<inputGraphVertex>, terminalMapping["="], 6<inputGraphVertex>)
+        TerminalEdge(6<inputGraphVertex>, terminalMapping["2"], 7<inputGraphVertex>)
+    |])
+    //g.ToDot ("input.dot")
+    test g miniML
+    //0
     //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.DynamicTests.``Simple call``])
    
     //Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])

@@ -9,7 +9,7 @@ type Symbol = Terminal of string | NonTerminal of string
 type Regexp =
     | Symbol of Symbol    
     | Alternative of Regexp * Regexp
-    | Option of Regexp
+    //| Option of Regexp
     | Sequence of Regexp * Regexp
     | Many of Regexp
     | Empty
@@ -24,7 +24,9 @@ let rec derive regexp symbol =
         match l,r with
         | Empty,Empty -> Empty
         | Empty,x | x,Empty -> x
-        | l,r -> Alternative(l,r)
+        | Alternative (l,r), x
+        | x, Alternative (l,r) when l = x || r = x -> Alternative (l,r)
+        | l,r -> if l = r then l else Alternative(l,r)
     match regexp with
     | Empty -> Empty
     | Epsilon -> Empty
@@ -45,7 +47,7 @@ let rec derive regexp symbol =
         | x, true -> mkAlternative (Sequence (x,tl)) (derive tl symbol)
             
     | Alternative (left,right) -> mkAlternative (derive left symbol)  (derive right symbol)
-    | Option regexp -> derive regexp symbol
+    //| Option regexp -> derive regexp symbol
     | Many regexp ->
         let newRegexp = derive regexp symbol
         match newRegexp with
@@ -55,7 +57,7 @@ let rec derive regexp symbol =
         
 and nullable regexp =
     match regexp with
-    | Epsilon | Option _ | Many _ -> true
+    | Epsilon (*| Option _ *)| Many _ -> true
     | Empty | Symbol _ -> false
     | Alternative (left, right) -> nullable left || nullable right
     | Sequence (left, right) -> nullable left && nullable right
@@ -64,7 +66,7 @@ let rec getAllSymbols regexp =
     match regexp with
     | Empty | Epsilon -> []
     | Symbol x -> [x]
-    | Many regexp | Option regexp-> getAllSymbols regexp
+    | Many regexp (*| Option regexp*)-> getAllSymbols regexp
     | Alternative (left,right) | Sequence (left,right) -> getAllSymbols left @ getAllSymbols right
         
 let buildRSMBox getTerminalFromString regexp =
@@ -108,7 +110,7 @@ let nt s = Symbol (NonTerminal s)
 let ( *|* ) x y = Alternative (x,y)
 let many x = Many x
 let (++) x y = Sequence (x,y)
-let opt x = Option x
+let opt x = Alternative(x, Epsilon)
 let literal (x:string) = x.ToCharArray() |> Array.map (string >> t) |> Array.reduce (++)
 let (=>) lhs rhs =
     match lhs with     
@@ -145,4 +147,4 @@ let build rules =
         |> Array.ofSeq
     
     addEdges |> ResizeArray.iter (fun f -> f (fun x -> nonTerminalToStartState.[x]))
-    RSM(boxes, boxes[0])
+    RSM(boxes, boxes[0]), terminalMapping
