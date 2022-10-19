@@ -28,7 +28,8 @@ let mkLinearGraph
 
     let terminals = inputString |> onText |> Seq.toArray |> Array.map getTerminal
     let vertices = Array.init (terminals.Length + 1) id
-    let allLanguageTerminals = terminalsMapping.Values
+    let allLanguageTerminals = terminalsMapping.Values |> HashSet
+    allLanguageTerminals.RemoveWhere (fun x -> x = terminalsMapping.[' '] || x = terminalsMapping.['\r']|| x = terminalsMapping.['\n'])
 
     let mkVertex i = LanguagePrimitives.Int32WithMeasure<inputGraphVertex> i
     let mkEdge v1 t v2 = TerminalEdge(mkVertex v1, t, mkVertex v2)

@@ -12,6 +12,7 @@ open FSharpx.Collections
 open GLLTests
 open Tests.InputGraph
 open Tests.LinearGraphReader
+open CFPQ_GLL.RsmBuilder
 
 let test2 (graph: InputGraph) q =
 
@@ -41,6 +42,71 @@ let testFromString (maker: Config -> string -> InputGraph) text mode q =
 
 let ``Error recovering tests`` =
 
+    let `` On mini ML RSM`` =
+        let rsm () =
+            let rsm, terminalMapping =
+                let Num = nt "Num"        
+                let Arithmetic = nt "Arithmetic"
+                let Var = nt "Var"
+                let Atom = nt "Atom"
+                let Prod = nt "Prod"        
+                let Program = nt "Program"
+                let Expr = nt "Expr"
+                let Compare = nt "Compare"
+                let space = t " " *|* t "\n" *|* t "\r" *|* t "\t"
+                let ws x = many space ++ x 
+               
+                [
+                    Program => Expr // many Expr ++ many space
+                                
+                    Num  => ws(([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                             ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* )))            
+                    Var  => ws(([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                            ++ many (    ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                                     *|* ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))))            
+                    Atom => (* Num
+                            *|* *) Var //(Var ++ many (space ++ Atom))
+                            //*|* (ws (t "(") ++ Expr ++ ws (t ")"))
+                            //*|* (Var ++ t "[" ++ Expr ++ t"]")
+                    //Prod => nonemptyList Atom (ws (t "*" *|* t "/"))
+                    //Arithmetic => nonemptyList Prod (ws(t "+" *|* t "-"))
+                    //Compare => nonemptyList Arithmetic (ws ((opt (t"!") ++ t "=") *|* ((t ">" *|* t "<") ++ opt (t "="))))
+                    Expr => Atom *|*
+                        //Compare
+                        (**|* *) (ws(literal "let") (* ++ opt(ws(literal "rec"))*) ++ space ++ Var ++ many (space ++ Var) ++ ws(t "=") ++ Expr ++ ws(literal "in") ++ Expr)
+                        //*|* (ws(literal "if") ++ Expr ++ ws(literal "then") ++ Expr ++ opt (ws(literal "else") ++ Expr))
+                        //*|* (ws(literal "while") ++ Expr ++ ws(literal "do") ++ Expr)                 
+                ]
+                |> build
+            rsm, terminalMapping
+            
+        let incorrectInsertions =
+            let testName = "Incorrect insertion"
+            testCase testName <| fun () ->
+                let q,terminalMapping = rsm ()
+                let graph = mkLinearGraph id terminalMapping Config.LinearGraphWithDeletionsAndInsertions "lt x = y in x"
+                let startV = [|0<inputGraphVertex>|]
+                let finishV = [|13<inputGraphVertex>|]                
+                let expected = 
+                    let nodes = Dictionary<_,_>()
+                    nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
+                    nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,1<rsmState>))
+                    nodes.Add(2, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>,2<rsmState>))
+                    nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,2<rsmState>))
+                    nodes.Add(4, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,2<inputGraphVertex>))
+                    nodes.Add(5, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>,1<inputGraphVertex>,2<rsmState>,1<rsmState>))
+                    nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (2<inputGraphVertex>,2<terminalSymbol>,1<inputGraphVertex>))
+
+                    let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (2,5); (5,6); |])
+                    let distances = [|0<distance>|]
+                    (nodes,edges,distances)
+
+                runErrorRecoveringGLLAndCheckResult testName graph startV finishV q expected
+        
+        testList "Mini ML" [
+            incorrectInsertions                
+        ] |> testSequenced
+        
     let ``On ab RSM`` =
 
         let abRSM () =

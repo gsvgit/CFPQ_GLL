@@ -125,12 +125,12 @@ let build rules =
     let terminalMapping = Dictionary()
     let mutable firstTreeTerminalId = 0<terminalSymbol>
     let getTerminalFromString terminalStr =
-        let exists, terminal = terminalMapping.TryGetValue terminalStr
+        let exists, terminal = terminalMapping.TryGetValue (char terminalStr)
         if exists
         then terminal
         else
             let id = firstTreeTerminalId
-            terminalMapping.Add(terminalStr,id)
+            terminalMapping.Add((char terminalStr),id)
             firstTreeTerminalId <- firstTreeTerminalId + 1<terminalSymbol>
             id
 

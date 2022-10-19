@@ -67,6 +67,7 @@ and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputG
     let parents = HashSet<IRangeNode>()
     let mutable distance =
         let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
+        //printfn $"nonterm weight = %A{res}"
         if res = Int32.MaxValue * 1<distance>
         then printfn "!!!"
         assert (res < Int32.MaxValue * 1<distance>)
@@ -150,6 +151,7 @@ type MatchedRanges () =
         handleRangeNode rangeNode
 
     member internal this.AddTerminalNode (range:Range<IInputGraphVertex>, terminal, distance) =
+        //printfn $"Trem = %A{terminal}, distance = %A{distance}"
         let terminalNodes = range.EndPosition.TerminalNodes
         let exists, nodes = terminalNodes.TryGetValue range.StartPosition
         if exists
@@ -202,17 +204,26 @@ type MatchedRanges () =
             newNonTerminalNode
 
     member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode, enableErrorRecovering:bool) =
+        //printfn $"W1 = %A{node.Distance}"
+        //if node.Distance = 3<distance>
+        //then printfn "!!!!!!!"
         let rangeNodes = matchedRange.InputRange.EndPosition.RangeNodes
 
         let exists, rangeNode = rangeNodes.TryGetValue matchedRange
         if exists
         then
             if not(enableErrorRecovering && node.Distance > rangeNode.Distance) then
+                //printfn $"W2 = %A{node.Distance}"
                 rangeNode.IntermediateNodes.Add node |> ignore
                 node.Parents.Add rangeNode |> ignore
 
                 if node.Distance < rangeNode.Distance
-                then MatchedRanges.updateDistances rangeNode
+                then
+                    //printfn $"%A{rangeNode.IntermediateNodes.Count}"
+                    let removed = rangeNode.IntermediateNodes.RemoveWhere (fun x -> x.Distance > node.Distance)
+                    //if removed = 0 then printfn $"%A{node.Distance} < %A{rangeNode.Distance}"
+                    assert (removed > 0)
+                    MatchedRanges.updateDistances rangeNode
             rangeNode
         else
             let rangeNode = RangeNode(matchedRange, HashSet<_> [|node|])
@@ -413,7 +424,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
             (node :> IRangeNode).IntermediateNodes
             |> Seq.iter (handleNonRangeNode (Some currentId))
 
-    do  roots |> Array.iter (handleNonTerminalNode None)
+    do  roots |> Array.iter (handleNonTerminalNode None)    
 
     let printEdge (x,y) = sprintf $"%i{x}->%i{y}"
     let printNode nodeId node =
@@ -428,7 +439,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
             sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: N_%i{_nonTerminal}\", shape = invhouse]"
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
             sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
-
+        
     member this.ToDot filePath =
         System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])
 
