@@ -126,14 +126,17 @@ let private run
                             MatchedRangeWithNode(matchedRange, rangeNode)
                         makeIntermediateNode leftSubRange rightSubRange
                     let weight =
-                        let weights =
+                        match gssEdge.MatchedRange.Node with
+                        Some x -> x.Distance
+                        | None -> 0<distance>
+                        (*let weights =
                             gssEdge.GssVertex.OutgoingEdges
                             |> ResizeArray.map (fun e -> match e.MatchedRange.Node with
                                                                | Some x -> x.Distance
                                                                | None -> 0<distance>)
                                     
-                        if weights.Count > 0 then weights |> Seq.min else 0<distance>
-                    Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, weight (*newRange.Node.Value.Distance*))//currentDescriptor.LeftPartMinWeight)
+                        if weights.Count > 0 then weights |> Seq.min else 0<distance>*)
+                    Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, currentDescriptor.LeftPartMinWeight(* + weight*) (*newRange.Node.Value.Distance*))//currentDescriptor.LeftPartMinWeight)
                     |> addDescriptor
                 )
 
@@ -155,7 +158,7 @@ let private run
                    match currentDescriptor.MatchedRange.Node with
                    Some x -> x.Distance
                    | None -> 0<distance>
-               Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange, (currentDescriptor.LeftPartMinWeight + weight))
+               Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange, currentDescriptor.LeftPartMinWeight)
                |> addDescriptor
                positionsForPops
                |> ResizeArray.iter (fun matchedRange ->
@@ -176,12 +179,12 @@ let private run
                            MatchedRangeWithNode(newMatchedRange, rangeNode)
                        let leftSubRange = currentDescriptor.MatchedRange
                        let weight =
-                           match currentDescriptor.MatchedRange.Node with
+                           match rightSubRange.Node with
                            | Some x -> x.Distance
                            | None -> 0<distance>
                        weight, makeIntermediateNode leftSubRange rightSubRange
                    
-                   Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, (*newRange.Node.Value.Distance*) currentDescriptor.LeftPartMinWeight) |> addDescriptor)
+                   Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, (*newRange.Node.Value.Distance*) currentDescriptor.LeftPartMinWeight + weight) |> addDescriptor)
 
         let inline handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: IRsmState) =
 
@@ -223,7 +226,7 @@ let private run
                     MatchedRangeWithNode(matchedRange, rangeNode)
                 makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
 
-            Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange, currentDescriptor.LeftPartMinWeight) |> addDescriptor
+            Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange, currentDescriptor.LeftPartMinWeight + (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>)) |> addDescriptor
 
         let handleTerminalEdge terminalSymbol graphTargetVertex rsmTargetVertex =
             handleTerminalOrEpsilonEdge terminalSymbol graphTargetVertex rsmTargetVertex

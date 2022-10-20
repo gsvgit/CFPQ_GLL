@@ -144,11 +144,11 @@ let main argv =
         [
             Program => Expr // many Expr ++ many space
                         
-            Num  => ws(([|1..2|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
-                     ++ many ([|0..2|] |> Array.map (string >> t) |> Array.reduce ( *|* )))            
-            Var  => ws(([|'x'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
-                    ++ many (    ([|'x'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
-                             *|* ([|0..1|] |> Array.map (string >> t) |> Array.reduce ( *|* ))))            
+            Num  => ws(([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                     ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* )))            
+            Var  => ws(([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                    ++ many (    ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
+                             *|* ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))))            
             Atom =>  Num
                     *|* (Var ++ many (space ++ Atom))
                     *|* (ws (t "(") ++ Expr ++ ws (t ")"))
@@ -169,11 +169,41 @@ let main argv =
     //let g = mkLinearGraph id terminalMapping Config.LinearGraphWithDeletionsAndInsertions "let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in lt y x in let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in y"
     //let g = mkLinearGraph id terminalMapping Config.LinearGraphWithDeletionsAndInsertions
     //           "let rec y x=if x>1 then x+2 else y (x-1) in lt z x=if x<1 then x+2 else (x-1) in y z 2)"
-    //let g = mkLinearGraph id terminalMapping Config.LinearGraphWithDeletionsAndInsertions
-    //           "let y = 1 in let x = 2 in lt x = 2 in let x = 2 in let x = 2 in let x = 2 in let x = 2 in y"
-    let g = mkLinearGraph id terminalMapping Config.LinearGraphWithDeletionsAndInsertions
-                "let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
-let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
+    
+    let str2 =
+        "let y = 1
+         in
+         let x = 2
+         in
+         let x = 2
+         in lt x = 2 in let x = 2 in let x = 2 in let x = 2 in y"
+    let str3 =
+        "lt y = 1
+         in
+         let x = 3
+         in
+         y"
+    (*
+    let str = "
+    let rec y x =
+        if x > 1
+        then x + 2
+        else y (x - 1)
+    in
+    let z x =
+        if x < 1
+        then x + 2
+        else (x - 1)
+    in
+    let rec y x =
+        if x > 1
+        then x + 2
+        else y (x - 1)
+    in
+    let z x =
+        if x < 1
+        then x + 2
+        else (x - 1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in lt z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
@@ -202,9 +232,15 @@ let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) i
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
-y z 2"
+let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
+y z 2)"
+*)
+    let g = mkLinearGraph id terminalMapping Config.LinearGraphWithDeletionsAndInsertions str3
+                
 
-    g.ToDot (false, "input.dot")
+    printfn $"input length = %A{str3.Length}"
+    
+    //g.ToDot (false, "input.dot")
     
     test2 g miniML
     //test2 g miniML

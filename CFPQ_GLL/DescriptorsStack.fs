@@ -49,7 +49,7 @@ type ErrorRecoveringDescriptorsStack () =
                                                | None -> 0<distance>)
                         
                     //if weights.Count > 0 then weights |> Seq.min else 0<distance>
-                    descriptor.LeftPartMinWeight + node.Distance
+                    descriptor.LeftPartMinWeight //+ node.Distance
                 | None -> descriptor.LeftPartMinWeight
             //printfn $"Descriptor weight: %A{pathWeight}"
             //printfn $"Keys:"
