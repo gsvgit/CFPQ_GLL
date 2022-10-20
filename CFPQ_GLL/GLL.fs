@@ -64,8 +64,7 @@ let private run
 
     let handleDescriptor (currentDescriptor:Descriptor) =
 
-        gss.AddDescriptorToHandled currentDescriptor
-        //printfn $"Left = %A{currentDescriptor.LeftPartMinWeight}"
+        gss.AddDescriptorToHandled currentDescriptor        
 
         if currentDescriptor.RsmState.IsFinal
         then
@@ -113,9 +112,6 @@ let private run
                                 if buildSppf
                                 then
                                     let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
-                                    //if enableErrorRecovering then
-                                    //let inputRange = matchedRange.Range.InputRange
-                                    //printfn $"{inputRange.StartPosition.GetHashCode()} | {inputRange.EndPosition.GetHashCode()} | {query.IsFinalStateForOriginalStartBox currentDescriptor.RsmState}"
                                     findCorrect <- findCorrect ||
                                                    (startVertices.Contains currentDescriptor.GssVertex.InputPosition)
                                                    && (finishVertices.Contains currentDescriptor.InputPosition)
@@ -125,18 +121,7 @@ let private run
                                 else dummyRangeNode
                             MatchedRangeWithNode(matchedRange, rangeNode)
                         makeIntermediateNode leftSubRange rightSubRange
-                    let weight =
-                        match gssEdge.MatchedRange.Node with
-                        Some x -> x.Distance
-                        | None -> 0<distance>
-                        (*let weights =
-                            gssEdge.GssVertex.OutgoingEdges
-                            |> ResizeArray.map (fun e -> match e.MatchedRange.Node with
-                                                               | Some x -> x.Distance
-                                                               | None -> 0<distance>)
-                                    
-                        if weights.Count > 0 then weights |> Seq.min else 0<distance>*)
-                    Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, currentDescriptor.LeftPartMinWeight(* + weight*) (*newRange.Node.Value.Distance*))//currentDescriptor.LeftPartMinWeight)
+                    Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, currentDescriptor.Weight)
                     |> addDescriptor
                 )
 
@@ -153,12 +138,8 @@ let private run
                                 , finalState
                                 , currentDescriptor.InputPosition
                                 , kvp.Key
-                                , currentDescriptor.MatchedRange)
-               let weight =
-                   match currentDescriptor.MatchedRange.Node with
-                   Some x -> x.Distance
-                   | None -> 0<distance>
-               Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange, currentDescriptor.LeftPartMinWeight)
+                                , currentDescriptor.MatchedRange)               
+               Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange, currentDescriptor.Weight)
                |> addDescriptor
                positionsForPops
                |> ResizeArray.iter (fun matchedRange ->
@@ -184,7 +165,7 @@ let private run
                            | None -> 0<distance>
                        weight, makeIntermediateNode leftSubRange rightSubRange
                    
-                   Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, (*newRange.Node.Value.Distance*) currentDescriptor.LeftPartMinWeight + weight) |> addDescriptor)
+                   Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight) |> addDescriptor)
 
         let inline handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: IRsmState) =
 
@@ -201,32 +182,16 @@ let private run
                         )
                     let rangeNode =
                         if buildSppf
-                        then
-                            let leftPartWeight =
-                                0<distance>
-                                (*
-                                let weights =
-                                    currentDescriptor.GssVertex.OutgoingEdges
-                                    |> ResizeArray.map (fun e -> match e.MatchedRange.Node with
-                                                           | Some x -> x.Distance
-                                                           | None -> 0<distance>)
-                                    
-                                if weights.Count > 0 then weights |> Seq.min else 0<distance>
-                                *)
-                                (*+ match currentDescriptor.MatchedRange.Node with
-                                  | Some x -> x.Distance
-                                  | None -> 0<distance>*)
-                            //printfn $"weight = %A{leftPartWeight}"
+                        then                            
                             let currentlyCreatedNode =
                                  matchedRanges.AddTerminalNode(Range(currentDescriptor.InputPosition, graphTargetVertex), terminalSymbol,
-                                       leftPartWeight
-                                       + (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>))
+                                       (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>))
                             matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.TerminalNode currentlyCreatedNode, enableErrorRecovering)
                         else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, rangeNode)
                 makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
 
-            Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange, currentDescriptor.LeftPartMinWeight + (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>)) |> addDescriptor
+            Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange, currentDescriptor.Weight + (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>)) |> addDescriptor
 
         let handleTerminalEdge terminalSymbol graphTargetVertex rsmTargetVertex =
             handleTerminalOrEpsilonEdge terminalSymbol graphTargetVertex rsmTargetVertex
@@ -240,33 +205,26 @@ let private run
                 for state in targetStates do
                     handleTerminalEdge terminalSymbol targetVertex state
 
-        handleEdge EOF (TerminalEdgeTarget(currentDescriptor.InputPosition, 0<edgeWeight>))
+        if finishVertices.Contains currentDescriptor.InputPosition
+        then handleEdge EOF (TerminalEdgeTarget(currentDescriptor.InputPosition, 0<edgeWeight>))
+        
+        // epsilon 
 
-        let errorRecoveryEdges, originalEdges =
+        let errorRecoveryEdges =            
             let errorRecoveryEdges = Dictionary()
-            let originalEdges = Dictionary()
-            for kvp in outgoingTerminalEdgesInGraph do
-                for vertex in kvp.Value do
-                    if vertex.Weight = 0<edgeWeight>
-                    then originalEdges.Add(kvp.Key, HashSet [|vertex|])
-                    else errorRecoveryEdges.Add(kvp.Key, HashSet [|vertex|])
-            errorRecoveryEdges, originalEdges
-        (*    
+            for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
+                errorRecoveryEdges.Add(terminal, HashSet [|TerminalEdgeTarget(currentDescriptor.InputPosition, 1<edgeWeight>)|])
+            
+            errorRecoveryEdges
+                    
         for kvp in outgoingTerminalEdgesInGraph do
             for vertex in kvp.Value do
                 if kvp.Key = Epsilon then
                     handleEpsilonEdge vertex
                 else
-                    handleEdge kvp.Key vertex*)
-            
-        for kvp in errorRecoveryEdges do
-            for vertex in kvp.Value do
-                if kvp.Key = Epsilon then
-                    handleEpsilonEdge vertex
-                else
                     handleEdge kvp.Key vertex
-                    
-        for kvp in originalEdges do
+        
+        for kvp in errorRecoveryEdges do
             for vertex in kvp.Value do
                 if kvp.Key = Epsilon then
                     handleEpsilonEdge vertex
@@ -276,13 +234,9 @@ let private run
     let mutable cnt = 0    
     while 
         (enableErrorRecovering && ( (findCorrect && descriptorsToProcess.IsEmpty) |> not)) ||
-        ((not enableErrorRecovering) && (descriptorsToProcess.IsEmpty |> not)) do // FIX ME
+        ((not enableErrorRecovering) && (descriptorsToProcess.IsEmpty |> not)) do 
         let descriptor = descriptorsToProcess.Pop()
         cnt <- cnt + 1
-        if descriptor.MatchedRange.Node.IsSome
-        then ()
-            //printfn $"descriptor = %A{descriptor.MatchedRange.Node.Value.Distance}"
-        //let root = TriplesStoredSPPF ([|descriptor.MatchedRange.Node.Value|], Dictionary())
         descriptor |> handleDescriptor
     
     printfn $"descriptors handled: %A{cnt}"

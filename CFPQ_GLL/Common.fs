@@ -20,7 +20,7 @@ type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVerte
     member this.InputPosition = inputPosition
     member this.GssVertex = gssVertex
     member this.MatchedRange = matchedRange
-    member this.LeftPartMinWeight
+    member this.Weight
         with get() = leftPartMinWeight
         and set v = leftPartMinWeight <- v
     override this.GetHashCode() = hashCode
@@ -41,6 +41,7 @@ and IRsmState =
     abstract NonTerminalNodes: ResizeArray<INonTerminalNode>  
     abstract AddTerminalEdge: int<terminalSymbol>*IRsmState -> unit
     abstract AddNonTerminalEdge: IRsmState*IRsmState -> unit
+    abstract ErrorRecoveryLabels: HashSet<int<terminalSymbol>> 
 and IRsmBox =
     abstract FinalStates: HashSet<IRsmState>
 

@@ -1,6 +1,7 @@
 module CFPQ_GLL.RSM
 
 open System.Collections.Generic
+open System.Data
 open CFPQ_GLL.Common
 open CFPQ_GLL.InputGraph
 
@@ -42,6 +43,8 @@ type TerminalEdgesStorage =
     | Big of Dictionary<int<terminalSymbol>,ResizeArray<int<rsmState>>>
 
 type RsmState (isStart: bool, isFinal: bool) =
+    let errorRecoveryLabels = HashSet()
+    let coveredTargetStates = HashSet()
     let descriptors = ResizeArray<Descriptor>()
     let outgoingTerminalEdges = Dictionary<int<terminalSymbol>, HashSet<IRsmState>>()
     let outgoingNonTerminalEdges= Dictionary<IRsmState, HashSet<IRsmState>>()
@@ -50,6 +53,7 @@ type RsmState (isStart: bool, isFinal: bool) =
     new () = RsmState(false,false)
 
     interface IRsmState with
+        member this.ErrorRecoveryLabels = errorRecoveryLabels
         member this.OutgoingTerminalEdges = outgoingTerminalEdges
         member this.OutgoingNonTerminalEdges = outgoingNonTerminalEdges
         member this.Descriptors = descriptors
@@ -57,6 +61,12 @@ type RsmState (isStart: bool, isFinal: bool) =
         member this.IsFinal = isFinal
         member this.NonTerminalNodes = nonTerminalNodes
         member this.AddTerminalEdge (terminal, targetState) =
+            if coveredTargetStates.Contains targetState |> not
+            then
+                let added = errorRecoveryLabels.Add terminal
+                assert added
+                let added =  coveredTargetStates.Add targetState
+                assert added
             let exists,targetStates = (this:>IRsmState).OutgoingTerminalEdges.TryGetValue terminal
             if exists
             then

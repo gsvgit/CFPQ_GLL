@@ -31,30 +31,7 @@ type ErrorRecoveringDescriptorsStack () =
 
     interface IDescriptorsStack with
         member this.Push descriptor =
-            let pathWeight =
-                match descriptor.MatchedRange.Node with
-                | Some node ->
-                    
-                    let weights =
-                        let edges =
-                            let r = ResizeArray<IGssEdge>()
-                            descriptor.GssVertex :: [for e in descriptor.GssVertex.OutgoingEdges -> e.GssVertex]
-                            |> List.iter (fun e ->r.AddRange e.OutgoingEdges)
-                            r
-                        descriptor.GssVertex.OutgoingEdges
-                        //edges
-                        |> ResizeArray.map (fun e -> 
-                                               match e.MatchedRange.Node with
-                                               | Some x -> x.Distance
-                                               | None -> 0<distance>)
-                        
-                    //if weights.Count > 0 then weights |> Seq.min else 0<distance>
-                    descriptor.LeftPartMinWeight //+ node.Distance
-                | None -> descriptor.LeftPartMinWeight
-            //printfn $"Descriptor weight: %A{pathWeight}"
-            //printfn $"Keys:"
-            //errorRecoveringDescriptorsStacks.Keys |> Seq.iter (fun x -> printf $"%A{x}; ")
-            //printfn "\n"
+            let pathWeight = descriptor.Weight                
             if pathWeight = 0<distance> then defaultDescriptorsStack.Push descriptor
             else
                 if errorRecoveringDescriptorsStacks.ContainsKey(pathWeight) |> not then
