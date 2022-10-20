@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <Compile Include="Common.fs" />
-        <Compile Include="InputGraph.fs" />
+        <Compile Include="LinearInputGraph.fs" />
         <Compile Include="RSM.fs" />
         <Compile Include="SPPF.fs" />
         <Compile Include="GSS.fs" />

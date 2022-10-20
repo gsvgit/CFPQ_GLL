@@ -15,17 +15,15 @@ type Mode =
 
 [<RequireQualifiedAccess>]
 type QueryResult =
-    | ReachabilityFacts of Dictionary<IInputGraphVertex,HashSet<IInputGraphVertex>>
+    | ReachabilityFacts of Dictionary<ILinearInputGraphVertex,HashSet<ILinearInputGraphVertex>>
     | MatchedRanges of MatchedRanges
 
 let private run
-        (enableErrorRecovering: bool)
-        (reachableVertices:Dictionary<_,HashSet<_>>)
         (gss:GSS)
         (matchedRanges:MatchedRanges)
         (descriptorsToProcess: IDescriptorsStack)
-        (startVertices:HashSet<IInputGraphVertex>)
-        (finishVertices:HashSet<IInputGraphVertex>)
+        (startVertex:ILinearInputGraphVertex)
+        (finalVertex:ILinearInputGraphVertex)
         (query:RSM) mode =
 
     let buildSppf =
@@ -38,13 +36,13 @@ let private run
     let inline addDescriptor (descriptor:Descriptor) =
         if not <| gss.IsThisDescriptorAlreadyHandled descriptor
         then
-            descriptorsToProcess.Push descriptor 
+            descriptorsToProcess.Push descriptor
 
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<IInputGraphVertex>
-                  , Unchecked.defaultof<IInputGraphVertex>
+                    Unchecked.defaultof<ILinearInputGraphVertex>
+                  , Unchecked.defaultof<ILinearInputGraphVertex>
                   , Unchecked.defaultof<IRsmState>
                   , Unchecked.defaultof<IRsmState>
                )
@@ -53,7 +51,7 @@ let private run
 
     let makeIntermediateNode (leftSubRange: MatchedRangeWithNode) (rightSubRange: MatchedRangeWithNode) =
         if buildSppf
-        then matchedRanges.AddIntermediateNode (leftSubRange, rightSubRange, enableErrorRecovering)
+        then matchedRanges.AddIntermediateNode (leftSubRange, rightSubRange, true)
         else
             let newMatchedRange = MatchedRange (leftSubRange.Range.InputRange.StartPosition
                         , rightSubRange.Range.InputRange.EndPosition
@@ -64,16 +62,10 @@ let private run
 
     let handleDescriptor (currentDescriptor:Descriptor) =
 
-        gss.AddDescriptorToHandled currentDescriptor        
+        gss.AddDescriptorToHandled currentDescriptor
 
         if currentDescriptor.RsmState.IsFinal
         then
-            if (not buildSppf) && query.IsFinalStateForOriginalStartBox currentDescriptor.RsmState
-            then
-                let startPosition = currentDescriptor.GssVertex.InputPosition
-                if startVertices.Contains startPosition
-                then
-                    reachableVertices.[startPosition].Add currentDescriptor.InputPosition |> ignore
 
             let matchedRange =
                 match currentDescriptor.MatchedRange.Node with
@@ -88,7 +80,7 @@ let private run
                         if buildSppf
                         then
                             let currentlyCreatedNode = EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
-                            matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.EpsilonNode currentlyCreatedNode, enableErrorRecovering)
+                            matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.EpsilonNode currentlyCreatedNode, true)
                         else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, newRangeNode)
 
@@ -113,11 +105,11 @@ let private run
                                 then
                                     let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
                                     findCorrect <- findCorrect ||
-                                                   (startVertices.Contains currentDescriptor.GssVertex.InputPosition)
-                                                   && (finishVertices.Contains currentDescriptor.InputPosition)
+                                                   (startVertex = currentDescriptor.GssVertex.InputPosition)
+                                                   && (finalVertex = currentDescriptor.InputPosition)
                                                    && (query.OriginalStartState = currentDescriptor.GssVertex.RsmState)
 
-                                    matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode, enableErrorRecovering)
+                                    matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode, true)
                                 else dummyRangeNode
                             MatchedRangeWithNode(matchedRange, rangeNode)
                         makeIntermediateNode leftSubRange rightSubRange
@@ -126,7 +118,7 @@ let private run
                 )
 
 
-        let outgoingTerminalEdgesInGraph = currentDescriptor.InputPosition.OutgoingEdges
+        let outgoingTerminalEdgeInGraph = currentDescriptor.InputPosition.OutgoingEdge
 
         let outgoingNonTerminalEdgesInRSM = currentDescriptor.RsmState.OutgoingNonTerminalEdges
         let outgoingTerminalEdgesInRSM = currentDescriptor.RsmState.OutgoingTerminalEdges
@@ -138,7 +130,7 @@ let private run
                                 , finalState
                                 , currentDescriptor.InputPosition
                                 , kvp.Key
-                                , currentDescriptor.MatchedRange)               
+                                , currentDescriptor.MatchedRange)
                Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange, currentDescriptor.Weight)
                |> addDescriptor
                positionsForPops
@@ -155,7 +147,7 @@ let private run
                                if buildSppf
                                then
                                    let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(matchedRange.Range.InputRange, kvp.Key)
-                                   matchedRanges.AddToMatchedRange(newMatchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode, enableErrorRecovering)
+                                   matchedRanges.AddToMatchedRange(newMatchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode, true)
                                 else dummyRangeNode
                            MatchedRangeWithNode(newMatchedRange, rangeNode)
                        let leftSubRange = currentDescriptor.MatchedRange
@@ -164,7 +156,7 @@ let private run
                            | Some x -> x.Distance
                            | None -> 0<distance>
                        weight, makeIntermediateNode leftSubRange rightSubRange
-                   
+
                    Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight) |> addDescriptor)
 
         let inline handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: IRsmState) =
@@ -182,11 +174,11 @@ let private run
                         )
                     let rangeNode =
                         if buildSppf
-                        then                            
+                        then
                             let currentlyCreatedNode =
                                  matchedRanges.AddTerminalNode(Range(currentDescriptor.InputPosition, graphTargetVertex), terminalSymbol,
                                        (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>))
-                            matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.TerminalNode currentlyCreatedNode, enableErrorRecovering)
+                            matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.TerminalNode currentlyCreatedNode, true)
                         else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, rangeNode)
                 makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
@@ -205,125 +197,101 @@ let private run
                 for state in targetStates do
                     handleTerminalEdge terminalSymbol targetVertex state
 
-        if finishVertices.Contains currentDescriptor.InputPosition
-        then handleEdge EOF (TerminalEdgeTarget(currentDescriptor.InputPosition, 0<edgeWeight>))
-        
-        // epsilon 
-
-        let errorRecoveryEdges =            
+        let errorRecoveryEdges =
             let errorRecoveryEdges = Dictionary()
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
-                errorRecoveryEdges.Add(terminal, HashSet [|TerminalEdgeTarget(currentDescriptor.InputPosition, 1<edgeWeight>)|])
-            
-            errorRecoveryEdges
-                    
-        for kvp in outgoingTerminalEdgesInGraph do
-            for vertex in kvp.Value do
-                if kvp.Key = Epsilon then
-                    handleEpsilonEdge vertex
-                else
-                    handleEdge kvp.Key vertex
-        
-        for kvp in errorRecoveryEdges do
-            for vertex in kvp.Value do
-                if kvp.Key = Epsilon then
-                    handleEpsilonEdge vertex
-                else
-                    handleEdge kvp.Key vertex
+                errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<distance>))
 
-    let mutable cnt = 0    
-    while 
-        (enableErrorRecovering && ( (findCorrect && descriptorsToProcess.IsEmpty) |> not)) ||
-        ((not enableErrorRecovering) && (descriptorsToProcess.IsEmpty |> not)) do 
+            let _,targetVertex = currentDescriptor.InputPosition.OutgoingEdge
+            errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<distance>))
+            errorRecoveryEdges
+
+        let symbol, vertex = outgoingTerminalEdgeInGraph
+        assert (symbol <> Epsilon)
+        handleEdge symbol vertex
+
+        for kvp in errorRecoveryEdges do
+            if kvp.Key = Epsilon then
+                handleEpsilonEdge kvp.Value
+            else
+                handleEdge kvp.Key kvp.Value
+
+    let mutable cnt = 0
+    while
+        (true && ( (findCorrect && descriptorsToProcess.IsEmpty) |> not)) ||
+        ((not true) && (descriptorsToProcess.IsEmpty |> not)) do
         let descriptor = descriptorsToProcess.Pop()
         cnt <- cnt + 1
         descriptor |> handleDescriptor
-    
+
     printfn $"descriptors handled: %A{cnt}"
 
     match mode with
-    | ReachabilityOnly -> QueryResult.ReachabilityFacts reachableVertices
+    | ReachabilityOnly -> QueryResult.ReachabilityFacts (Dictionary<_,_>())
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
 
 let evalFromState
-        (enableErrorRecovering: bool)
         (descriptorToProcess:IDescriptorsStack)
-        (reachableVertices:Dictionary<_,HashSet<_>>)
         (gss:GSS)
         (matchedRanges:MatchedRanges)
-        (startVertices:HashSet<IInputGraphVertex>)
-        (finishVertices:HashSet<IInputGraphVertex>)
+        (startVertex:ILinearInputGraphVertex)
+        (finalVertex:ILinearInputGraphVertex)
         (query:RSM) mode =
 
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<IInputGraphVertex>
-                  , Unchecked.defaultof<IInputGraphVertex>
+                    Unchecked.defaultof<ILinearInputGraphVertex>
+                  , Unchecked.defaultof<ILinearInputGraphVertex>
                   , Unchecked.defaultof<IRsmState>
                   , Unchecked.defaultof<IRsmState>
                )
-    startVertices
-    |> Seq.iter (fun v ->
-        let gssVertex = gss.AddNewVertex(v, query.StartState)
-        Descriptor(query.StartState, v, gssVertex, emptyRange, 0<distance>)
-        |> descriptorToProcess.Push
-        )
+    let gssVertex = gss.AddNewVertex(startVertex, query.StartState)
+    Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<distance>)
+    |> descriptorToProcess.Push
 
     run
-        enableErrorRecovering
-        reachableVertices
         gss
         matchedRanges
         descriptorToProcess
-        startVertices
-        finishVertices
+        startVertex
+        finalVertex
         query
         mode
 
-let defaultEvalFromState = evalFromState false (DefaultDescriptorsStack())
-let errorRecoveringEvalFromState = evalFromState true (ErrorRecoveringDescriptorsStack())
 
-let private eval<'inputVertex when 'inputVertex: equality> evalFromStateFunction (finishVertices:HashSet<_>) (startVertices:HashSet<_>) (query:RSM) mode =
-    let reachableVertices =
-        let d = Dictionary<_,_>(startVertices.Count)
-        startVertices
-        |> Seq.iter (fun v -> d.Add(v, HashSet<_>()))
-        d
+let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertices startVertices (query:RSM) mode =
     let gss = GSS()
     let matchedRanges = MatchedRanges()
-    evalFromStateFunction reachableVertices gss matchedRanges (startVertices:HashSet<_>) (finishVertices: HashSet<_>) (query:RSM) mode
+    evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertices finishVertices (query:RSM) mode
 
-let defaultEval<'inputVertex when 'inputVertex: equality> = eval defaultEvalFromState (HashSet())
-let errorRecoveringEval<'inputVertex when 'inputVertex: equality> = eval errorRecoveringEvalFromState
 
-let onInputGraphChanged (changedVertices:seq<IInputGraphVertex>) =
-    let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.Descriptors) |> Array.ofSeq
-    descriptorsToContinueFrom
-    |> Array.iter (fun descriptor ->
-        let removed = descriptor.GssVertex.HandledDescriptors.Remove descriptor
-        assert removed
-        let removed = descriptor.InputPosition.Descriptors.Remove descriptor
-        assert removed
-        let removed = descriptor.RsmState.Descriptors.Remove descriptor
-        assert removed
-        )
-    fun
-        reachableVertices
-        gss
-        matchedRanges
-        startVertices
-        query
-        mode
-         ->
-            run
-                false
-                reachableVertices
-                gss
-                matchedRanges
-                (DefaultDescriptorsStack descriptorsToContinueFrom)
-                startVertices
-                (HashSet())
-                query
-                mode
+
+//let onInputGraphChanged (changedVertices:seq<ILinearInputGraphVertex>) =
+//    let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.Descriptors) |> Array.ofSeq
+//    descriptorsToContinueFrom
+//    |> Array.iter (fun descriptor ->
+//        let removed = descriptor.GssVertex.HandledDescriptors.Remove descriptor
+//        assert removed
+//        let removed = descriptor.InputPosition.Descriptors.Remove descriptor
+//        assert removed
+//        let removed = descriptor.RsmState.Descriptors.Remove descriptor
+//        assert removed
+//        )
+//    fun
+//        reachableVertices
+//        gss
+//        matchedRanges
+//        startVertices
+//        query
+//        mode
+//         ->
+//            run
+//                gss
+//                matchedRanges
+//                (DefaultDescriptorsStack descriptorsToContinueFrom)
+//                startVertices
+//                (HashSet())
+//                query
+//                mode
 

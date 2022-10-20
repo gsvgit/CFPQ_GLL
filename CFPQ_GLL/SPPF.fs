@@ -10,7 +10,7 @@ open FSharpx.Collections
 
 type Distance = Unreachable | Reachable of int
 
-type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<IInputGraphVertex>, distance) =
+type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<ILinearInputGraphVertex>, distance) =
     let parents = HashSet<IRangeNode>()
     let mutable distance = distance
     member this.Terminal = terminal
@@ -23,7 +23,7 @@ type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<IInputGraphV
             with get () = distance
             and set v = distance <- v
 
-and EpsilonNode (position:IInputGraphVertex, nonTerminalStartState:IRsmState) =
+and EpsilonNode (position:ILinearInputGraphVertex, nonTerminalStartState:IRsmState) =
     let parents = HashSet<IRangeNode>()
     member this.Position = position
     member this.NonTerminalStartState = nonTerminalStartState
@@ -32,7 +32,7 @@ and EpsilonNode (position:IInputGraphVertex, nonTerminalStartState:IRsmState) =
         member this.Parents = parents
 
 and IntermediateNode (rsmState:IRsmState
-                       , inputPosition:IInputGraphVertex
+                       , inputPosition:ILinearInputGraphVertex
                        , leftSubtree: IRangeNode
                        , rightSubtree: IRangeNode) =
     let parents = HashSet<IRangeNode>()
@@ -63,7 +63,7 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
         member this.Parents = parents
         member this.IntermediateNodes = intermediateNodes
 
-and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<IInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
+and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<ILinearInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
     let parents = HashSet<IRangeNode>()
     let mutable distance =
         let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
@@ -150,7 +150,7 @@ type MatchedRanges () =
 
         handleRangeNode rangeNode
 
-    member internal this.AddTerminalNode (range:Range<IInputGraphVertex>, terminal, distance) =
+    member internal this.AddTerminalNode (range:Range<ILinearInputGraphVertex>, terminal, distance) =
         //printfn $"Trem = %A{terminal}, distance = %A{distance}"
         let terminalNodes = range.EndPosition.TerminalNodes
         let exists, nodes = terminalNodes.TryGetValue range.StartPosition
@@ -170,7 +170,7 @@ type MatchedRanges () =
             terminalNodes.Add(range.StartPosition, d)
             newTerminalNode
 
-    member internal this.AddNonTerminalNode (range:Range<IInputGraphVertex>, nonTerminalStartState:IRsmState) =
+    member internal this.AddNonTerminalNode (range:Range<ILinearInputGraphVertex>, nonTerminalStartState:IRsmState) =
         let rangeNodes = range.EndPosition.RangeNodes
         let nonTerminalNodes = range.StartPosition.NonTerminalNodesStartedHere
         let exists, nodes = nonTerminalNodes.TryGetValue range.EndPosition
@@ -326,7 +326,7 @@ type TriplesStoredSPPFNode =
     | IntermediateNode of int<inputGraphVertex> * int<rsmState>
     | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmState> * int<rsmState>
 
-type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<IInputGraphVertex,int<inputGraphVertex>>) =
+type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<ILinearInputGraphVertex,int<inputGraphVertex>>) =
     let rsmStatesMap = Dictionary<IRsmState,int<rsmState>>()
     let mutable firstFreeRsmStateId = 0<rsmState>
     let getStateId state =

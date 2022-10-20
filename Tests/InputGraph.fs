@@ -11,14 +11,17 @@ open CFPQ_GLL.InputGraph
 type InputGraphEdge =
     val TerminalSymbol: int<terminalSymbol>
     val TargetVertex: int<inputGraphVertex>
-    val Weight: int<edgeWeight>
+    val Weight: int<distance>
     new (terminal, targetVertex, weight) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = weight}
 
 type DemoInputGraphEdge =
-    | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>
-    | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>
-    | ErrorEpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex> // delete
-    | ErrorTerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex> // delete
+    | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>*int<distance>
+    | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>*int<distance>
+
+let DefaultTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 0<distance>)
+let ErrorTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 1<distance>)
+let DefaultEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 0<distance>)
+let ErrorEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 1<distance>)
 
 [<Struct>]
 type InputGraphTerminalEdge = // Usages don't found
@@ -40,28 +43,16 @@ type InputGraph (edges, enableErrorRecovering) =
         vertices.[v]
 
     let addEdges edges =
-        let errorEdgeWeight = 1<edgeWeight>
-        let defaultEdgeWeight = if enableErrorRecovering then 0<edgeWeight> else 1<edgeWeight>
         edges
         |> Array.iter (function
-                        | TerminalEdge (_from, smb, _to) ->
+                        | TerminalEdge (_from, smb, _to, weight) ->
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
-                            InputGraphEdge(smb, _to, defaultEdgeWeight)  |> vertexContent.OutgoingTerminalEdges.Add
-                        | EpsilonEdge(_from, _to) ->
+                            InputGraphEdge(smb, _to, weight)  |> vertexContent.OutgoingTerminalEdges.Add
+                        | EpsilonEdge(_from, _to, weight) ->
                             let vertexContent = addVertex _from
                             addVertex _to |> ignore
-                            InputGraphEdge(Epsilon, _to, defaultEdgeWeight) |> vertexContent.OutgoingTerminalEdges.Add
-                        | ErrorTerminalEdge(_from, smb, _to) ->
-                            if not enableErrorRecovering then failwith "Unexpected error edge without error recovering"
-                            let vertexContent = addVertex _from
-                            addVertex _to |> ignore
-                            InputGraphEdge(smb, _to, errorEdgeWeight)  |> vertexContent.OutgoingTerminalEdges.Add
-                        | ErrorEpsilonEdge(_from, _to) ->
-                            if not enableErrorRecovering then failwith "Unexpected error edge without error recovering"
-                            let vertexContent = addVertex _from
-                            addVertex _to |> ignore
-                            InputGraphEdge(Epsilon, _to, errorEdgeWeight) |> vertexContent.OutgoingTerminalEdges.Add
+                            InputGraphEdge(Epsilon, _to, weight) |> vertexContent.OutgoingTerminalEdges.Add
                        )
 
     do addEdges edges
@@ -92,33 +83,26 @@ type InputGraph (edges, enableErrorRecovering) =
 
     member this.AddVertex v = addVertex v |> ignore
 
-    member this.ToCfpqCoreGraph (startVertices: HashSet<int<inputGraphVertex>>) =
+    member this.ToCfpqCoreGraph (startVertex: int<inputGraphVertex>) =
+        this.ToDot (0,"coreGraph.dot")
         let mutable firstFreeVertexId = 0
-        let verticesMapping = Dictionary<int<inputGraphVertex>, IInputGraphVertex>()
-        let newStartVertices = HashSet<IInputGraphVertex>()
+        let verticesMapping = Dictionary<int<inputGraphVertex>, ILinearInputGraphVertex>()
         let getVertex vertexId =
             let exists, vertex = verticesMapping.TryGetValue vertexId
             let res =
                 if exists
                 then vertex
                 else
-                    let vertex = InputGraphVertexBase()
+                    let vertex = LinearInputGraphVertexBase()
                     firstFreeVertexId <- firstFreeVertexId + 1
                     verticesMapping.Add(vertexId, vertex)
                     vertex
-            if startVertices.Contains vertexId
-            then newStartVertices.Add res |> ignore
             res
+        let newStartVertex = getVertex startVertex
         for kvp in vertices do
-            let vertex = (getVertex kvp.Key)
+            let vertex = getVertex kvp.Key
             for edge in kvp.Value.OutgoingTerminalEdges do
                 let targetVertex = getVertex edge.TargetVertex
-                let exists, edges = vertex.OutgoingEdges.TryGetValue edge.TerminalSymbol
-                if exists
-                then
-                    let added = TerminalEdgeTarget(targetVertex, edge.Weight) |> edges.Add
-                    assert added
-                else
-                    vertex.OutgoingEdges.Add(edge.TerminalSymbol, HashSet<_>[|TerminalEdgeTarget(targetVertex, edge.Weight)|])
+                (vertex :?> LinearInputGraphVertexBase).AddOutgoingEdge (edge.TerminalSymbol, TerminalEdgeTarget(targetVertex, edge.Weight))
 
-        newStartVertices,verticesMapping
+        newStartVertex,verticesMapping

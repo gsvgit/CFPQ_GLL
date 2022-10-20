@@ -8,7 +8,7 @@ type GSSEdge (gssVertex: IGssVertex, rsmState: IRsmState, matchedRange: MatchedR
         member this.RsmState = rsmState
         member this.MatchedRange = matchedRange
 
-and GssVertex (inputPosition: IInputGraphVertex, rsmState: IRsmState) =
+and GssVertex (inputPosition: ILinearInputGraphVertex, rsmState: IRsmState) =
     let outgoingEdges = ResizeArray<IGssEdge>()
     let popped = ResizeArray<MatchedRangeWithNode>()
     let handledDescriptors = HashSet<Descriptor>()
@@ -21,13 +21,13 @@ and GssVertex (inputPosition: IInputGraphVertex, rsmState: IRsmState) =
 
 [<Struct>]
 type GssVertexId =
-    val InputPosition: IInputGraphVertex
+    val InputPosition: ILinearInputGraphVertex
     val RsmState: IRsmState
     new(inputPosition, rsmState) = {InputPosition = inputPosition; RsmState = rsmState}
 
 type GSS () =
     let vertices = Dictionary<GssVertexId, GssVertex>()
-    member this.AddNewVertex (inputPosition: IInputGraphVertex, rsmState:IRsmState) =
+    member this.AddNewVertex (inputPosition: ILinearInputGraphVertex, rsmState:IRsmState) =
         let gssVertexId = GssVertexId(inputPosition, rsmState)
         let exists, gssVertex = vertices.TryGetValue gssVertexId
         if exists
@@ -39,7 +39,7 @@ type GSS () =
 
     member this.AddEdge (currentGSSVertex: IGssVertex
                          , rsmStateToReturn: IRsmState
-                         , inputPositionToContinue: IInputGraphVertex
+                         , inputPositionToContinue: ILinearInputGraphVertex
                          , rsmStateToContinue: IRsmState
                          , matchedRange: MatchedRangeWithNode) =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue) :> IGssVertex

@@ -5,20 +5,27 @@ open CFPQ_GLL.Common
 
 [<Measure>] type inputGraphVertex
 
-type InputGraphVertexBase () =
-    let outgoingEdges = Dictionary<int<terminalSymbol>, HashSet<TerminalEdgeTarget>>()
+type LinearInputGraphVertexBase () =
+    let mutable outgoingEdge = None
     let descriptors = HashSet<Descriptor>()
-    let terminalNodes = Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>()
-    let nonTerminalNodes = Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()
+    let terminalNodes = Dictionary<ILinearInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>()
+    let nonTerminalNodes = Dictionary<ILinearInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()
     let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
     let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>()
-    //let nonTerminalsWithStartHere = HashSet<_>()
-    interface IInputGraphVertex with
-        member this.OutgoingEdges = outgoingEdges
+
+    member this.AddOutgoingEdge (terminal, target) =
+        match outgoingEdge with
+        | None -> outgoingEdge <- Some (terminal, target)
+        | Some x -> failwithf $"Edge exists: %A{x}"
+
+    interface ILinearInputGraphVertex with
+        member this.OutgoingEdge =
+            match outgoingEdge with
+            | Some v -> v
+            | None -> failwith "Unexpected end of input"
         member this.Descriptors = descriptors
         member this.TerminalNodes = terminalNodes
         member this.NonTerminalNodesStartedHere = nonTerminalNodes
-        //member this.NonTerminalNodesWithStartHere = nonTerminalsWithStartHere
         member this.RangeNodes = rangeNodes
         member this.IntermediateNodes = intermediateNodes
 

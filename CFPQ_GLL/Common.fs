@@ -4,10 +4,9 @@ open System.Collections.Generic
 
 [<Measure>] type terminalSymbol
 [<Measure>] type distance
-[<Measure>] type edgeWeight
 
 
-type Descriptor (rsmState: IRsmState, inputPosition: IInputGraphVertex, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, leftPartMinWeight: int<distance>) =
+type Descriptor (rsmState: IRsmState, inputPosition: ILinearInputGraphVertex, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, leftPartMinWeight: int<distance>) =
     let mutable leftPartMinWeight = leftPartMinWeight
     let hashCode =
         let mutable hash = 17
@@ -38,26 +37,26 @@ and IRsmState =
     abstract IsFinal: bool
     abstract IsStart: bool
     abstract Box: IRsmBox with get, set
-    abstract NonTerminalNodes: ResizeArray<INonTerminalNode>  
+    abstract NonTerminalNodes: ResizeArray<INonTerminalNode>
     abstract AddTerminalEdge: int<terminalSymbol>*IRsmState -> unit
     abstract AddNonTerminalEdge: IRsmState*IRsmState -> unit
-    abstract ErrorRecoveryLabels: HashSet<int<terminalSymbol>> 
+    abstract ErrorRecoveryLabels: HashSet<int<terminalSymbol>>
 and IRsmBox =
     abstract FinalStates: HashSet<IRsmState>
 
-and IInputGraphVertex =
-    abstract OutgoingEdges: Dictionary<int<terminalSymbol>, HashSet<TerminalEdgeTarget>>
+and ILinearInputGraphVertex =
+    abstract OutgoingEdge: int<terminalSymbol> * TerminalEdgeTarget
     abstract Descriptors: HashSet<Descriptor>
-    abstract TerminalNodes: Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>
-    abstract NonTerminalNodesStartedHere: Dictionary<IInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>
+    abstract TerminalNodes: Dictionary<ILinearInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>
+    abstract NonTerminalNodesStartedHere: Dictionary<ILinearInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>
     //abstract NonTerminalNodesWithStartHere: HashSet<IInputGraphVertex * INonTerminalNode>
     abstract RangeNodes: Dictionary<MatchedRange, IRangeNode>
     abstract IntermediateNodes: Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>
 and [<Struct>] TerminalEdgeTarget =
-    val TargetVertex: IInputGraphVertex
-    val Weight: int<edgeWeight>
+    val TargetVertex: ILinearInputGraphVertex
+    val Weight: int<distance>
     new (targetVertex, weight) = {TargetVertex = targetVertex; Weight = weight}
-    new (targetVertex) = {TargetVertex = targetVertex; Weight = 0<edgeWeight>}
+    new (targetVertex) = {TargetVertex = targetVertex; Weight = 0<distance>}
 
 and [<Struct>] Range<'position> =
     val StartPosition: 'position
@@ -65,7 +64,7 @@ and [<Struct>] Range<'position> =
     new (startPosition, endPosition) = {StartPosition = startPosition; EndPosition = endPosition}
 
 and [<Struct>] MatchedRange =
-    val InputRange : Range<IInputGraphVertex>
+    val InputRange : Range<ILinearInputGraphVertex>
     val RSMRange : Range<IRsmState>
     new (inputRange, rsmRange) = {InputRange = inputRange; RSMRange = rsmRange}
     new (inputFrom, inputTo, rsmFrom, rsmTo) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo)}
@@ -87,8 +86,8 @@ and INonTerminalNode =
     abstract Distance: int<distance> with get, set
     abstract Parents: HashSet<IRangeNode>
     abstract RangeNodes: ResizeArray<IRangeNode>
-    abstract LeftPosition : IInputGraphVertex
-    abstract RightPosition : IInputGraphVertex
+    abstract LeftPosition : ILinearInputGraphVertex
+    abstract RightPosition : ILinearInputGraphVertex
     abstract NonTerminalStartState : IRsmState
 and IIntermediateNode =
     abstract Distance: int<distance> with get, set
@@ -103,7 +102,7 @@ and IGssEdge =
     abstract MatchedRange: MatchedRangeWithNode
 
 and IGssVertex =
-    abstract InputPosition: IInputGraphVertex
+    abstract InputPosition: ILinearInputGraphVertex
     abstract RsmState: IRsmState
     abstract OutgoingEdges: ResizeArray<IGssEdge>
     abstract Popped: ResizeArray<MatchedRangeWithNode>
