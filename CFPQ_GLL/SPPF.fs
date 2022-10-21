@@ -11,7 +11,7 @@ open FSharpx.Collections
 type Distance = Unreachable | Reachable of int
 
 type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<ILinearInputGraphVertex>, distance) =
-    let parents = HashSet<IRangeNode>()
+    let parents = ResizeArray<IRangeNode>()
     let mutable distance = distance
     member this.Terminal = terminal
     member this.LeftPosition = graphRange.StartPosition
@@ -24,7 +24,7 @@ type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<ILinearInput
             and set v = distance <- v
 
 and EpsilonNode (position:ILinearInputGraphVertex, nonTerminalStartState:IRsmState) =
-    let parents = HashSet<IRangeNode>()
+    let parents = ResizeArray<IRangeNode>()
     member this.Position = position
     member this.NonTerminalStartState = nonTerminalStartState
 
@@ -35,7 +35,7 @@ and IntermediateNode (rsmState:IRsmState
                        , inputPosition:ILinearInputGraphVertex
                        , leftSubtree: IRangeNode
                        , rightSubtree: IRangeNode) =
-    let parents = HashSet<IRangeNode>()
+    let parents = ResizeArray<IRangeNode>()
     let mutable distance = leftSubtree.Distance + rightSubtree.Distance
     member this.RSMState = rsmState
     member this.InputPosition = inputPosition
@@ -50,7 +50,7 @@ and IntermediateNode (rsmState:IRsmState
 and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeNode>) =
     let mutable distance =
         intermediateNodes |> Seq.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
-    let parents = HashSet<INonRangeNode>()
+    let parents = ResizeArray<INonRangeNode>()
 
     member this.InputStartPosition = matchedRange.InputRange.StartPosition
     member this.InputEndPosition = matchedRange.InputRange.EndPosition
@@ -64,7 +64,7 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
         member this.IntermediateNodes = intermediateNodes
 
 and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<ILinearInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
-    let parents = HashSet<IRangeNode>()
+    let parents = ResizeArray<IRangeNode>()
     let mutable distance =
         let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
         //printfn $"nonterm weight = %A{res}"
@@ -179,7 +179,7 @@ type MatchedRanges () =
                     let res = ResizeArray()
                     for final in nonTerminalStartState.Box.FinalStates do
                         let matchedRange = MatchedRange (range, Range<IRsmState>(nonTerminalStartState, final))
-                        let exists, rangeNode = rangeNodes.TryGetValue matchedRange
+                        let exists, rangeNode = rangeNodes.TryGetValue matchedRange                            
                         if exists then res.Add rangeNode
                     res
             let node = NonTerminalNode(nonTerminalStartState, range, rangeNodes)
@@ -212,18 +212,18 @@ type MatchedRanges () =
             then
                 if not(enableErrorRecovering && node.Distance > rangeNode.Distance) then
                     rangeNode.IntermediateNodes.Add node |> ignore
-                    node.Parents.Add rangeNode |> ignore
+                    node.Parents.Add rangeNode
 
                     if node.Distance < rangeNode.Distance
                     then
                         let removed = rangeNode.IntermediateNodes.RemoveWhere (fun x -> x.Distance > node.Distance)
-                        if removed = 0 then printfn $"%A{node.Distance} < %A{rangeNode.Distance}"
+                        //if removed = 0 then printfn $"%A{node.Distance} < %A{rangeNode.Distance}"
                         assert (removed > 0)
                         MatchedRanges.updateDistances rangeNode
                 rangeNode
             else
                 let rangeNode = RangeNode(matchedRange, HashSet<_> [|node|])
-                node.Parents.Add rangeNode |> ignore
+                node.Parents.Add rangeNode                                                   
                 rangeNodes.Add(matchedRange, rangeNode)
                 rangeNode
         node
@@ -241,8 +241,8 @@ type MatchedRanges () =
                         , rightSubRange.Node.Value
                     )
                 let n = NonRangeNode.IntermediateNode node
-                leftSubRange.Node.Value.Parents.Add n |> ignore
-                rightSubRange.Node.Value.Parents.Add n |> ignore
+                leftSubRange.Node.Value.Parents.Add n
+                rightSubRange.Node.Value.Parents.Add n
                 node :> IIntermediateNode
             let intermediateNode =
                 let exists, rightPart = intermediateNodes.TryGetValue leftSubRange.Range

@@ -45,6 +45,7 @@ and IRsmBox =
     abstract FinalStates: HashSet<IRsmState>
 
 and ILinearInputGraphVertex =
+    abstract Id : int
     abstract OutgoingEdge: int<terminalSymbol> * TerminalEdgeTarget
     abstract Descriptors: HashSet<Descriptor>
     abstract TerminalNodes: Dictionary<ILinearInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>
@@ -79,22 +80,22 @@ and [<Struct>] MatchedRangeWithNode =
 
 and ITerminalNode =
     abstract Distance: int<distance> with get, set
-    abstract Parents: HashSet<IRangeNode>
+    abstract Parents: ResizeArray<IRangeNode>
 and IEpsilonNode =
-    abstract Parents: HashSet<IRangeNode>
+    abstract Parents: ResizeArray<IRangeNode>
 and INonTerminalNode =
     abstract Distance: int<distance> with get, set
-    abstract Parents: HashSet<IRangeNode>
+    abstract Parents: ResizeArray<IRangeNode>
     abstract RangeNodes: ResizeArray<IRangeNode>
     abstract LeftPosition : ILinearInputGraphVertex
     abstract RightPosition : ILinearInputGraphVertex
     abstract NonTerminalStartState : IRsmState
 and IIntermediateNode =
     abstract Distance: int<distance> with get, set
-    abstract Parents: HashSet<IRangeNode>
+    abstract Parents: ResizeArray<IRangeNode>
 and IRangeNode =
     abstract Distance: int<distance> with get, set
-    abstract Parents: HashSet<INonRangeNode>
+    abstract Parents: ResizeArray<INonRangeNode>
     abstract IntermediateNodes: HashSet<INonRangeNode>
 and IGssEdge =
     abstract RsmState: IRsmState
@@ -110,5 +111,5 @@ and IGssVertex =
 
 and INonRangeNode =
     abstract Distance: int<distance>
-    abstract Parents: HashSet<IRangeNode>
+    abstract Parents: ResizeArray<IRangeNode>
 

@@ -93,7 +93,7 @@ type InputGraph (edges, enableErrorRecovering) =
                 if exists
                 then vertex
                 else
-                    let vertex = LinearInputGraphVertexBase()
+                    let vertex = LinearInputGraphVertexBase(int vertexId)
                     firstFreeVertexId <- firstFreeVertexId + 1
                     verticesMapping.Add(vertexId, vertex)
                     vertex

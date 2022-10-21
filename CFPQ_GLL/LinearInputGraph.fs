@@ -5,20 +5,24 @@ open CFPQ_GLL.Common
 
 [<Measure>] type inputGraphVertex
 
-type LinearInputGraphVertexBase () =
+type LinearInputGraphVertexBase (id:int32) =
+    let id = id
     let mutable outgoingEdge = None
     let descriptors = HashSet<Descriptor>()
     let terminalNodes = Dictionary<ILinearInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>()
     let nonTerminalNodes = Dictionary<ILinearInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()
     let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
+        //Dictionary<MatchedRange, IRangeNode>()
     let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>()
-
+    override this.GetHashCode() = id
+    
     member this.AddOutgoingEdge (terminal, target) =
         match outgoingEdge with
         | None -> outgoingEdge <- Some (terminal, target)
         | Some x -> failwithf $"Edge exists: %A{x}"
 
     interface ILinearInputGraphVertex with
+        member this.Id = id
         member this.OutgoingEdge =
             match outgoingEdge with
             | Some v -> v
