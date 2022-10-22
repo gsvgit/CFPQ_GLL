@@ -28,24 +28,24 @@ let calculatorRSM () =
     // Program -> Statement ';' | Statement ';' Program
 
     let startNum, startVar, startExpr, startTerm, startFactor, startPower, startStatement, startProgram =
-        RsmState(true, false) :> IRsmState,
-        RsmState(true, false) :> IRsmState,
-        RsmState(true, false) :> IRsmState,
-        RsmState(true, false) :> IRsmState,
-        RsmState(true, false)  :> IRsmState,
-        RsmState(true, false) :> IRsmState,
-        RsmState(true, false) :> IRsmState,
-        RsmState(true, false)  :> IRsmState
+        RsmState(true, false), //:> IRsmState,
+        RsmState(true, false), //:> IRsmState,
+        RsmState(true, false), //:> IRsmState,
+        RsmState(true, false), //:> IRsmState,
+        RsmState(true, false),  //:> IRsmState,
+        RsmState(true, false), //:> IRsmState,
+        RsmState(true, false), //:> IRsmState,
+        RsmState(true, false) //:> IRsmState
     let finishNum1, finishNum2, finishVar, finishExpr, finishTerm, finishFactor, finishPower, finishStatement, finishProgram =
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState,
-        RsmState(false, true) :> IRsmState
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true),// :> IRsmState,
+        RsmState(false, true)// :> IRsmState
 
     let numBox =
         let box = RSMBox()
@@ -72,8 +72,8 @@ let calculatorRSM () =
 
     let factorBox =
         let box = RSMBox()
-        let waitExprAfterOpeningBracket = RsmState(false, false) :> IRsmState
-        let waitClosingBracketAfterExpr = RsmState(false, false) :> IRsmState
+        let waitExprAfterOpeningBracket = RsmState(false, false) //:> IRsmState
+        let waitClosingBracketAfterExpr = RsmState(false, false) //:> IRsmState
         box.AddState startFactor
         box.AddState finishFactor
         box.AddState waitExprAfterOpeningBracket
@@ -90,8 +90,8 @@ let calculatorRSM () =
 
     let powerBox =
         let box = RSMBox()
-        let waitPowerSymbolAfterFactor = RsmState(false, true) :> IRsmState
-        let waitPower = RsmState(false, false) :> IRsmState
+        let waitPowerSymbolAfterFactor = RsmState(false, true) //:> IRsmState
+        let waitPower = RsmState(false, false)// :> IRsmState
 
         box.AddState startPower
         box.AddState finishPower
@@ -106,8 +106,8 @@ let calculatorRSM () =
 
     let termBox =
         let box = RSMBox()
-        let waitMultSymbol = RsmState(false, false) :> IRsmState
-        let waitPower = RsmState(false, false) :> IRsmState
+        let waitMultSymbol = RsmState(false, false) //:> IRsmState
+        let waitPower = RsmState(false, false) //:> IRsmState
 
         box.AddState startTerm
         box.AddState finishTerm
@@ -122,9 +122,9 @@ let calculatorRSM () =
 
     let exprBox =
         let box = RSMBox()
-        let waitExpr = RsmState(false, false) :> IRsmState
-        let waitPlusOrMinusAfterExpr = RsmState(false, false) :> IRsmState
-        let waitTermAfterOperation = RsmState(false, false) :> IRsmState
+        let waitExpr = RsmState(false, false) //:> IRsmState
+        let waitPlusOrMinusAfterExpr = RsmState(false, false) //:> IRsmState
+        let waitTermAfterOperation = RsmState(false, false) //:> IRsmState
         box.AddState startExpr
         box.AddState finishExpr
         box.AddState waitExpr
@@ -142,8 +142,8 @@ let calculatorRSM () =
 
     let statementBox =
         let box = RSMBox()
-        let waitEqAfterVar = RsmState(false, false) :> IRsmState
-        let waitExprAfterEq = RsmState(false, false) :> IRsmState
+        let waitEqAfterVar = RsmState(false, false) //:> IRsmState
+        let waitExprAfterEq = RsmState(false, false) //:> IRsmState
         box.AddState startStatement
         box.AddState finishStatement
         box.AddState waitEqAfterVar
@@ -157,7 +157,7 @@ let calculatorRSM () =
 
     let programBox =
         let box = RSMBox()
-        let waitDotComma = RsmState(false, false) :> IRsmState
+        let waitDotComma = RsmState(false, false)// :> IRsmState
         box.AddState startProgram
         box.AddState finishProgram
         box.AddState waitDotComma

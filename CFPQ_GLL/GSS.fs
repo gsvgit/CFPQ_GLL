@@ -2,13 +2,13 @@ module CFPQ_GLL.GSS
 open System.Collections.Generic
 open CFPQ_GLL.Common
 
-type GSSEdge (gssVertex: IGssVertex, rsmState: IRsmState, matchedRange: MatchedRangeWithNode) =
+type GSSEdge (gssVertex: IGssVertex, rsmState: RsmState, matchedRange: MatchedRangeWithNode) =
     interface IGssEdge with
         member this.GssVertex = gssVertex
         member this.RsmState = rsmState
         member this.MatchedRange = matchedRange
 
-and GssVertex (inputPosition: ILinearInputGraphVertex, rsmState: IRsmState) =
+and GssVertex (inputPosition: LinearInputGraphVertexBase, rsmState: RsmState) =
     let outgoingEdges = ResizeArray<IGssEdge>()
     let popped = ResizeArray<MatchedRangeWithNode>()
     let handledDescriptors = HashSet<Descriptor>()
@@ -21,13 +21,13 @@ and GssVertex (inputPosition: ILinearInputGraphVertex, rsmState: IRsmState) =
 
 [<Struct>]
 type GssVertexId =
-    val InputPosition: ILinearInputGraphVertex
-    val RsmState: IRsmState
+    val InputPosition: LinearInputGraphVertexBase
+    val RsmState: RsmState
     new(inputPosition, rsmState) = {InputPosition = inputPosition; RsmState = rsmState}
 
 type GSS () =
     let vertices = Dictionary<GssVertexId, GssVertex>()
-    member this.AddNewVertex (inputPosition: ILinearInputGraphVertex, rsmState:IRsmState) =
+    member this.AddNewVertex (inputPosition: LinearInputGraphVertexBase, rsmState:RsmState) =
         let gssVertexId = GssVertexId(inputPosition, rsmState)
         let exists, gssVertex = vertices.TryGetValue gssVertexId
         if exists
@@ -38,9 +38,9 @@ type GSS () =
             gssVertex
 
     member this.AddEdge (currentGSSVertex: IGssVertex
-                         , rsmStateToReturn: IRsmState
-                         , inputPositionToContinue: ILinearInputGraphVertex
-                         , rsmStateToContinue: IRsmState
+                         , rsmStateToReturn: RsmState
+                         , inputPositionToContinue: LinearInputGraphVertexBase
+                         , rsmStateToContinue: RsmState
                          , matchedRange: MatchedRangeWithNode) =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue) :> IGssVertex
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
@@ -63,6 +63,6 @@ type GSS () =
 
     member this.AddDescriptorToHandled (descriptor:Descriptor) =
         descriptor.InputPosition.Descriptors.Add descriptor
-        descriptor.RsmState.Descriptors.Add descriptor
+        //descriptor.RsmState.Descriptors.Add descriptor
         descriptor.GssVertex.HandledDescriptors.Add descriptor
         |> ignore

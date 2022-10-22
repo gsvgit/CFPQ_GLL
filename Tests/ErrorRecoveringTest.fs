@@ -114,9 +114,9 @@ let ``Error recovering tests`` =
 
         let abRSM () =
             // S -> ab
-            let startState = RsmState(true, false) :> IRsmState
-            let state = RsmState(false, false) :> IRsmState
-            let finalState = RsmState(false, true) :> IRsmState
+            let startState = RsmState(true, false) //:> IRsmState
+            let state = RsmState(false, false) //:> IRsmState
+            let finalState = RsmState(false, true) //:> IRsmState
             let box = RSMBox()
             box.AddState startState
             box.AddState state
@@ -227,9 +227,9 @@ let ``Error recovering tests`` =
 
         let CAStarBStarRSM () =
             // S -> ca*b*
-            let startState = RsmState(true, false) :> IRsmState
-            let aState = RsmState(false, true) :> IRsmState
-            let bState = RsmState(false, true) :> IRsmState
+            let startState = RsmState(true, false)// :> IRsmState
+            let aState = RsmState(false, true) //:> IRsmState
+            let bState = RsmState(false, true)// :> IRsmState
             let box = RSMBox()
             box.AddState startState
             box.AddState aState

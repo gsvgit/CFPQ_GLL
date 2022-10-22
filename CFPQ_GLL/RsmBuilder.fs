@@ -73,7 +73,7 @@ let buildRSMBox getTerminalFromString regexp =
     let thisEdgesMustBeAddedLater = ResizeArray()
     let box = RSMBox()
     let alphabet = HashSet (getAllSymbols regexp)
-    let stateToRsmState = Dictionary<_,IRsmState>()    
+    let stateToRsmState = Dictionary<_,RsmState>()    
     let getRsmState state isStart isFinal =
         if stateToRsmState.ContainsKey state
         then stateToRsmState[state]

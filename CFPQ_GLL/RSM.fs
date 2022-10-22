@@ -34,14 +34,15 @@ type RSMTerminalEdge =
 
 [<Struct>]
 type RSMNonTerminalEdge =
-    val State : IRsmState
-    val NonTerminalSymbolStartState : IRsmState
+    val State : RsmState
+    val NonTerminalSymbolStartState : RsmState
     new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}
 
 type TerminalEdgesStorage =
     | Small of array<RSMTerminalEdge>
     | Big of Dictionary<int<terminalSymbol>,ResizeArray<int<rsmState>>>
 
+(*
 type RsmState (isStart: bool, isFinal: bool) =
     let errorRecoveryLabels = HashSet()
     let coveredTargetStates = HashSet()
@@ -86,7 +87,7 @@ type RsmState (isStart: bool, isFinal: bool) =
                     | None -> failwith "Rsm state without rsm box."
                     | Some b -> b
             and set v = rsmBox <- Some v
-
+*)
 [<Struct>]
 type RSMVertexMutableContent =
     val OutgoingTerminalEdges : ResizeArray<RSMTerminalEdge>
@@ -99,8 +100,8 @@ type RSMVertexMutableContent =
 
 type RSMBox() =
     let mutable startState = None
-    let finalStates = HashSet<IRsmState>()
-    member this.AddState (state:IRsmState) =
+    let finalStates = HashSet<RsmState>()
+    member this.AddState (state:RsmState) =
         state.Box <- this
         if state.IsFinal
         then
@@ -120,12 +121,12 @@ type RSMBox() =
 type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM = RsmState() :> IRsmState
+    let startStateOfExtendedRSM = RsmState() //:> IRsmState
 
     let extensionBox =
         let originalStartState = startBox.StartState
-        let finalState = RsmState() :> IRsmState
-        let intermediateState = RsmState() :> IRsmState
+        let finalState = RsmState() //:> IRsmState
+        let intermediateState = RsmState() //:> IRsmState
         startStateOfExtendedRSM.OutgoingNonTerminalEdges.Add(originalStartState, HashSet[|intermediateState|])
         intermediateState.OutgoingTerminalEdges.Add(EOF, HashSet[|finalState|])
         let box = RSMBox()
@@ -142,7 +143,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
         let vertexId =
             let mutable firstFreeVertexId = 0
             let visitedVertices = Dictionary<_,_>()
-            fun (v:IRsmState) ->
+            fun (v:RsmState) ->
                 let exists, id = visitedVertices.TryGetValue v
                 if exists
                 then id
@@ -152,7 +153,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                     visitedVertices.Add (v,id)
                     id
 
-        let rec toDot (v: IRsmState) =
+        let rec toDot (v: RsmState) =
             let id = vertexId v
             if not <| visited.Contains v
             then

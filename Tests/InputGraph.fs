@@ -86,7 +86,7 @@ type InputGraph (edges, enableErrorRecovering) =
     member this.ToCfpqCoreGraph (startVertex: int<inputGraphVertex>) =
         this.ToDot (0,"coreGraph.dot")
         let mutable firstFreeVertexId = 0
-        let verticesMapping = Dictionary<int<inputGraphVertex>, ILinearInputGraphVertex>()
+        let verticesMapping = Dictionary<int<inputGraphVertex>, LinearInputGraphVertexBase>()
         let getVertex vertexId =
             let exists, vertex = verticesMapping.TryGetValue vertexId
             let res =

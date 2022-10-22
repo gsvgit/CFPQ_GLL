@@ -5,12 +5,13 @@ open CFPQ_GLL.Common
 
 [<Measure>] type inputGraphVertex
 
+(*
 type LinearInputGraphVertexBase (id:int32) =
     let id = id
     let mutable outgoingEdge = None
     let descriptors = HashSet<Descriptor>()
     let terminalNodes = Dictionary<ILinearInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>()
-    let nonTerminalNodes = Dictionary<ILinearInputGraphVertex, Dictionary<IRsmState, INonTerminalNode>>()
+    let nonTerminalNodes = Dictionary<ILinearInputGraphVertex, Dictionary<RsmState, INonTerminalNode>>()
     let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
         //Dictionary<MatchedRange, IRangeNode>()
     let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>()
@@ -32,6 +33,6 @@ type LinearInputGraphVertexBase (id:int32) =
         member this.NonTerminalNodesStartedHere = nonTerminalNodes
         member this.RangeNodes = rangeNodes
         member this.IntermediateNodes = intermediateNodes
-
+*)
 let EOF:int<terminalSymbol> = System.Int32.MaxValue - 1 |> LanguagePrimitives.Int32WithMeasure
 let Epsilon:int<terminalSymbol> = -1<terminalSymbol>

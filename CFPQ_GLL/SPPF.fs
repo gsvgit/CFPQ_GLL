@@ -10,7 +10,7 @@ open FSharpx.Collections
 
 type Distance = Unreachable | Reachable of int
 
-type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<ILinearInputGraphVertex>, distance) =
+type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<LinearInputGraphVertexBase>, distance) =
     let parents = ResizeArray<IRangeNode>()
     let mutable distance = distance
     member this.Terminal = terminal
@@ -23,7 +23,7 @@ type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<ILinearInput
             with get () = distance
             and set v = distance <- v
 
-and EpsilonNode (position:ILinearInputGraphVertex, nonTerminalStartState:IRsmState) =
+and EpsilonNode (position:LinearInputGraphVertexBase, nonTerminalStartState:RsmState) =
     let parents = ResizeArray<IRangeNode>()
     member this.Position = position
     member this.NonTerminalStartState = nonTerminalStartState
@@ -31,8 +31,8 @@ and EpsilonNode (position:ILinearInputGraphVertex, nonTerminalStartState:IRsmSta
     interface IEpsilonNode with
         member this.Parents = parents
 
-and IntermediateNode (rsmState:IRsmState
-                       , inputPosition:ILinearInputGraphVertex
+and IntermediateNode (rsmState:RsmState
+                       , inputPosition:LinearInputGraphVertexBase
                        , leftSubtree: IRangeNode
                        , rightSubtree: IRangeNode) =
     let parents = ResizeArray<IRangeNode>()
@@ -63,7 +63,7 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
         member this.Parents = parents
         member this.IntermediateNodes = intermediateNodes
 
-and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<ILinearInputGraphVertex>, rangeNodes:ResizeArray<IRangeNode>) =
+and NonTerminalNode (nonTerminalStartState: RsmState, graphRange: Range<LinearInputGraphVertexBase>, rangeNodes:ResizeArray<IRangeNode>) =
     let parents = ResizeArray<IRangeNode>()
     let mutable distance =
         let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
@@ -150,7 +150,7 @@ type MatchedRanges () =
 
         handleRangeNode rangeNode
 
-    member internal this.AddTerminalNode (range:Range<ILinearInputGraphVertex>, terminal, distance) =
+    member internal this.AddTerminalNode (range:Range<LinearInputGraphVertexBase>, terminal, distance) =
         //printfn $"Trem = %A{terminal}, distance = %A{distance}"
         let terminalNodes = range.EndPosition.TerminalNodes
         let exists, nodes = terminalNodes.TryGetValue range.StartPosition
@@ -170,7 +170,7 @@ type MatchedRanges () =
             terminalNodes.Add(range.StartPosition, d)
             newTerminalNode
 
-    member internal this.AddNonTerminalNode (range:Range<ILinearInputGraphVertex>, nonTerminalStartState:IRsmState) =
+    member internal this.AddNonTerminalNode (range:Range<LinearInputGraphVertexBase>, nonTerminalStartState:RsmState) =
         let rangeNodes = range.EndPosition.RangeNodes
         let nonTerminalNodes = range.StartPosition.NonTerminalNodesStartedHere
         let exists, nodes = nonTerminalNodes.TryGetValue range.EndPosition
@@ -178,7 +178,7 @@ type MatchedRanges () =
             let rangeNodes =
                     let res = ResizeArray()
                     for final in nonTerminalStartState.Box.FinalStates do
-                        let matchedRange = MatchedRange (range, Range<IRsmState>(nonTerminalStartState, final))
+                        let matchedRange = MatchedRange (range, Range<RsmState>(nonTerminalStartState, final))
                         let exists, rangeNode = rangeNodes.TryGetValue matchedRange                            
                         if exists then res.Add rangeNode
                     res
@@ -326,8 +326,8 @@ type TriplesStoredSPPFNode =
     | IntermediateNode of int<inputGraphVertex> * int<rsmState>
     | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmState> * int<rsmState>
 
-type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<ILinearInputGraphVertex,int<inputGraphVertex>>) =
-    let rsmStatesMap = Dictionary<IRsmState,int<rsmState>>()
+type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<LinearInputGraphVertexBase,int<inputGraphVertex>>) =
+    let rsmStatesMap = Dictionary<RsmState,int<rsmState>>()
     let mutable firstFreeRsmStateId = 0<rsmState>
     let getStateId state =
         let exists,stateId = rsmStatesMap.TryGetValue state

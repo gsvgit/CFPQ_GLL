@@ -15,15 +15,15 @@ type Mode =
 
 [<RequireQualifiedAccess>]
 type QueryResult =
-    | ReachabilityFacts of Dictionary<ILinearInputGraphVertex,HashSet<ILinearInputGraphVertex>>
+    | ReachabilityFacts of Dictionary<LinearInputGraphVertexBase,HashSet<LinearInputGraphVertexBase>>
     | MatchedRanges of MatchedRanges
 
 let private run
         (gss:GSS)
         (matchedRanges:MatchedRanges)
         (descriptorsToProcess: IDescriptorsStack)
-        (startVertex:ILinearInputGraphVertex)
-        (finalVertex:ILinearInputGraphVertex)
+        (startVertex:LinearInputGraphVertexBase)
+        (finalVertex:LinearInputGraphVertexBase)
         (query:RSM) mode =
 
     let buildSppf =
@@ -41,10 +41,10 @@ let private run
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<IRsmState>
-                  , Unchecked.defaultof<IRsmState>
+                    Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<RsmState>
+                  , Unchecked.defaultof<RsmState>
                )
 
     let dummyRangeNode = Unchecked.defaultof<RangeNode>
@@ -159,7 +159,7 @@ let private run
 
                    Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight) |> addDescriptor)
 
-        let inline handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: IRsmState) =
+        let inline handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: RsmState) =
 
             let graphTargetVertex = graphEdgeTarget.TargetVertex
 
@@ -234,17 +234,17 @@ let evalFromState
         (descriptorToProcess:IDescriptorsStack)
         (gss:GSS)
         (matchedRanges:MatchedRanges)
-        (startVertex:ILinearInputGraphVertex)
-        (finalVertex:ILinearInputGraphVertex)
+        (startVertex:LinearInputGraphVertexBase)
+        (finalVertex:LinearInputGraphVertexBase)
         (query:RSM) mode =
 
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<IRsmState>
-                  , Unchecked.defaultof<IRsmState>
+                    Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<RsmState>
+                  , Unchecked.defaultof<RsmState>
                )
     let gssVertex = gss.AddNewVertex(startVertex, query.StartState)
     Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<distance>)

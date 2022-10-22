@@ -10,7 +10,7 @@ open CFPQ_GLL.SPPF
 open Expecto
 open Tests.InputGraph
 
-let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
+let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, RsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
 
     let getState stateId =
         let exists, state = statesMapping.TryGetValue stateId
@@ -33,7 +33,7 @@ let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, IRsmState>,
             startState.AddTerminalEdge(_term, finalState)
     statesMapping
 
-let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
+let makeRsmBox (statesMapping: Dictionary<int<rsmState>, RsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
     let box = RSMBox()
     let statesMapping = fillRsmBox (box, statesMapping, startSate, finalStates, edges)
     box, statesMapping
@@ -54,8 +54,8 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
 let private runGLLAndCheckResultForManuallyCreatedGraph
     evalFunction
     (testName:string)
-    (startVertex: ILinearInputGraphVertex)
-    (finalVertex: ILinearInputGraphVertex)
+    (startVertex: LinearInputGraphVertexBase)
+    (finalVertex: LinearInputGraphVertexBase)
     (q:RSM)
     (expectedNodes, expectedEdges, expectedDistances) =
 
