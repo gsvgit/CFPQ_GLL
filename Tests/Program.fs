@@ -25,9 +25,11 @@ let main argv =
 //            Tests.ErrorRecoveringTest.``Error recovering tests``
 //        ] |> testSequenced
 //    Tests.runTestsWithCLIArgs [] [||] tests
-
-
-    //Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Form V#``])
+//
+//    let rsm, _ = RSMCalculator.calculatorRSM()
+//    rsm.ToDot "rsm.dot"
+//    0
+//    Tests.runTestsWithCLIArgs [] [||] (testList "debug tests" [Tests.GLLTests.``Form V#``])
     let re1 = t "a" ++ many (t "b")
     let re2 = many (t "a" ++ many (t "b"))
     let re3 = many (t "a" ++ t "b")
@@ -141,7 +143,7 @@ let main argv =
          y"
 
     let str = "
-    lt rec y x =
+    let rec y x =
         if x > 1
         then x + 2
         else y (x - 1)
@@ -171,8 +173,7 @@ let main argv =
         then x + 2
         else (x - 1)
     in
-    let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
-let rec y x=if x>1 then x+2 else y (x-1) in lt z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
+let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
@@ -201,7 +202,8 @@ let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) i
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
 let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
-y z 2)"
+let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in lt rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in let rec y x=if x>1 then x+2 else y (x-1) in let z x=if x<1 then x+2 else (x-1) in
+y z 2"
 
     let g = mkLinearGraph id terminalMapping str
 

@@ -71,15 +71,15 @@ type RsmState (isStart: bool, isFinal: bool) =
             if exists
             then
                 targetStates.Add targetState |> ignore
-            else 
+            else
                 (this:>IRsmState).OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
         member this.AddNonTerminalEdge (nonTerminal, targetState) =
             let exists,targetStates = (this:>IRsmState).OutgoingNonTerminalEdges.TryGetValue nonTerminal
             if exists
             then
                 targetStates.Add targetState |> ignore
-            else 
-                (this:>IRsmState).OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])    
+            else
+                (this:>IRsmState).OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])
         member this.Box
             with get () =
                     match rsmBox with
@@ -120,13 +120,14 @@ type RSMBox() =
 type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let finalStates = HashSet<_>()
     let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM = RsmState() :> IRsmState
+    let startStateOfExtendedRSM = RsmState(true,false) :> IRsmState
 
-    let extensionBox =
+    do
         let originalStartState = startBox.StartState
-        let finalState = RsmState() :> IRsmState
+        let finalState = RsmState(false,true) :> IRsmState
         let intermediateState = RsmState() :> IRsmState
-        startStateOfExtendedRSM.OutgoingNonTerminalEdges.Add(originalStartState, HashSet[|intermediateState|])
+        startStateOfExtendedRSM.AddNonTerminalEdge(originalStartState, intermediateState)
+        // We doesn't use AddTerminalEdge because we don't want to add EOF to ErrorRecoveryLabels
         intermediateState.OutgoingTerminalEdges.Add(EOF, HashSet[|finalState|])
         let box = RSMBox()
         box.AddState startStateOfExtendedRSM

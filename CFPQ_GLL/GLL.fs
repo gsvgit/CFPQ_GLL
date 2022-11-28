@@ -105,9 +105,9 @@ let private run
                                 then
                                     let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
                                     findCorrect <- findCorrect ||
-                                                   (startVertex = currentDescriptor.GssVertex.InputPosition)
-                                                   && (finalVertex = currentDescriptor.InputPosition)
-                                                   && (query.OriginalStartState = currentDescriptor.GssVertex.RsmState)
+                                                   (startVertex = currentlyCreatedNode.LeftPosition) // currentDescriptor.GssVertex.InputPosition)
+                                                   && (finalVertex = currentlyCreatedNode.RightPosition) //currentDescriptor.InputPosition)
+                                                   && (query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState) // currentDescriptor.GssVertex.RsmState)
 
                                     matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode, true)
                                 else dummyRangeNode
@@ -160,7 +160,7 @@ let private run
                    Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight) |> addDescriptor)
 
         let inline handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: IRsmState) =
-
+            //printfn $"{terminalSymbol} {graphEdgeTarget.Weight}"
             let graphTargetVertex = graphEdgeTarget.TargetVertex
 
             let newMatchedRange =
@@ -188,7 +188,8 @@ let private run
         let handleTerminalEdge terminalSymbol graphTargetVertex rsmTargetVertex =
             handleTerminalOrEpsilonEdge terminalSymbol graphTargetVertex rsmTargetVertex
 
-        let handleEpsilonEdge targetVertex = handleTerminalOrEpsilonEdge Epsilon targetVertex currentDescriptor.RsmState
+        let handleEpsilonEdge targetVertex =
+            handleTerminalOrEpsilonEdge Epsilon targetVertex currentDescriptor.RsmState
 
         let handleEdge terminalSymbol targetVertex =
             let exists, targetStates = outgoingTerminalEdgesInRSM.TryGetValue terminalSymbol
@@ -198,7 +199,7 @@ let private run
                     handleTerminalEdge terminalSymbol targetVertex state
 
         let errorRecoveryEdges =
-            let errorRecoveryEdges = Dictionary()
+            let errorRecoveryEdges = Dictionary() // TODO: list
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
                 errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<distance>))
 
@@ -218,8 +219,7 @@ let private run
 
     let mutable cnt = 0
     while
-        (true && ( (findCorrect && descriptorsToProcess.IsEmpty) |> not)) ||
-        ((not true) && (descriptorsToProcess.IsEmpty |> not)) do
+        not (findCorrect && descriptorsToProcess.IsEmpty) do
         let descriptor = descriptorsToProcess.Pop()
         cnt <- cnt + 1
         descriptor |> handleDescriptor

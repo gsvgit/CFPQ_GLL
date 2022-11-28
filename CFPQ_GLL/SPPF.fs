@@ -67,7 +67,6 @@ and NonTerminalNode (nonTerminalStartState: IRsmState, graphRange: Range<ILinear
     let parents = HashSet<IRangeNode>()
     let mutable distance =
         let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
-        //printfn $"nonterm weight = %A{res}"
         if res = Int32.MaxValue * 1<distance>
         then printfn "!!!"
         assert (res < Int32.MaxValue * 1<distance>)
@@ -151,14 +150,18 @@ type MatchedRanges () =
         handleRangeNode rangeNode
 
     member internal this.AddTerminalNode (range:Range<ILinearInputGraphVertex>, terminal, distance) =
-        //printfn $"Trem = %A{terminal}, distance = %A{distance}"
         let terminalNodes = range.EndPosition.TerminalNodes
         let exists, nodes = terminalNodes.TryGetValue range.StartPosition
         if exists
         then
             let exists, terminalNode = nodes.TryGetValue terminal
             if exists
-            then terminalNode
+            then
+                if terminalNode.Distance > distance
+                then
+                    terminalNode.Distance <- distance
+                    terminalNode.Parents |> Seq.iter MatchedRanges.updateDistances
+                terminalNode
             else
                 let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
                 nodes.Add(terminal, newTerminalNode)
@@ -175,13 +178,19 @@ type MatchedRanges () =
         let nonTerminalNodes = range.StartPosition.NonTerminalNodesStartedHere
         let exists, nodes = nonTerminalNodes.TryGetValue range.EndPosition
         let mkNewNonTerminal () =
-            let rangeNodes =
+            let rangeNodes = // TODO: check
                     let res = ResizeArray()
+                    let mutable curMinDistance = Int32.MaxValue * 1<distance>
                     for final in nonTerminalStartState.Box.FinalStates do
                         let matchedRange = MatchedRange (range, Range<IRsmState>(nonTerminalStartState, final))
                         let exists, rangeNode = rangeNodes.TryGetValue matchedRange
-                        if exists then res.Add rangeNode
-                    res
+                        if exists
+                        then
+                            res.Add rangeNode
+                            if rangeNode.Distance < curMinDistance
+                            then curMinDistance <- rangeNode.Distance
+                    res |> ResizeArray.filter (fun n -> n.Distance = curMinDistance)
+
             let node = NonTerminalNode(nonTerminalStartState, range, rangeNodes)
             rangeNodes |> ResizeArray.iter (fun n -> n.Parents.Add (NonRangeNode.NonTerminalNode node) |> ignore)
             nonTerminalStartState.NonTerminalNodes.Add node
@@ -205,12 +214,12 @@ type MatchedRanges () =
 
     member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode, enableErrorRecovering:bool) =
         let rangeNodes = matchedRange.InputRange.EndPosition.RangeNodes
-
+        //printfn $"Weight: %d{node.Distance}"
         let exists, rangeNode = rangeNodes.TryGetValue matchedRange
         let node =
             if exists
             then
-                if not(enableErrorRecovering && node.Distance > rangeNode.Distance) then
+                if node.Distance <= rangeNode.Distance then
                     rangeNode.IntermediateNodes.Add node |> ignore
                     node.Parents.Add rangeNode |> ignore
 
