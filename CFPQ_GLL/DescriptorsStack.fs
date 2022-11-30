@@ -31,7 +31,7 @@ type ErrorRecoveringDescriptorsStack () =
 
     interface IDescriptorsStack with
         member this.Push descriptor =
-            let pathWeight = descriptor.Weight                
+            let pathWeight = descriptor.Weight
             if pathWeight = 0<distance> then defaultDescriptorsStack.Push descriptor
             else
                 if errorRecoveringDescriptorsStacks.ContainsKey(pathWeight) |> not then
@@ -45,7 +45,6 @@ type ErrorRecoveringDescriptorsStack () =
                 let moved = enumerator.MoveNext()
                 assert moved
                 let currentMin = enumerator.Current
-                //printfn $"min = %A{currentMin}"
                 let result = errorRecoveringDescriptorsStacks[currentMin].Pop ()
                 if errorRecoveringDescriptorsStacks[currentMin].Count = 0 then
                     errorRecoveringDescriptorsStacks.Remove currentMin |> ignore

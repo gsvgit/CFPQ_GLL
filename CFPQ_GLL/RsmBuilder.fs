@@ -9,15 +9,12 @@ type Symbol = Terminal of string | NonTerminal of string
 type Regexp =
     | Symbol of Symbol
     | Alternative of Regexp * Regexp
-    //| Option of Regexp
     | Sequence of Regexp * Regexp
     | Many of Regexp
     | Empty
     | Epsilon
 
-type Rule = Rule of string * Regexp
 
-type Grammar = Grammar of string * List<Rule>
 
 let rec derive regexp symbol =
     let mkAlternative l r =
@@ -47,7 +44,6 @@ let rec derive regexp symbol =
         | x, true -> mkAlternative (Sequence (x,tl)) (derive tl symbol)
 
     | Alternative (left,right) -> mkAlternative (derive left symbol)  (derive right symbol)
-    //| Option regexp -> derive regexp symbol
     | Many regexp ->
         let newRegexp = derive regexp symbol
         match newRegexp with
@@ -57,7 +53,7 @@ let rec derive regexp symbol =
 
 and nullable regexp =
     match regexp with
-    | Epsilon (*| Option _ *)| Many _ -> true
+    | Epsilon | Many _ -> true
     | Empty | Symbol _ -> false
     | Alternative (left, right) -> nullable left || nullable right
     | Sequence (left, right) -> nullable left && nullable right
@@ -104,23 +100,54 @@ let buildRSMBox getTerminalFromString regexp =
 
     box, thisEdgesMustBeAddedLater
 
+type RegexpWithLayoutConfig =
+    | NoLayout of Regexp
+    | Symbol of Symbol
+    | Alternative of RegexpWithLayoutConfig * RegexpWithLayoutConfig
+    | Sequence of RegexpWithLayoutConfig * RegexpWithLayoutConfig
+    | Many of RegexpWithLayoutConfig
+    | Empty
+    | Epsilon
+
+type Rule = Rule of string * RegexpWithLayoutConfig
+
+type Grammar = Grammar of string * List<Rule>
 
 let t s = Symbol (Terminal s)
 let nt s = Symbol (NonTerminal s)
-let ( *|* ) x y = Alternative (x,y)
+let ( +|+ ) x y = Alternative (x,y)
 let many x = Many x
 let some x = Sequence (x, many x)
-let (++) x y = Sequence (x,y)
+let ( ** ) x y = Sequence (x,y)
 let opt x = Alternative(x, Epsilon)
-let literal (x:string) = x.ToCharArray() |> Array.map (string >> t) |> Array.reduce (++)
+let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (string >> Terminal >> Regexp.Symbol) |> Array.reduce (fun x y -> Regexp.Sequence (x,y)))
+let protect x = NoLayout x
 let (=>) lhs rhs =
     match lhs with
     | Symbol(NonTerminal s) -> Rule(s, rhs)
     | x -> failwithf $"Left hand side of production should be nonterminal, but %A{x} used."
 
-let nonemptyList elem sep = elem ++ many (sep ++ elem)
+let nonemptyList elem sep = elem ** many (sep ** elem)
+let list elem sep = Alternative (nonemptyList elem sep, Epsilon)
 
-let build rules =
+let addLayout regexp layoutSymbols =
+    let layoutRegexp = layoutSymbols |> List.map (Terminal >> Regexp.Symbol) |> List.reduce (fun x y -> Regexp.Alternative(x, y)) |> Regexp.Many
+    let rec addLayout regexp =
+        match regexp with
+        | NoLayout x -> x
+        | Symbol x -> Regexp.Symbol x
+        | Alternative (left,right) -> Regexp.Alternative (addLayout left, addLayout right)
+        | Sequence (left,right) -> Regexp.Sequence (addLayout left, Regexp.Sequence(layoutRegexp, addLayout right))
+        | Many x ->
+            let x = addLayout x
+            Regexp.Alternative (Regexp.Epsilon, Regexp.Sequence (x, Regexp.Many x))
+        | Empty -> Regexp.Empty
+        | Epsilon -> Regexp.Epsilon
+    addLayout regexp
+
+
+let build layoutSymbols rules =
+
     let nonTerminalToStartState = Dictionary<_,_>()
     let addEdges = ResizeArray()
     let terminalMapping = Dictionary()
@@ -140,7 +167,8 @@ let build rules =
         |> Seq.map ( fun rule ->
             match rule with
             | Rule (ntName,ntRegex) ->
-                let box, _addEdges = buildRSMBox getTerminalFromString ntRegex
+                let regexp = addLayout ntRegex layoutSymbols
+                let box, _addEdges = buildRSMBox getTerminalFromString regexp
                 nonTerminalToStartState.Add (ntName, box.StartState)
                 addEdges.AddRange _addEdges
                 box

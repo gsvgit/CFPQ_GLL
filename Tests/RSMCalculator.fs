@@ -22,24 +22,24 @@ let calculatorRSM () =
     let Statement = nt "Statement"
     let Program = nt "Program"
 
-    let mkAlt x = List.map (string >> t) x |> List.reduce ( *|* )
+    let mkAlt x = List.map (string >> t) x |> List.reduce ( +|+ )
 
     let numeralsEx0 = [1..9] |> mkAlt
     let numerals = [1..9] |> mkAlt
     let letters = ['a'..'z'] |> mkAlt
 
     [
-        Num       =>  numeralsEx0 ++ many numerals
+        Num       =>  numeralsEx0 ** many numerals
         Var       =>  some letters
-        Expr      =>  Expr ++ t "+" ++ Term
-                      *|* Expr ++ t "-" ++ Term
-                      *|* Term
-        Term      =>  Term ++ t "*" ++ Power
-                      *|* Power
-        Power     =>  Factor ++ t "^" ++ Power
-                      *|* Factor
-        Factor    =>  Var *|* Num *|* t "(" ++ Expr ++ t ")"
-        Statement =>  Var ++ t "=" ++ Expr
-        Program   =>  Statement ++ t ";"
-                      *|* Statement ++ t ";" ++ Program
-    ] |> build
+        Expr      =>  Expr ** t "+" ** Term
+                      +|+ Expr ** t "-" ** Term
+                      +|+ Term
+        Term      =>  Term ** t "*" ** Power
+                      +|+ Power
+        Power     =>  Factor ** t "^" ** Power
+                      +|+ Factor
+        Factor    =>  Var +|+ Num +|+ t "(" ** Expr ** t ")"
+        Statement =>  Var ** t "=" ** Expr
+        Program   =>  Statement ** t ";"
+                      +|+ Statement ** t ";" ** Program
+    ] |> build []

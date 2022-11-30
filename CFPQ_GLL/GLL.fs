@@ -18,6 +18,8 @@ type QueryResult =
     | ReachabilityFacts of Dictionary<ILinearInputGraphVertex,HashSet<ILinearInputGraphVertex>>
     | MatchedRanges of MatchedRanges
 
+let logGll logLevel = Logging.printLog Logging.GLL logLevel
+
 let private run
         (gss:GSS)
         (matchedRanges:MatchedRanges)
@@ -105,9 +107,9 @@ let private run
                                 then
                                     let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
                                     findCorrect <- findCorrect ||
-                                                   (startVertex = currentlyCreatedNode.LeftPosition) // currentDescriptor.GssVertex.InputPosition)
-                                                   && (finalVertex = currentlyCreatedNode.RightPosition) //currentDescriptor.InputPosition)
-                                                   && (query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState) // currentDescriptor.GssVertex.RsmState)
+                                                   (startVertex = currentlyCreatedNode.LeftPosition)
+                                                   && (finalVertex = currentlyCreatedNode.RightPosition)
+                                                   && (query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState)
 
                                     matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode, true)
                                 else dummyRangeNode
@@ -160,7 +162,7 @@ let private run
                    Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight) |> addDescriptor)
 
         let inline handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: IRsmState) =
-            //printfn $"{terminalSymbol} {graphEdgeTarget.Weight}"
+            logGll Logging.Debug $"(handleTerminalOrEpsilonEdge) Terminal: {terminalSymbol}  Weight: {graphEdgeTarget.Weight}"
             let graphTargetVertex = graphEdgeTarget.TargetVertex
 
             let newMatchedRange =
@@ -199,7 +201,7 @@ let private run
                     handleTerminalEdge terminalSymbol targetVertex state
 
         let errorRecoveryEdges =
-            let errorRecoveryEdges = Dictionary() // TODO: list
+            let errorRecoveryEdges = Dictionary()
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
                 errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<distance>))
 
@@ -224,7 +226,7 @@ let private run
         cnt <- cnt + 1
         descriptor |> handleDescriptor
 
-    printfn $"descriptors handled: %A{cnt}"
+    logGll Logging.Info $"descriptors handled: %A{cnt}"
 
     match mode with
     | ReachabilityOnly -> QueryResult.ReachabilityFacts (Dictionary<_,_>())
@@ -260,11 +262,10 @@ let evalFromState
         mode
 
 
-let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertices startVertices (query:RSM) mode =
+let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertex startVertex (query:RSM) mode =
     let gss = GSS()
     let matchedRanges = MatchedRanges()
-    evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertices finishVertices (query:RSM) mode
-
+    evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM) mode
 
 
 //let onInputGraphChanged (changedVertices:seq<ILinearInputGraphVertex>) =

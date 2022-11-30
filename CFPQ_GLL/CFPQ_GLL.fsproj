@@ -6,6 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Logging.fs" />
         <Compile Include="Common.fs" />
         <Compile Include="LinearInputGraph.fs" />
         <Compile Include="RSM.fs" />
