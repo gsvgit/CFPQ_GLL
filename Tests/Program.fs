@@ -25,7 +25,16 @@ let main _ =
     AddTargets defaultLoggerConfig
     ChangeTargetLevel GLL CFPQ_GLL.Logging.Info
 
-    GolangRSM.golangRSM.ToDot "golangRSM.dot"
+//    GolangRSM.golangRSM.ToDot "golangRSM.dot"
+//    RSMCalculator.calculatorRSM () |> fst |> fun x -> x.ToDot "calculatorRSM.dot"
+
+    let program ="""
+func f() int {
+
+}
+"""
+    let g = LinearGraphReader.mkLinearGraph id GolangRSM.terminalMapping program
+    ErrorRecoveringTest.run g GolangRSM.golangRSM GolangRSM.terminalMapping GolangRSM.nonTerminalMapping
     0
 //    let tests =
 //        testList "All tests" [

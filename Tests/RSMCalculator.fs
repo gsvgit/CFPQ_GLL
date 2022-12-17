@@ -29,6 +29,7 @@ let calculatorRSM () =
     let letters = ['a'..'z'] |> mkAlt
 
     [
+        Program   =>  Statement ** t ";" +|+ Statement ** t ";" ** Program
         Num       =>  numeralsEx0 ** many numerals
         Var       =>  some letters
         Expr      =>  Expr ** t "+" ** Term
@@ -40,6 +41,4 @@ let calculatorRSM () =
                       +|+ Factor
         Factor    =>  Var +|+ Num +|+ t "(" ** Expr ** t ")"
         Statement =>  Var ** t "=" ** Expr
-        Program   =>  Statement ** t ";"
-                      +|+ Statement ** t ";" ** Program
     ] |> build []

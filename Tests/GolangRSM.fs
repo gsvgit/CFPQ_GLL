@@ -2,7 +2,7 @@ module Tests.GolangRSM
 
 open CFPQ_GLL.RsmBuilder
 
-let golangRSM, mapping =
+let golangRSM, terminalMapping, nonTerminalMapping =
     let Num = nt "Num"
     let Var = nt "Var"
 
@@ -40,17 +40,20 @@ let golangRSM, mapping =
 
     let numeralsEx0 = [1..9] |> mkAlt
     let numerals = [1..9] |> mkAlt
-    let letters = ['a'..'z'] |> mkAlt
+    let letters = (List.concat [['a'..'z']; ['A' .. 'Z']]) |> mkAlt
     let trueVal = literal "true"
     let falseVal = literal "false"
 
     let boolType = literal "bool"
     let intType = literal "int"
 
+    let returnLit = literal "return"
+
 
     [
-        Num       =>  numeralsEx0 ** many numerals
-        Var       =>  some letters
+        Program   =>  many FuncDecl
+        Num       =>  protect (numeralsEx0 ** many numerals)
+        Var       =>  protect (some letters)
 
         IntExpr   =>  IntExpr ** t "+" ** IntTerm
                       +|+ IntExpr ** t "-" ** IntTerm
@@ -74,7 +77,7 @@ let golangRSM, mapping =
         Expr => BoolExpr +|+ IntExpr
         ExprList => list Expr (t ",")
 
-        ArgDecl     =>  VarType ** t " " ** Var
+        ArgDecl     =>  protect(VarType ** t " ") ** Var
         ArgDeclList =>  list ArgDecl (t ",")
         VarType     =>  intType +|+ boolType
 
@@ -83,8 +86,8 @@ let golangRSM, mapping =
         For   => literal "for" ** t "(" ** ArgDecl ** t ";" ** BoolExpr ** t ";" ** Statement ** t ")" ** t "{" ** Block ** t "}" // Fixme
         While => literal "while" ** t "(" ** BoolExpr ** t ")" ** t "{" ** Block ** t "}"
 
-        FuncDecl => literal "func" ** t " " ** Var ** t "(" ** ArgDeclList ** t ")" ** VarType ** t "{" ** Block ** t "}"
-        VarDecl  => intType ** t " " ** Var ** t "=" ** IntExpr +|+ boolType ** t " " ** Var ** t "=" ** BoolExpr
+        FuncDecl => protect(literal "func" ** t " ") ** Var ** t "(" ** ArgDeclList ** t ")" ** VarType ** t "{" ** Block ** t "}"
+        VarDecl  => protect(intType ** t " ") ** Var ** t "=" ** IntExpr +|+ boolType ** t " " ** Var ** t "=" ** BoolExpr
 
         Assign => Var ** t "=" ** Expr
 
@@ -97,7 +100,6 @@ let golangRSM, mapping =
                       +|+ If
                       +|+ For
                       +|+ While
-
-        Program   =>  many FuncDecl
+                      +|+ returnLit ** Expr ** t ";"
     ] |> build [" "; "\t"; "\n"; "\r"]
 

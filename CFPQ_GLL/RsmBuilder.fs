@@ -14,8 +14,6 @@ type Regexp =
     | Empty
     | Epsilon
 
-
-
 let rec derive regexp symbol =
     let mkAlternative l r =
         match l,r with
@@ -101,13 +99,23 @@ let buildRSMBox getTerminalFromString regexp =
     box, thisEdgesMustBeAddedLater
 
 type RegexpWithLayoutConfig =
-    | NoLayout of Regexp
+    | NoLayout of RegexpWithLayoutConfig
     | Symbol of Symbol
     | Alternative of RegexpWithLayoutConfig * RegexpWithLayoutConfig
     | Sequence of RegexpWithLayoutConfig * RegexpWithLayoutConfig
     | Many of RegexpWithLayoutConfig
     | Empty
     | Epsilon
+
+let rec private regexpId (regexp: RegexpWithLayoutConfig): Regexp =
+    match regexp with
+    | NoLayout x -> regexpId x
+    | Symbol x -> Regexp.Symbol x
+    | Alternative (left,right) -> Regexp.Alternative (regexpId left, regexpId right)
+    | Sequence (left,right) -> Regexp.Sequence (regexpId left, regexpId right)
+    | Many x -> Regexp.Many (regexpId x)
+    | Empty -> Regexp.Empty
+    | Epsilon -> Regexp.Epsilon
 
 type Rule = Rule of string * RegexpWithLayoutConfig
 
@@ -120,8 +128,8 @@ let many x = Many x
 let some x = Sequence (x, many x)
 let ( ** ) x y = Sequence (x,y)
 let opt x = Alternative(x, Epsilon)
-let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (string >> Terminal >> Regexp.Symbol) |> Array.reduce (fun x y -> Regexp.Sequence (x,y)))
-let protect x = NoLayout x
+let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (string >> Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
+let protect (x: RegexpWithLayoutConfig) = NoLayout x
 let (=>) lhs rhs =
     match lhs with
     | Symbol(NonTerminal s) -> Rule(s, rhs)
@@ -131,19 +139,22 @@ let nonemptyList elem sep = elem ** many (sep ** elem)
 let list elem sep = Alternative (nonemptyList elem sep, Epsilon)
 
 let addLayout regexp layoutSymbols =
-    let layoutRegexp = layoutSymbols |> List.map (Terminal >> Regexp.Symbol) |> List.reduce (fun x y -> Regexp.Alternative(x, y)) |> Regexp.Many
-    let rec addLayout regexp =
-        match regexp with
-        | NoLayout x -> x
-        | Symbol x -> Regexp.Symbol x
-        | Alternative (left,right) -> Regexp.Alternative (addLayout left, addLayout right)
-        | Sequence (left,right) -> Regexp.Sequence (addLayout left, Regexp.Sequence(layoutRegexp, addLayout right))
-        | Many x ->
-            let x = addLayout x
-            Regexp.Alternative (Regexp.Epsilon, Regexp.Sequence (x, Regexp.Many x))
-        | Empty -> Regexp.Empty
-        | Epsilon -> Regexp.Epsilon
-    addLayout regexp
+    match layoutSymbols with
+    | [] -> regexpId regexp
+    | _ ->
+        let layoutRegexp = layoutSymbols |> List.map (Terminal >> Regexp.Symbol) |> List.reduce (fun x y -> Regexp.Alternative(x, y)) |> Regexp.Many
+        let rec addLayout regexp =
+            match regexp with
+            | NoLayout x -> regexpId x
+            | Symbol x -> Regexp.Symbol x
+            | Alternative (left,right) -> Regexp.Alternative (addLayout left, addLayout right)
+            | Sequence (left,right) -> Regexp.Sequence (addLayout left, Regexp.Sequence(layoutRegexp, addLayout right))
+            | Many x ->
+                let x = addLayout x
+                Regexp.Alternative (Regexp.Epsilon, Regexp.Sequence (x, Regexp.Many x))
+            | Empty -> Regexp.Empty
+            | Epsilon -> Regexp.Epsilon
+        addLayout regexp
 
 
 let build layoutSymbols rules =
@@ -164,7 +175,7 @@ let build layoutSymbols rules =
 
     let boxes =
         rules
-        |> Seq.map ( fun rule ->
+        |> Seq.map (fun rule ->
             match rule with
             | Rule (ntName,ntRegex) ->
                 let regexp = addLayout ntRegex layoutSymbols
@@ -176,4 +187,6 @@ let build layoutSymbols rules =
         |> Array.ofSeq
 
     addEdges |> ResizeArray.iter (fun f -> f (fun x -> nonTerminalToStartState.[x]))
-    RSM(boxes, boxes[0]), terminalMapping
+
+
+    RSM(boxes, boxes[0]), terminalMapping, nonTerminalToStartState

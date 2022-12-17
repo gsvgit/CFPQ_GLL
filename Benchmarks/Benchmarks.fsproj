@@ -7,6 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="ErrorRecoveringBenchmark.fs" />
+        <Compile Include="BenchmarkDataGeneration.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
@@ -17,6 +19,7 @@
 
     <ItemGroup>
       <PackageReference Include="Argu" Version="6.1.1" />
+      <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
     </ItemGroup>
 
 </Project>
