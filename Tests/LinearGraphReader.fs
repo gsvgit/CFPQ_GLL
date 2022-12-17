@@ -9,11 +9,6 @@ open CFPQ_GLL.Common
 open FSharpx.Collections
 open Tests.InputGraph
 
-
-
-
-
-
 let mkLinearGraph
     (onText: string -> string)
     (terminalsMapping: Dictionary<char, int<terminalSymbol>>)

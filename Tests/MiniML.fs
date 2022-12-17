@@ -59,7 +59,7 @@ let rsm2 =
     |> build []
 
 //rsm2.ToDot "rsm2.dot"
-let miniML,terminalMapping =
+let miniML,terminalMapping, _ =
     let Num = nt "Num"
     let Arithmetic = nt "Arithmetic"
     let Var = nt "Var"

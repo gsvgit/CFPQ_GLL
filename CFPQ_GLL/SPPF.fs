@@ -433,21 +433,32 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     do  roots |> Array.iter (handleNonTerminalNode None)
 
     let printEdge (x,y) = sprintf $"%i{x}->%i{y}"
-    let printNode nodeId node =
+    let printNode nodeId node
+        (terminalMapping: Dictionary<int<terminalSymbol>, char>)
+        (nonTerminalMapping: Dictionary<int<rsmState>, string>)=
         match node with
         | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to) ->
-            sprintf $"%i{nodeId} [label = \"%A{_from}, t_%i{_terminal}, %A{_to}\", shape = rectangle]"
+            if terminalMapping.Count = 1
+            then sprintf $"%i{nodeId} [label = \"%A{_from}, t_{_terminal}, %A{_to}\", shape = rectangle]"
+            else sprintf $"%i{nodeId} [label = \"%A{_from}, {terminalMapping[_terminal]}, %A{_to}\", shape = rectangle]"
         | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState) ->
             sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}\", shape = plain]"
         | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to) ->
-            sprintf $"%i{nodeId} [label = \"%A{_from}, N_%i{_nonTerminal}, %A{_to}\", shape = invtrapezium]"
+            if nonTerminalMapping.Count = 0
+            then sprintf $"%i{nodeId} [label = \"%A{_from}, N_%i{_nonTerminal}, %A{_to}\", shape = invtrapezium]"
+            else sprintf $"%i{nodeId} [label = \"%A{_from}, {nonTerminalMapping[_nonTerminal]}, %A{_to}\", shape = invtrapezium]"
         | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal) ->
             sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: N_%i{_nonTerminal}\", shape = invhouse]"
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
             sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
 
-    member this.ToDot filePath =
-        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])
+    member this.ToDot (terminalMapping, nonTerminalMapping: Dictionary<IRsmState, string>, filePath) =
+        let nonTerminalMapping' = Dictionary<_,_>()
+        for k in nonTerminalMapping.Keys do
+            nonTerminalMapping'.Add(getStateId k, nonTerminalMapping.[k])
+        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value terminalMapping nonTerminalMapping')); yield! (ResizeArray.map printEdge edges); "}"])
+
+    member this.ToDot filePath = this.ToDot (Dictionary<_, _>(), Dictionary<_, _>(), filePath)
 
     member this.Edges with get() = edges
     member this.Nodes with get () = nodes

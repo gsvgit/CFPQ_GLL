@@ -69,7 +69,7 @@ let private runGLLAndCheckResultForManuallyCreatedGraph
         printfn $"D for %s{validDotFileName}: %A{distances}"
         let actual = TriplesStoredSPPF([|root|], Dictionary())
         dumpResultToConsole actual
-        actual.ToDot validDotFileName
+        actual.ToDot (validDotFileName)
         Expect.sequenceEqual actual.Nodes expectedNodes "Nodes should be equals."
         Expect.sequenceEqual actual.Edges expectedEdges "Edges should be equals."
         Expect.sequenceEqual distances expectedDistances "Distances should be equals."
