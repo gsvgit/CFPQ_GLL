@@ -23,14 +23,17 @@ let defaultLoggerConfig =
 let main _ =
 
     AddTargets defaultLoggerConfig
-    ChangeTargetLevel GLL CFPQ_GLL.Logging.Info
+    ChangeTargetLevel GLL CFPQ_GLL.Logging.Trace
+    Logging.ConfigureWriter <| new System.IO.StreamWriter("log.txt")
 
-//    GolangRSM.golangRSM.ToDot "golangRSM.dot"
+    GolangRSM.golangRSM.ToDot ("golangRSM.dot", ErrorRecoveringTest.reverseDict GolangRSM.terminalMapping, ErrorRecoveringTest.reverseDict GolangRSM.nonTerminalMapping)
 //    RSMCalculator.calculatorRSM () |> fst |> fun x -> x.ToDot "calculatorRSM.dot"
 
     let program ="""
-func f() int {
-
+func cycles(x int, y int) int {
+    if ( x == 0 ) {
+        return y;
+    }
 }
 """
     let g = LinearGraphReader.mkLinearGraph id GolangRSM.terminalMapping program

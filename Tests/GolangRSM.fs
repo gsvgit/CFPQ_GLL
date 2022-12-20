@@ -39,7 +39,7 @@ let golangRSM, terminalMapping, nonTerminalMapping =
     let mkAlt x = List.map (string >> t) x |> List.reduce ( +|+ )
 
     let numeralsEx0 = [1..9] |> mkAlt
-    let numerals = [1..9] |> mkAlt
+    let numerals = [0..9] |> mkAlt
     let letters = (List.concat [['a'..'z']; ['A' .. 'Z']]) |> mkAlt
     let trueVal = literal "true"
     let falseVal = literal "false"
@@ -49,9 +49,10 @@ let golangRSM, terminalMapping, nonTerminalMapping =
 
     let returnLit = literal "return"
 
+    let spaces = [" "; "\t"; "\n"; "\r"] |> mkAlt
 
     [
-        Program   =>  many FuncDecl
+        Program   =>  many spaces ** many FuncDecl
         Num       =>  protect (numeralsEx0 ** many numerals)
         Var       =>  protect (some letters)
 
@@ -77,17 +78,18 @@ let golangRSM, terminalMapping, nonTerminalMapping =
         Expr => BoolExpr +|+ IntExpr
         ExprList => list Expr (t ",")
 
-        ArgDecl     =>  protect(VarType ** t " ") ** Var
+        ArgDecl     =>  protect (Var ** t " ") ** VarType
         ArgDeclList =>  list ArgDecl (t ",")
         VarType     =>  intType +|+ boolType
 
 
         If    => literal "if" ** t "(" ** BoolExpr ** t ")" ** t "{" ** Block ** t "}"
-        For   => literal "for" ** t "(" ** ArgDecl ** t ";" ** BoolExpr ** t ";" ** Statement ** t ")" ** t "{" ** Block ** t "}" // Fixme
+        For   => literal "for" ** t "(" ** VarDecl ** t ";" ** BoolExpr ** t ";" ** Statement ** t ")" ** t "{" ** Block ** t "}" // Fixme
         While => literal "while" ** t "(" ** BoolExpr ** t ")" ** t "{" ** Block ** t "}"
 
         FuncDecl => protect(literal "func" ** t " ") ** Var ** t "(" ** ArgDeclList ** t ")" ** VarType ** t "{" ** Block ** t "}"
-        VarDecl  => protect(intType ** t " ") ** Var ** t "=" ** IntExpr +|+ boolType ** t " " ** Var ** t "=" ** BoolExpr
+        VarDecl  => protect(literal "var" ** t " ") ** protect(Var ** t" ") ** (intType ** t "=" ** IntExpr
+                    +|+ boolType ** t "=" ** BoolExpr)
 
         Assign => Var ** t "=" ** Expr
 

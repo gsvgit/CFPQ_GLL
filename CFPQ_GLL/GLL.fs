@@ -110,7 +110,7 @@ let private run
                                                    (startVertex = currentlyCreatedNode.LeftPosition)
                                                    && (finalVertex = currentlyCreatedNode.RightPosition)
                                                    && (query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState)
-
+                                    logGll Logging.Trace $"findCorrect = {startVertex = currentlyCreatedNode.LeftPosition} && {finalVertex = currentlyCreatedNode.RightPosition} && {query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState}"
                                     matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode, true)
                                 else dummyRangeNode
                             MatchedRangeWithNode(matchedRange, rangeNode)
@@ -222,6 +222,7 @@ let private run
     let mutable cnt = 0
     while
         not (findCorrect && descriptorsToProcess.IsEmpty) do
+        logGll Logging.Trace $"Condition = {findCorrect} && {descriptorsToProcess.IsEmpty}"
         let descriptor = descriptorsToProcess.Pop()
         cnt <- cnt + 1
         descriptor |> handleDescriptor

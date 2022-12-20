@@ -145,13 +145,14 @@ let addLayout regexp layoutSymbols =
         let layoutRegexp = layoutSymbols |> List.map (Terminal >> Regexp.Symbol) |> List.reduce (fun x y -> Regexp.Alternative(x, y)) |> Regexp.Many
         let rec addLayout regexp =
             match regexp with
-            | NoLayout x -> regexpId x
-            | Symbol x -> Regexp.Symbol x
+            | NoLayout x -> Regexp.Sequence (regexpId x, layoutRegexp)
+            | Symbol x ->
+                match x with
+                | Terminal _ -> Regexp.Sequence (Regexp.Symbol x, layoutRegexp)
+                | NonTerminal _ -> Regexp.Symbol x
             | Alternative (left,right) -> Regexp.Alternative (addLayout left, addLayout right)
-            | Sequence (left,right) -> Regexp.Sequence (addLayout left, Regexp.Sequence(layoutRegexp, addLayout right))
-            | Many x ->
-                let x = addLayout x
-                Regexp.Alternative (Regexp.Epsilon, Regexp.Sequence (x, Regexp.Many x))
+            | Sequence (left,right) -> Regexp.Sequence (addLayout left, addLayout right)
+            | Many x -> Regexp.Many (addLayout x)
             | Empty -> Regexp.Empty
             | Epsilon -> Regexp.Epsilon
         addLayout regexp

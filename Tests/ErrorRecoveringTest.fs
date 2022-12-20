@@ -15,6 +15,13 @@ open Tests.InputGraph
 open Tests.LinearGraphReader
 open CFPQ_GLL.RsmBuilder
 
+let reverseDict (dict: Dictionary<'a, 'b>) =
+    let x = dict |> Dictionary.KeyCollection |> Seq.map (fun k -> dict[k], k)
+    let result = Dictionary()
+    for k, v in x do
+        result.Add(k, v)
+    result
+
 let run
     (graph: InputGraph)
     (q: RSM)
@@ -24,12 +31,7 @@ let run
     let startV = 0<inputGraphVertex>
     let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)
 
-    let reverseDict (dict: Dictionary<'a, 'b>) =
-        let x = dict |> Dictionary.KeyCollection |> Seq.map (fun k -> dict[k], k)
-        let result = Dictionary()
-        for k, v in x do
-            result.Add(k, v)
-        result
+
 
     let reversedTerminalMapping =
         let result = reverseDict terminalMapping

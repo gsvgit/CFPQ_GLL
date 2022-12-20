@@ -138,7 +138,9 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     member this.IsFinalStateForOriginalStartBox state = (startBox :> IRsmBox).FinalStates.Contains state
     member this.OriginalStartState = startBox.StartState
 
-    member this.ToDot filePath =
+    member this.ToDot (filePath,
+        (terminalMapping: Dictionary<int<terminalSymbol>, char>),
+        (nonTerminalMapping:  Dictionary<IRsmState, string>))=
         let visited = HashSet<_>()
         let vertexId =
             let mutable firstFreeVertexId = 0
@@ -163,18 +165,20 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                         if v.IsFinal
                         then
                             if v.IsStart
-                            then yield $"%i{id} [shape = doublecircle style = filled fillcolor=green]"
+                            then yield $"%i{id} [shape = doublecircle style = filled fillcolor=green label=%A{nonTerminalMapping[v]}]"
                             else yield $"%i{id} [shape = doublecircle]"
                         elif v.IsStart
-                        then yield $"%i{id} [style = filled fillcolor=green]"
+                        then yield $"%i{id} [style = filled fillcolor=green label=%A{nonTerminalMapping[v]}]"
                         for e in v.OutgoingTerminalEdges do
                             for target in e.Value do
-                                yield $"%i{id} -> %i{vertexId target} [label = t_%i{e.Key}]"
+                                yield
+                                    if terminalMapping.Count = 0 then $"%i{id} -> %i{vertexId target} [label = t_%i{e.Key}]"
+                                    else $"%i{id} -> %i{vertexId target} [label = %A{string terminalMapping[e.Key]}]"
                                 yield! toDot target
 
                         for e in v.OutgoingNonTerminalEdges do
                             for target in e.Value do
-                                yield $"%i{id} -> %i{vertexId target} [label = N_%i{vertexId e.Key}]"
+                                yield $"%i{id} -> %i{vertexId target} [label = %A{nonTerminalMapping[e.Key]}]"
                                 yield! toDot target
                     }
             else Seq.empty
@@ -186,3 +190,8 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
          yield "}"
         }
         |> fun x -> System.IO.File.WriteAllLines(filePath, x)
+
+    member this.ToDot filePath =
+        let terminalMapping = Dictionary<_,_>()
+        let nonTerminalMapping = Dictionary<_,_>()
+        this.ToDot (filePath, terminalMapping, nonTerminalMapping)

@@ -86,12 +86,11 @@ func cycles(x int, y int) int {
             x = x + 1;
         }
         return x;
-    } else {
-        for (i = 0; i < y; i = i + 1) {
-                x = x + 1;
-        }
-        return x;
     }
+    for (i = 0; i < y; i = i + 1) {
+            x = x + 1;
+    }
+    return x;
 }
 """
 
