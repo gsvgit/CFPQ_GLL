@@ -69,45 +69,9 @@ let private mkError (program: string) (e: SyntaxError) =
         lines[index] <- line.Substring(0, truncateIndex)
         String.concat "\n" lines
 
-let private functionSample = """
-func longFuncName(x int, y bool, longName int) int {
-    if (y) {
-        return x + longName;
-    } else {
-        return x - longName;
-    }
-}
-"""
 
-let private cycleSample = """
-func cycles(x int, y int) int {
-    if ( false ) {
-        while (x < y) {
-            x = x + 1;
-        }
-        return x;
-    }
-    for (i = 0; i < y; i = i + 1) {
-            x = x + 1;
-    }
-    return x;
-}
-"""
 
-let private expressionSample = """
-func expression(x int, y int) int {
-    var expr1 int = (x + y) ^ z * (x - y ^ z);
-    expr1 = expr1 + f(x, y);
-    var expr2 bool = x + y + z + x + y + z;
-    if (x < y) {
-        return x + y;
-    } else {
-        return x - y;
-    }
-}
-"""
-
-let private samples = [| functionSample; cycleSample; expressionSample |]
+let private samples = [| Tests.GolangRSM.functionSample; Tests.GolangRSM.cycleSample; Tests.GolangRSM.expressionSample |]
 
 let private generateProgramWithError (size: int) (errorCnt: int) =
     let mutable program = ""
@@ -116,7 +80,7 @@ let private generateProgramWithError (size: int) (errorCnt: int) =
 
     let mutable errors = []
     for i in 1..errorCnt do
-        let intError = rnd.Next(1, 7)
+        let intError = rnd.Next(1, 5)//7)
         errors <- intError.ToString() :: errors
         program <- mkError program (SyntaxError.fromInt intError)
 

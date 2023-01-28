@@ -13,8 +13,10 @@ type Descriptor (rsmState: IRsmState, inputPosition: ILinearInputGraphVertex, gs
         hash <- hash * 23 + rsmState.GetHashCode()
         hash <- hash * 23 + inputPosition.GetHashCode()
         hash <- hash * 23 + gssVertex.GetHashCode()
+        hash <- hash * 23 + int leftPartMinWeight
         //hash <- hash * 23 + matchedRange.GetHashCode()
         hash
+    member val IsFinal = false with get, set
     member this.RsmState = rsmState
     member this.InputPosition = inputPosition
     member this.GssVertex = gssVertex
@@ -28,7 +30,8 @@ type Descriptor (rsmState: IRsmState, inputPosition: ILinearInputGraphVertex, gs
         && (y :?> Descriptor).RsmState = this.RsmState
         && (y :?> Descriptor).InputPosition = this.InputPosition
         && (y :?> Descriptor).GssVertex = this.GssVertex
-       // && (y :?> Descriptor).MatchedRange = this.MatchedRange
+        && (y :?> Descriptor).Weight = this.Weight
+        //&& (y :?> Descriptor).MatchedRange = this.MatchedRange
 
 and IRsmState =
     abstract OutgoingTerminalEdges : Dictionary<int<terminalSymbol>,HashSet<IRsmState>>

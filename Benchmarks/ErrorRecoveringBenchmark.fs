@@ -28,17 +28,13 @@ let benchmarkData =
 
          {
             Name = Path.GetFileName path
-            RSM = fun () -> Tests.GolangRSM.golangRSM
+            RSM = Tests.GolangRSM.golangRSM
             StartVertex = startVertex
             FinishVertex = finalVertex
         }
 
-
-
     Directory.GetFiles(path, "*.go") |> Array.map getDataFromFile
 
-
-let rsm ()  = Tests.GolangRSM.golangRSM
 
 let runGLL (data: BenchmarkData) =
     GLL.errorRecoveringEval data.FinishVertex data.StartVertex (data.RSM ()) GLL.AllPaths |> ignore

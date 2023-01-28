@@ -5,7 +5,7 @@ open CFPQ_GLL.Common
 open CFPQ_GLL.RSM
 open FSharpx.Collections
 
-type Symbol = Terminal of string | NonTerminal of string
+type Symbol = Terminal of char | NonTerminal of string
 type Regexp =
     | Symbol of Symbol
     | Alternative of Regexp * Regexp
@@ -128,7 +128,7 @@ let many x = Many x
 let some x = Sequence (x, many x)
 let ( ** ) x y = Sequence (x,y)
 let opt x = Alternative(x, Epsilon)
-let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (string >> Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
+let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
 let protect (x: RegexpWithLayoutConfig) = NoLayout x
 let (=>) lhs rhs =
     match lhs with
