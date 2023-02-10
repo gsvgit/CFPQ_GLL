@@ -63,6 +63,5 @@ type GSS () =
 
     member this.AddDescriptorToHandled (descriptor:Descriptor) =
         descriptor.InputPosition.Descriptors.Add descriptor
-        //descriptor.RsmState.Descriptors.Add descriptor
         descriptor.GssVertex.HandledDescriptors.Add descriptor
         |> ignore
