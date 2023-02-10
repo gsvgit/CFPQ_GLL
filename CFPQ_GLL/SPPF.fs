@@ -375,22 +375,11 @@ type TriplesStoredSPPFNode =
     | EpsilonNode of int<inputGraphVertex> * INonterminal * int<weight>
     | TerminalNode of int<inputGraphVertex> * Char * int<inputGraphVertex> * int<weight>
     | NonTerminalNode of int<inputGraphVertex> * INonterminal * int<inputGraphVertex> * int<weight>
-    | IntermediateNode of int<inputGraphVertex> * int<rsmState> * int<weight>
-    | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmState> * int<rsmState>
+    | IntermediateNode of int<inputGraphVertex> * int<rsmStateId> * int<weight>
+    | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmStateId> * int<rsmStateId>
 
 type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<LinearInputGraphVertexBase,int<inputGraphVertex>>) =
-    let rsmStatesMap = Dictionary<RsmState,int<rsmState>>()
-    let mutable firstFreeRsmStateId = 0<rsmState>
-    let getStateId state =
-        let exists,stateId = rsmStatesMap.TryGetValue state
-        if exists
-        then stateId
-        else
-            let stateId = firstFreeRsmStateId
-            rsmStatesMap.Add(state,stateId)
-            firstFreeRsmStateId <- firstFreeRsmStateId + 1<rsmState>
-            stateId
-
+        
     let mutable firstFreeGraphVertexId =
         if vertexMap.Values.Count = 0
         then 0<inputGraphVertex>
@@ -418,7 +407,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     let rec handleIntermediateNode parentId (node:IIntermediateNode) =
         let node = node :?> IntermediateNode
         let currentId = nodesCount
-        nodes.Add(currentId, TriplesStoredSPPFNode.IntermediateNode(getVertexId node.InputPosition, getStateId node.RSMState, (node :> IIntermediateNode).Weight))
+        nodes.Add(currentId, TriplesStoredSPPFNode.IntermediateNode(getVertexId node.InputPosition, node.RSMState.Id, (node :> IIntermediateNode).Weight))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
         handleRangeNode (Some currentId) node.LeftSubtree
@@ -466,8 +455,8 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
             visitedRangeNodes.Add(node, currentId)
             nodes.Add(currentId, TriplesStoredSPPFNode.RangeNode(getVertexId node.InputStartPosition,
                                                                  getVertexId node.InputEndPosition,
-                                                                 getStateId node.RSMStartPosition,
-                                                                 getStateId node.RSMEndPosition))
+                                                                 node.RSMStartPosition.Id,
+                                                                 node.RSMEndPosition.Id))
             addEdge parentId currentId
             nodesCount <- nodesCount + 1
             (node :> IRangeNode).IntermediateNodes
