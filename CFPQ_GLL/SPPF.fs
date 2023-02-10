@@ -10,7 +10,7 @@ open FSharpx.Collections
 
 type Distance = Unreachable | Reachable of int
 
-type TerminalNode (terminal: int<terminalSymbol>, graphRange: Range<LinearInputGraphVertexBase>, distance) =
+type TerminalNode (terminal: Char, graphRange: Range<LinearInputGraphVertexBase>, distance) =
     let parents = ResizeArray<IRangeNode>()
     let mutable distance = distance
     member this.Terminal = terminal
@@ -379,7 +379,7 @@ type MatchedRanges () =
 [<RequireQualifiedAccess>]
 type TriplesStoredSPPFNode =
     | EpsilonNode of int<inputGraphVertex> * INonterminal * int<distance>
-    | TerminalNode of int<inputGraphVertex> * int<terminalSymbol> * int<inputGraphVertex> * int<distance>
+    | TerminalNode of int<inputGraphVertex> * Char * int<inputGraphVertex> * int<distance>
     | NonTerminalNode of int<inputGraphVertex> * INonterminal * int<inputGraphVertex> * int<distance>
     | IntermediateNode of int<inputGraphVertex> * int<rsmState> * int<distance>
     | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmState> * int<rsmState>
@@ -482,13 +482,10 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     do  roots |> Array.iter (handleNonTerminalNode None)
 
     let printEdge (x,y) = sprintf $"%i{x}->%i{y}"
-    let printNode nodeId node
-        (terminalMapping: Dictionary<int<terminalSymbol>, char>) =        
+    let printNode nodeId node =
         match node with
         | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to, w) ->
-            if terminalMapping.Count = 1
-            then sprintf $"%i{nodeId} [label = \"%A{_from}, t_{_terminal}, %A{_to}, Weight: {w}\", shape = rectangle]"
-            else sprintf $"%i{nodeId} [label = \"%A{_from}, {terminalMapping[_terminal]}, %A{_to}, Weight: {w}\", shape = rectangle]"
+            sprintf $"%i{nodeId} [label = \"%A{_from}, {string _terminal}, %A{_to}, Weight: {w}\", shape = rectangle]"
         | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState, w) ->
             sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}, Weight: {w}\", shape = plain]"
         | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to, w) ->            
@@ -498,10 +495,8 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
             sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
 
-    member this.ToDot (terminalMapping, filePath) =        
-        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value terminalMapping)); yield! (ResizeArray.map printEdge edges); "}"])
-
-    member this.ToDot filePath = this.ToDot (Dictionary<_, _>(), filePath)
+    member this.ToDot filePath =        
+        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])
 
     member this.Edges with get() = edges
     member this.Nodes with get () = nodes

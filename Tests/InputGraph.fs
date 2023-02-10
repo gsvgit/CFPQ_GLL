@@ -9,13 +9,13 @@ open CFPQ_GLL.InputGraph
 
 [<Struct>]
 type InputGraphEdge =
-    val TerminalSymbol: int<terminalSymbol>
+    val TerminalSymbol: Char
     val TargetVertex: int<inputGraphVertex>
     val Weight: int<distance>
     new (terminal, targetVertex, weight) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = weight}
 
 type DemoInputGraphEdge =
-    | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>*int<distance>
+    | TerminalEdge of int<inputGraphVertex>*Char*int<inputGraphVertex>*int<distance>
     | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>*int<distance>
 
 let DefaultTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 0<distance>)
@@ -71,7 +71,7 @@ type InputGraph (edges, enableErrorRecovering) =
 
             for kvp in vertices do
                 for edge in kvp.Value.OutgoingTerminalEdges do
-                    yield $"%i{kvp.Key} -> %i{edge.TargetVertex} [label=%i{edge.TerminalSymbol}]"
+                    yield $"%i{kvp.Key} -> %i{edge.TargetVertex} [label={string edge.TerminalSymbol}]"
 
             yield "}"
         }

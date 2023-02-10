@@ -8,7 +8,7 @@ open CFPQ_GLL.InputGraph
 [<Measure>] type rsmState
 
 type RSMEdges =
-    | TerminalEdge of int<rsmState>*int<terminalSymbol>*int<rsmState>
+    | TerminalEdge of int<rsmState>*Char*int<rsmState>
     | NonTerminalEdge of _from:int<rsmState>*_nonTerminalSymbolStartState:int<rsmState>*_to:int<rsmState>
 
     member this.StartState =
@@ -115,9 +115,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                         then yield $"%i{v.Id} [style = filled fillcolor=green label=%A{v.Box.Nonterminal.Name}]"
                         for e in v.OutgoingTerminalEdges do
                             for target in e.Value do
-                                yield
-                                    if terminalMapping.Count = 0 then $"%i{v.Id} -> %i{target.Id} [label = t_%i{e.Key}]"
-                                    else $"%i{v.Id} -> %i{target.Id} [label = %A{string terminalMapping[e.Key]}]"
+                                yield $"%i{v.Id} -> %i{target.Id} [label = %A{e.Key}]"
                                 yield! toDot target
 
                         for e in v.OutgoingNonTerminalEdges do

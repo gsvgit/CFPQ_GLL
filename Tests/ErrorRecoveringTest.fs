@@ -26,16 +26,10 @@ let reverseDict (dict: Dictionary<'a, 'b>) =
 let run
     (graph: InputGraph)
     (q: RSM)
-    (terminalMapping: Dictionary<char, int<terminalSymbol>>)
     dotFileName
     =
     let startV = 0<inputGraphVertex>
     let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)
-
-    let reversedTerminalMapping =
-        let result = reverseDict terminalMapping
-        result.Add(-1<terminalSymbol>, 'ε')
-        result
 
     //graph.ToDot (0, "graph.dot")
     //printfn "Graph is saved to graph.dot"
@@ -56,7 +50,7 @@ let run
 
 
         let actual = TriplesStoredSPPF([|root|], Dictionary())
-        actual.ToDot (reversedTerminalMapping, dotFileName)
+        actual.ToDot dotFileName
         //printfn $"SPPF is saved to {validDotFileName}"
 
         let output =
@@ -71,8 +65,8 @@ let gllTestCase
     lazySource
     (input: string)
     expected =
-    let query, tm = lazySource()
-    let graphMaker = mkLinearGraph id tm
+    let query = lazySource()
+    let graphMaker = mkLinearGraph id
     let graph = graphMaker input
     let startV = 0<inputGraphVertex>
     let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)
@@ -82,10 +76,10 @@ let mkTestList f (inputs: string seq) =
 
     inputs
     |> Seq.iteri (fun i s ->
-        let query, tm = f()
-        let graphMaker = mkLinearGraph id tm
+        let query = f()
+        let graphMaker = mkLinearGraph id
         printf $"""mkTest "{s}" """
-        run (graphMaker s) query tm $"{i}.dot"
+        run (graphMaker s) query $"{i}.dot"
     )
 
 

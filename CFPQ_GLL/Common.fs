@@ -6,6 +6,13 @@ open System.Collections.Generic
 [<Measure>] type distance
 [<Measure>] type rsmStateId
 
+type Char =
+    Char of char | EOF | Epsilon 
+    override this.ToString() =
+        match this with
+        | Char c -> string c
+        | EOF -> "EOF"
+        | Epsilon -> "ε"
 type INonterminal =
     abstract Name: string
     
@@ -50,7 +57,7 @@ and RsmState (isStart: bool, isFinal: bool) =
     let id = getFirstFreeRsmStateId()
     let errorRecoveryLabels = HashSet()
     let coveredTargetStates = HashSet()    
-    let outgoingTerminalEdges = Dictionary<int<terminalSymbol>, HashSet<RsmState>>()
+    let outgoingTerminalEdges = Dictionary<Char, HashSet<RsmState>>()
     let outgoingNonTerminalEdges= Dictionary<RsmState, HashSet<RsmState>>()
     let nonTerminalNodes = ResizeArray<INonTerminalNode>()
     let mutable rsmBox : Option<IRsmBox> = None
@@ -70,12 +77,12 @@ and RsmState (isStart: bool, isFinal: bool) =
             assert added
             let added =  coveredTargetStates.Add targetState
             assert added
-        let exists,targetStates = (this).OutgoingTerminalEdges.TryGetValue terminal
+        let exists,targetStates = this.OutgoingTerminalEdges.TryGetValue terminal
         if exists
         then
             targetStates.Add targetState |> ignore
         else 
-            (this).OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
+            this.OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
     member this.AddNonTerminalEdge (nonTerminal, targetState) =
         let exists,targetStates = (this).OutgoingNonTerminalEdges.TryGetValue nonTerminal
         if exists
@@ -96,9 +103,9 @@ and IRsmBox =
    
 and LinearInputGraphVertexBase (id:int32) =
     let id = id
-    let mutable outgoingEdge : Option<int<terminalSymbol> * TerminalEdgeTarget> = None
+    let mutable outgoingEdge : Option<Char * TerminalEdgeTarget> = None
     let descriptors = HashSet<Descriptor>()
-    let terminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<int<terminalSymbol>, ITerminalNode>>()
+    let terminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<Char, ITerminalNode>>()
     let nonTerminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<RsmState, INonTerminalNode>>()
     let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
         //Dictionary<MatchedRange, IRangeNode>()

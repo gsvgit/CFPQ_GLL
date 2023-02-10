@@ -19,7 +19,7 @@ type BenchmarkData = {
 let benchmarkData =
 
     let getDataFromFile (path: string) =
-         let graph = File.ReadAllText path |> Tests.LinearGraphReader.mkLinearGraph id Tests.GolangRSM.terminalMapping
+         let graph = File.ReadAllText path |> Tests.LinearGraphReader.mkLinearGraph id
          let startV = 0<inputGraphVertex>
          let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)
 

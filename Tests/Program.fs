@@ -26,8 +26,8 @@ let main _ =
     ChangeTargetLevel GLL CFPQ_GLL.Logging.Trace
     //Logging.ConfigureWriter <| new System.IO.StreamWriter("log.txt")
 
-    let rsm, tm = GolangRSM.golangSrc ()
-    rsm.ToDot ("golangRSM.dot", ErrorRecoveringTest.reverseDict tm)
+    let rsm = GolangRSM.golangSrc ()
+    rsm.ToDot "golangRSM.dot"
 //    RSMCalculator.calculatorRSM () |> fst |> fun x -> x.ToDot "calculatorRSM.dot"
 
     let mkAlt x = List.map t x |> List.reduce ( +|+ )
@@ -108,12 +108,12 @@ let main _ =
             S => many (t '(' ** S ** t ')' +|+  t '{' ** S ** t '}' +|+ t '[' ** S ** t ']')
         ] |> build [' ']
 
-    let rsm, tm = src ()
+    let rsm = src ()
 
     // let x = LinearGraphReader.mkLinearGraph id tm hugeTest
     // x.ToDot ((), "test.dot")
 
-    rsm.ToDot ("rsm.dot",ErrorRecoveringTest.reverseDict tm)
+    rsm.ToDot "rsm.dot"
 
     ErrorRecoveringTest.mkTestList src [
         "[{[]]"
