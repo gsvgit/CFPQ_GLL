@@ -1,17 +1,9 @@
 
-open System.Collections.Generic
 open CFPQ_GLL
-open CFPQ_GLL.Common
-open CFPQ_GLL.GLL
-open CFPQ_GLL.InputGraph
 open Tests
-open Tests.InputGraph
-open CFPQ_GLL.SPPF
 open Expecto
 open Logging
 open CFPQ_GLL.RsmBuilder
-open Tests.LinearGraphReader
-
 
 let config = {FsCheckConfig.defaultConfig with maxTest = 10000}
 
@@ -26,8 +18,8 @@ let main _ =
     ChangeTargetLevel GLL CFPQ_GLL.Logging.Trace
     //Logging.ConfigureWriter <| new System.IO.StreamWriter("log.txt")
 
-    let rsm, tm, ntm = GolangRSM.golangSrc ()
-    rsm.ToDot ("golangRSM.dot", ErrorRecoveringTest.reverseDict tm, ErrorRecoveringTest.reverseDict ntm)
+    let rsm = GolangRSM.golangSrc ()
+    rsm.ToDot "golangRSM.dot"
 //    RSMCalculator.calculatorRSM () |> fst |> fun x -> x.ToDot "calculatorRSM.dot"
 
     let mkAlt x = List.map t x |> List.reduce ( +|+ )
@@ -108,12 +100,12 @@ let main _ =
             S => many (t '(' ** S ** t ')' +|+  t '{' ** S ** t '}' +|+ t '[' ** S ** t ']')
         ] |> build [' ']
 
-    let rsm, tm, ntm = src ()
+    let rsm = src ()
 
     // let x = LinearGraphReader.mkLinearGraph id tm hugeTest
     // x.ToDot ((), "test.dot")
 
-    rsm.ToDot ("rsm.dot",ErrorRecoveringTest.reverseDict tm, ErrorRecoveringTest.reverseDict ntm)
+    rsm.ToDot "rsm.dot"
 
     ErrorRecoveringTest.mkTestList src [
         "[{[]]"

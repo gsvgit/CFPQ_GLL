@@ -1,19 +1,4 @@
-open System.Collections.Generic
-open System.Xml.Schema
-open Argu
-open BenchmarkDotNet.Running
-open Benchmarks
 open Benchmarks.ErrorRecoveringBenchmark
-open CFPQ_GLL
-open CFPQ_GLL.Common
-open CFPQ_GLL.GLL
-open CFPQ_GLL.GSS
-open Tests
-open Tests.InputGraph
-open CFPQ_GLL.RSM
-open CFPQ_GLL.SPPF
-open CFPQ_GLL.InputGraph
-
 
 [<EntryPoint>]
 let main _ =

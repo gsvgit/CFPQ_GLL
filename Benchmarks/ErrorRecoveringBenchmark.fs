@@ -3,23 +3,21 @@ module Benchmarks.ErrorRecoveringBenchmark
 open System.IO
 open CFPQ_GLL
 open CFPQ_GLL.Common
-open CFPQ_GLL.InputGraph
 open BenchmarkDotNet.Attributes
-open BenchmarkDotNet.Running
 
 let path = "/home/viktor/RiderProjects/CFPQ_GLL/golang"
 
 type BenchmarkData = {
     Name: string
     RSM: unit -> RSM.RSM
-    StartVertex: ILinearInputGraphVertex
-    FinishVertex: ILinearInputGraphVertex
+    StartVertex: LinearInputGraphVertexBase
+    FinishVertex: LinearInputGraphVertexBase
 }
 
 let benchmarkData =
 
     let getDataFromFile (path: string) =
-         let graph = File.ReadAllText path |> Tests.LinearGraphReader.mkLinearGraph id Tests.GolangRSM.terminalMapping
+         let graph = File.ReadAllText path |> Tests.LinearGraphReader.mkLinearGraph id
          let startV = 0<inputGraphVertex>
          let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)
 

@@ -1,27 +1,25 @@
 module Tests.InputGraph
 
 open System.Collections.Generic
-open CFPQ_GLL
 open CFPQ_GLL.Common
-open CFPQ_GLL.InputGraph
 
 [<Measure>] type inputGraphTerminalEdge
 
 [<Struct>]
 type InputGraphEdge =
-    val TerminalSymbol: int<terminalSymbol>
+    val TerminalSymbol: Char
     val TargetVertex: int<inputGraphVertex>
-    val Weight: int<distance>
+    val Weight: int<weight>
     new (terminal, targetVertex, weight) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = weight}
 
 type DemoInputGraphEdge =
-    | TerminalEdge of int<inputGraphVertex>*int<terminalSymbol>*int<inputGraphVertex>*int<distance>
-    | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>*int<distance>
+    | TerminalEdge of int<inputGraphVertex>*Char*int<inputGraphVertex>*int<weight>
+    | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>*int<weight>
 
-let DefaultTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 0<distance>)
-let ErrorTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 1<distance>)
-let DefaultEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 0<distance>)
-let ErrorEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 1<distance>)
+let DefaultTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 0<weight>)
+let ErrorTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 1<weight>)
+let DefaultEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 0<weight>)
+let ErrorEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 1<weight>)
 
 [<Struct>]
 type InputGraphTerminalEdge = // Usages don't found
@@ -71,7 +69,7 @@ type InputGraph (edges, enableErrorRecovering) =
 
             for kvp in vertices do
                 for edge in kvp.Value.OutgoingTerminalEdges do
-                    yield $"%i{kvp.Key} -> %i{edge.TargetVertex} [label=%i{edge.TerminalSymbol}]"
+                    yield $"%i{kvp.Key} -> %i{edge.TargetVertex} [label={string edge.TerminalSymbol}]"
 
             yield "}"
         }
@@ -86,14 +84,14 @@ type InputGraph (edges, enableErrorRecovering) =
     member this.ToCfpqCoreGraph (startVertex: int<inputGraphVertex>) =
         this.ToDot (0,"coreGraph.dot")
         let mutable firstFreeVertexId = 0
-        let verticesMapping = Dictionary<int<inputGraphVertex>, ILinearInputGraphVertex>()
+        let verticesMapping = Dictionary<int<inputGraphVertex>, LinearInputGraphVertexBase>()
         let getVertex vertexId =
             let exists, vertex = verticesMapping.TryGetValue vertexId
             let res =
                 if exists
                 then vertex
                 else
-                    let vertex = LinearInputGraphVertexBase()
+                    let vertex = LinearInputGraphVertexBase(int vertexId)
                     firstFreeVertexId <- firstFreeVertexId + 1
                     verticesMapping.Add(vertexId, vertex)
                     vertex

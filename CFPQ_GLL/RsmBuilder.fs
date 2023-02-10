@@ -60,14 +60,14 @@ let rec getAllSymbols regexp =
     match regexp with
     | Empty | Epsilon -> []
     | Symbol x -> [x]
-    | Many regexp (*| Option regexp*)-> getAllSymbols regexp
+    | Many regexp -> getAllSymbols regexp
     | Alternative (left,right) | Sequence (left,right) -> getAllSymbols left @ getAllSymbols right
 
-let buildRSMBox getTerminalFromString regexp =
+let buildRSMBox ntName regexp =
     let thisEdgesMustBeAddedLater = ResizeArray()
-    let box = RSMBox()
+    let box = RSMBox(NonterminalBase ntName)
     let alphabet = HashSet (getAllSymbols regexp)
-    let stateToRsmState = Dictionary<_,IRsmState>()
+    let stateToRsmState = Dictionary<_,RsmState>()
     let getRsmState state isStart isFinal =
         if stateToRsmState.ContainsKey state
         then stateToRsmState[state]
@@ -91,7 +91,7 @@ let buildRSMBox getTerminalFromString regexp =
                 let toRsmState = getRsmState newState false (nullable newState)
                 let fromRsmState = stateToRsmState[state]
                 match symbol with
-                | Terminal x -> fromRsmState.AddTerminalEdge (getTerminalFromString x, toRsmState)
+                | Terminal x -> fromRsmState.AddTerminalEdge (Char x, toRsmState)
                 | NonTerminal x ->
                     fun getNonTerminalStartState -> fromRsmState.AddNonTerminalEdge (getNonTerminalStartState x, toRsmState)
                     |> thisEdgesMustBeAddedLater.Add
@@ -157,30 +157,18 @@ let addLayout regexp layoutSymbols =
             | Epsilon -> Regexp.Epsilon
         addLayout regexp
 
-
 let build layoutSymbols rules =
 
     let nonTerminalToStartState = Dictionary<_,_>()
     let addEdges = ResizeArray()
-    let terminalMapping = Dictionary()
-    let mutable firstTreeTerminalId = 0<terminalSymbol>
-    let getTerminalFromString terminalStr =
-        let exists, terminal = terminalMapping.TryGetValue (char terminalStr)
-        if exists
-        then terminal
-        else
-            let id = firstTreeTerminalId
-            terminalMapping.Add((char terminalStr),id)
-            firstTreeTerminalId <- firstTreeTerminalId + 1<terminalSymbol>
-            id
-
+  
     let boxes =
         rules
         |> Seq.map (fun rule ->
             match rule with
             | Rule (ntName,ntRegex) ->
                 let regexp = addLayout ntRegex layoutSymbols
-                let box, _addEdges = buildRSMBox getTerminalFromString regexp
+                let box, _addEdges = buildRSMBox ntName regexp
                 nonTerminalToStartState.Add (ntName, box.StartState)
                 addEdges.AddRange _addEdges
                 box
@@ -189,5 +177,4 @@ let build layoutSymbols rules =
 
     addEdges |> ResizeArray.iter (fun f -> f (fun x -> nonTerminalToStartState.[x]))
 
-
-    RSM(boxes, boxes[0]), terminalMapping, nonTerminalToStartState
+    RSM(boxes, boxes[0])

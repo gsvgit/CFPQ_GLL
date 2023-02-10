@@ -1,16 +1,14 @@
 module Tests.GLLTests
 
 open System.Collections.Generic
-open CFPQ_GLL
 open CFPQ_GLL.Common
 open CFPQ_GLL.GLL
-open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
 open Expecto
 open Tests.InputGraph
 
-let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
+let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, RsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
 
     let getState stateId =
         let exists, state = statesMapping.TryGetValue stateId
@@ -33,12 +31,7 @@ let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, IRsmState>,
             startState.AddTerminalEdge(_term, finalState)
     statesMapping
 
-let makeRsmBox (statesMapping: Dictionary<int<rsmState>, IRsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
-    let box = RSMBox()
-    let statesMapping = fillRsmBox (box, statesMapping, startSate, finalStates, edges)
-    box, statesMapping
-
-let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
+(*let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
     sppf.Edges |> Seq.iter (fun (x,y) -> printf $"(%i{x},%i{y}); ")
     printfn ""
     sppf.Nodes
@@ -50,6 +43,7 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
         | TriplesStoredSPPFNode.RangeNode (_posFrom, _posTo, _rsmFrom, _rsmTo) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.RangeNode (%i{_posFrom}<inputGraphVertex>,%i{_posTo}<inputGraphVertex>,%i{_rsmFrom}<rsmState>,%i{_rsmTo}<rsmState>))"
         | TriplesStoredSPPFNode.IntermediateNode (_pos, _rsm, _w) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.IntermediateNode (%i{_pos}<inputGraphVertex>,%i{_rsm}<rsmState>, %i{_w}<distance>))"
         )
+*)
 
 let calculateActual root =
 
@@ -65,15 +59,15 @@ let calculateActual root =
     let rangeCount = countFor (function | TriplesStoredSPPFNode.RangeNode _ -> true | _ -> false)
     let intermediateCount = countFor (function | TriplesStoredSPPFNode.IntermediateNode _ -> true | _ -> false)
 
-    epsilonCount, terminalCount, nonTerminalCount, rangeCount, intermediateCount, root.Distance
+    epsilonCount, terminalCount, nonTerminalCount, rangeCount, intermediateCount, root.Weight
 
 let private runGLLAndCheckResultForManuallyCreatedGraph
     evalFunction
     (testName:string)
-    (startVertex: ILinearInputGraphVertex)
-    (finalVertex: ILinearInputGraphVertex)
+    (startVertex: LinearInputGraphVertexBase)
+    (finalVertex: LinearInputGraphVertexBase)
     (q:RSM)
-    (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, distanceEx) =
+    (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx) =
 
     let validDotFileName = testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
     let result = evalFunction startVertex q AllPaths
@@ -82,27 +76,27 @@ let private runGLLAndCheckResultForManuallyCreatedGraph
     | QueryResult.MatchedRanges ranges ->
 
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
-        let root = sppf |> Array.filter (fun n -> startVertex = n.LeftPosition && finalVertex = n.RightPosition) |> Array.minBy(fun n -> n.Distance)
+        let root = sppf |> Array.filter (fun n -> startVertex = n.LeftPosition && finalVertex = n.RightPosition) |> Array.minBy(fun n -> n.Weight)
 
         //printfn $"D for %s{validDotFileName}"
 
         //let actual = TriplesStoredSPPF([|root|], Dictionary())
         //actual.ToDot validDotFileName
 
-        let epsilonCount, terminalCount, nonTerminalCount, rangeCount, intermediateCount, distance = calculateActual root
+        let epsilonCount, terminalCount, nonTerminalCount, rangeCount, intermediateCount, weight = calculateActual root
         Expect.equal epsilonCount epsilonCountEx "Epsilon nodes count should be equal"
         Expect.equal terminalCount terminalCountEx "Terminal nodes count should be equal"
         Expect.equal nonTerminalCount nonTerminalCountEx "NonTerminal nodes count should be equal"
         Expect.equal rangeCount rangeCountEx "Range nodes count should be equal"
         Expect.equal intermediateCount intermediateCountEx "Intermediate nodes count should be equal"
-        Expect.equal distance distanceEx "Distances should be equal"
+        Expect.equal weight weightEx "Weights should be equal"
 
     | _ -> failwith "Result should be MatchedRanges"
 
 
-let runErrorRecoveringGLLAndCheckResult (testName:string) (graph:InputGraph) startV finalV (q:RSM) (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, distanceEx) =
+let runErrorRecoveringGLLAndCheckResult (testName:string) (graph:InputGraph) startV finalV (q:RSM) (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx) =
     let startVertex,mapping = graph.ToCfpqCoreGraph startV
     let finalVertex = mapping[finalV]
-    runGLLAndCheckResultForManuallyCreatedGraph (errorRecoveringEval finalVertex) testName startVertex finalVertex q (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, distanceEx)
+    runGLLAndCheckResultForManuallyCreatedGraph (errorRecoveringEval finalVertex) testName startVertex finalVertex q (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx)
 
 

@@ -1,12 +1,7 @@
 module CFPQ_GLL.DescriptorsStack
 
-open System.Collections
 open System.Collections.Generic
 open CFPQ_GLL.Common
-open CFPQ_GLL.RSM
-open CFPQ_GLL.GSS
-open CFPQ_GLL.InputGraph
-open CFPQ_GLL.SPPF
 open FSharpx.Collections
 
 type IDescriptorsStack =
@@ -27,15 +22,15 @@ type DefaultDescriptorsStack (seq: Descriptor seq) =
 
 type ErrorRecoveringDescriptorsStack () =
     let defaultDescriptorsStack = Stack<Descriptor>()
-    let errorRecoveringDescriptorsStacks = SortedDictionary<int<distance>, Stack<Descriptor>>()
+    let errorRecoveringDescriptorsStacks = SortedDictionary<int<weight>, Stack<Descriptor>>()
 
     interface IDescriptorsStack with
         member this.Push descriptor =
             let pathWeight = descriptor.Weight
-            if pathWeight = 0<distance> then defaultDescriptorsStack.Push descriptor
+            if pathWeight = 0<weight> then defaultDescriptorsStack.Push descriptor
             else
-                if errorRecoveringDescriptorsStacks.ContainsKey(pathWeight) |> not then
-                    errorRecoveringDescriptorsStacks[pathWeight] <- Stack<_>()
+                if errorRecoveringDescriptorsStacks.ContainsKey(pathWeight) |> not
+                then errorRecoveringDescriptorsStacks[pathWeight] <- Stack<_>()
                 errorRecoveringDescriptorsStacks[pathWeight].Push descriptor
 
         member this.Pop () =
@@ -46,8 +41,8 @@ type ErrorRecoveringDescriptorsStack () =
                 assert moved
                 let currentMin = enumerator.Current
                 let result = errorRecoveringDescriptorsStacks[currentMin].Pop ()
-                if errorRecoveringDescriptorsStacks[currentMin].Count = 0 then
-                    errorRecoveringDescriptorsStacks.Remove currentMin |> ignore
+                if errorRecoveringDescriptorsStacks[currentMin].Count = 0
+                then errorRecoveringDescriptorsStacks.Remove currentMin |> ignore
                 result
 
         member this.IsEmpty

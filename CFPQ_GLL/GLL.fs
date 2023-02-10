@@ -4,7 +4,6 @@ open System.Collections.Generic
 open CFPQ_GLL.Common
 open CFPQ_GLL.RSM
 open CFPQ_GLL.GSS
-open CFPQ_GLL.InputGraph
 open CFPQ_GLL.SPPF
 open CFPQ_GLL.DescriptorsStack
 open FSharpx.Collections
@@ -15,7 +14,7 @@ type Mode =
 
 [<RequireQualifiedAccess>]
 type QueryResult =
-    | ReachabilityFacts of Dictionary<ILinearInputGraphVertex,HashSet<ILinearInputGraphVertex>>
+    | ReachabilityFacts of Dictionary<LinearInputGraphVertexBase,HashSet<LinearInputGraphVertexBase>>
     | MatchedRanges of MatchedRanges
 
 let logGll logLevel = Logging.printLog Logging.GLL logLevel
@@ -25,8 +24,8 @@ let private run
         (gss:GSS)
         (matchedRanges:MatchedRanges)
         (descriptorsToProcess: IDescriptorsStack)
-        (startVertex:ILinearInputGraphVertex)
-        (finalVertex:ILinearInputGraphVertex)
+        (startVertex:LinearInputGraphVertexBase)
+        (finalVertex:LinearInputGraphVertexBase)
         (query:RSM) mode =
 
     // let encodeTerminal t =
@@ -87,10 +86,10 @@ let private run
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<IRsmState>
-                  , Unchecked.defaultof<IRsmState>
+                    Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<RsmState>
+                  , Unchecked.defaultof<RsmState>
                )
 
     let dummyRangeNode = Unchecked.defaultof<RangeNode>
@@ -159,11 +158,11 @@ let private run
                                 else dummyRangeNode
                             MatchedRangeWithNode(matchedRange, rangeNode)
                         makeIntermediateNode leftSubRange rightSubRange
-                    let newDistance =
+                    let newWeight =
                         match newRange.Node with
-                        | Some n -> n.Distance
-                        | None -> 0<distance>
-                    let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, newDistance)//currentDescriptor.Weight)
+                        | Some n -> n.Weight
+                        | None -> 0<weight>
+                    let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, newWeight)//currentDescriptor.Weight)
                     //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
                     d.IsFinal <- findCorrect
                     addDescriptor d
@@ -206,14 +205,14 @@ let private run
                        let leftSubRange = currentDescriptor.MatchedRange
                        let weight =
                            match rightSubRange.Node with
-                           | Some x -> x.Distance
-                           | None -> 0<distance>
+                           | Some x -> x.Weight
+                           | None -> 0<weight>
                        weight, makeIntermediateNode leftSubRange rightSubRange
                    let d =  Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight)
                    //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
                    d |> addDescriptor)
 
-        let handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: IRsmState) =
+        let handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: RsmState) =
             ////logGll Logging.Debug $"(handleTerminalOrEpsilonEdge) Terminal: {encodeTerminal terminalSymbol}  Weight: {graphEdgeTarget.Weight}"
             let graphTargetVertex = graphEdgeTarget.TargetVertex
 
@@ -259,8 +258,8 @@ let private run
             let currentTerminal,targetVertex = currentDescriptor.InputPosition.OutgoingEdge
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
                 if terminal <> currentTerminal
-                then errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<distance>))
-            errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<distance>))
+                then errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
+            errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
 
         let symbol, vertex = outgoingTerminalEdgeInGraph
@@ -275,7 +274,7 @@ let private run
 
 
 
-    let mutable weight = -1<distance>
+    let mutable weight = -1<weight>
     let mutable cnt = 0
     let mutable _continue = true
     while
@@ -311,20 +310,20 @@ let evalFromState
         (descriptorToProcess:IDescriptorsStack)
         (gss:GSS)
         (matchedRanges:MatchedRanges)
-        (startVertex:ILinearInputGraphVertex)
-        (finalVertex:ILinearInputGraphVertex)
+        (startVertex:LinearInputGraphVertexBase)
+        (finalVertex:LinearInputGraphVertexBase)
         (query:RSM) mode =
 
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<ILinearInputGraphVertex>
-                  , Unchecked.defaultof<IRsmState>
-                  , Unchecked.defaultof<IRsmState>
+                    Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<LinearInputGraphVertexBase>
+                  , Unchecked.defaultof<RsmState>
+                  , Unchecked.defaultof<RsmState>
                )
     let gssVertex = gss.AddNewVertex(startVertex, query.StartState)
-    Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<distance>)
+    Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<weight>)
     |> descriptorToProcess.Push
 
     run

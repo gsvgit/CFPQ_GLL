@@ -1,9 +1,6 @@
 module Tests.LinearGraphReader
 
 open System.IO
-open System.Collections.Generic
-open CFPQ_GLL
-open CFPQ_GLL.InputGraph
 open Expecto
 open CFPQ_GLL.Common
 open FSharpx.Collections
@@ -11,14 +8,9 @@ open Tests.InputGraph
 
 let mkLinearGraph
     (onText: string -> string)
-    (terminalsMapping: Dictionary<char, int<terminalSymbol>>)
     (inputString: string) =
 
-    let getTerminal symbol =
-        if terminalsMapping.ContainsKey(symbol) |> not then failwith $"Unexpected symbol[{symbol}] in input file"
-        terminalsMapping[symbol]
-
-    let terminals = inputString |> onText |> Seq.toArray |> Array.map getTerminal
+    let terminals = inputString |> onText |> Seq.toArray |> Array.map Char
     let mkVertex i = LanguagePrimitives.Int32WithMeasure<inputGraphVertex> i
     let mkEdge v1 t v2 = DefaultTerminalEdge(mkVertex v1, t, mkVertex v2)
     let mkLinearEdge v t = mkEdge v t (v + 1)
@@ -32,19 +24,14 @@ let mkLinearGraph
 
 let readLinearGraph
     (onText: string -> string)
-    (terminalsMapping: Dictionary<char, int<terminalSymbol>>)
     (filePath: string) =
 
-    File.ReadAllText(filePath) |> mkLinearGraph onText terminalsMapping
+    File.ReadAllText(filePath) |> mkLinearGraph onText 
 
 let ``Linear graph creating tests`` =
 
-    let aTerminal = 0<terminalSymbol>
-    let bTerminal = 1<terminalSymbol>
-
-    let terminalsMapping = Dictionary<char,int<terminalSymbol>>()
-    terminalsMapping.Add('a', aTerminal)
-    terminalsMapping.Add('b', bTerminal)
+    let aTerminal = Char 'a'
+    let bTerminal = Char 'b'
 
     let assertGraphEqual (actual: InputGraph) (expected: InputGraph) =
         actual.ToDot (1,"actual.dot")
@@ -72,7 +59,7 @@ let ``Linear graph creating tests`` =
     let abaInputString = "aba"
     let abcInputString = "abc"
 
-    let mkGraph = mkLinearGraph id terminalsMapping
+    let mkGraph = mkLinearGraph id
 
     let mkTest edges input () =
 
