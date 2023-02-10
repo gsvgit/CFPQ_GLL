@@ -4,8 +4,21 @@ open System.Collections.Generic
 
 [<Measure>] type terminalSymbol
 [<Measure>] type distance
+[<Measure>] type rsmStateId
 
-
+type INonterminal =
+    abstract Name: string
+    
+type NonterminalBase (name: string) =
+    interface INonterminal with    
+        member this.Name = name
+    
+let getFirstFreeRsmStateId =
+    let mutable cnt = 0<rsmStateId>
+    fun () ->
+        let res = cnt
+        cnt <- cnt + 1<rsmStateId>
+        res
 type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, leftPartMinWeight: int<distance>) =
     let mutable leftPartMinWeight = leftPartMinWeight
     let hashCode =
@@ -34,19 +47,19 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
         //&& (y :?> Descriptor).MatchedRange = this.MatchedRange
 
 and RsmState (isStart: bool, isFinal: bool) =
+    let id = getFirstFreeRsmStateId()
     let errorRecoveryLabels = HashSet()
-    let coveredTargetStates = HashSet()
-    //let descriptors = ResizeArray<Descriptor>()
+    let coveredTargetStates = HashSet()    
     let outgoingTerminalEdges = Dictionary<int<terminalSymbol>, HashSet<RsmState>>()
     let outgoingNonTerminalEdges= Dictionary<RsmState, HashSet<RsmState>>()
     let nonTerminalNodes = ResizeArray<INonTerminalNode>()
     let mutable rsmBox : Option<IRsmBox> = None
     new () = RsmState(false,false)
     
+    member this.Id = id
     member this.ErrorRecoveryLabels = errorRecoveryLabels
     member this.OutgoingTerminalEdges = outgoingTerminalEdges
-    member this.OutgoingNonTerminalEdges = outgoingNonTerminalEdges
-    //member this.Descriptors = descriptors
+    member this.OutgoingNonTerminalEdges = outgoingNonTerminalEdges    
     member this.IsStart = isStart
     member this.IsFinal = isFinal
     member this.NonTerminalNodes = nonTerminalNodes
@@ -69,7 +82,7 @@ and RsmState (isStart: bool, isFinal: bool) =
         then
             targetStates.Add targetState |> ignore
         else 
-            (this).OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])    
+            this.OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])    
     member this.Box
         with get () =
                 match rsmBox with
@@ -79,19 +92,8 @@ and RsmState (isStart: bool, isFinal: bool) =
 
 and IRsmBox =
     abstract FinalStates: HashSet<RsmState>
-
-
-(*and ILinearInputGraphVertex =
-    abstract Id : int
-    abstract OutgoingEdge: int<terminalSymbol> * TerminalEdgeTarget
-    abstract Descriptors: HashSet<Descriptor>
-    abstract TerminalNodes: Dictionary<ILinearInputGraphVertex, Dictionary<int<terminalSymbol>, ITerminalNode>>
-    abstract NonTerminalNodesStartedHere: Dictionary<ILinearInputGraphVertex, Dictionary<RsmState, INonTerminalNode>>
-    //abstract NonTerminalNodesWithStartHere: HashSet<IInputGraphVertex * INonTerminalNode>
-    abstract RangeNodes: Dictionary<MatchedRange, IRangeNode>
-    abstract IntermediateNodes: Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>
-    *)
-    
+    abstract Nonterminal: INonterminal
+   
 and LinearInputGraphVertexBase (id:int32) =
     let id = id
     let mutable outgoingEdge : Option<int<terminalSymbol> * TerminalEdgeTarget> = None
@@ -108,7 +110,6 @@ and LinearInputGraphVertexBase (id:int32) =
         | None -> outgoingEdge <- Some (terminal, target)
         | Some x -> failwithf $"Edge exists: %A{x}"
 
-    //interface ILinearInputGraphVertex with
     member this.Id = id
     member this.OutgoingEdge =
         match outgoingEdge with

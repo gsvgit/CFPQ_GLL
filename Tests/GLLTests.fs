@@ -33,12 +33,7 @@ let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, RsmState>, 
             startState.AddTerminalEdge(_term, finalState)
     statesMapping
 
-let makeRsmBox (statesMapping: Dictionary<int<rsmState>, RsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
-    let box = RSMBox()
-    let statesMapping = fillRsmBox (box, statesMapping, startSate, finalStates, edges)
-    box, statesMapping
-
-let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
+(*let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
     sppf.Edges |> Seq.iter (fun (x,y) -> printf $"(%i{x},%i{y}); ")
     printfn ""
     sppf.Nodes
@@ -50,6 +45,7 @@ let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
         | TriplesStoredSPPFNode.RangeNode (_posFrom, _posTo, _rsmFrom, _rsmTo) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.RangeNode (%i{_posFrom}<inputGraphVertex>,%i{_posTo}<inputGraphVertex>,%i{_rsmFrom}<rsmState>,%i{_rsmTo}<rsmState>))"
         | TriplesStoredSPPFNode.IntermediateNode (_pos, _rsm, _w) -> printfn $"nodes.Add(%i{kvp.Key}, TriplesStoredSPPFNode.IntermediateNode (%i{_pos}<inputGraphVertex>,%i{_rsm}<rsmState>, %i{_w}<distance>))"
         )
+*)
 
 let calculateActual root =
 

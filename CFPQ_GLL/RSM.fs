@@ -42,52 +42,7 @@ type TerminalEdgesStorage =
     | Small of array<RSMTerminalEdge>
     | Big of Dictionary<int<terminalSymbol>,ResizeArray<int<rsmState>>>
 
-(*
-type RsmState (isStart: bool, isFinal: bool) =
-    let errorRecoveryLabels = HashSet()
-    let coveredTargetStates = HashSet()
-    let descriptors = ResizeArray<Descriptor>()
-    let outgoingTerminalEdges = Dictionary<int<terminalSymbol>, HashSet<IRsmState>>()
-    let outgoingNonTerminalEdges= Dictionary<IRsmState, HashSet<IRsmState>>()
-    let nonTerminalNodes = ResizeArray()
-    let mutable rsmBox = None
-    new () = RsmState(false,false)
 
-    interface IRsmState with
-        member this.ErrorRecoveryLabels = errorRecoveryLabels
-        member this.OutgoingTerminalEdges = outgoingTerminalEdges
-        member this.OutgoingNonTerminalEdges = outgoingNonTerminalEdges
-        member this.Descriptors = descriptors
-        member this.IsStart = isStart
-        member this.IsFinal = isFinal
-        member this.NonTerminalNodes = nonTerminalNodes
-        member this.AddTerminalEdge (terminal, targetState) =
-            if coveredTargetStates.Contains targetState |> not
-            then
-                let added = errorRecoveryLabels.Add terminal
-                assert added
-                let added =  coveredTargetStates.Add targetState
-                assert added
-            let exists,targetStates = (this:>IRsmState).OutgoingTerminalEdges.TryGetValue terminal
-            if exists
-            then
-                targetStates.Add targetState |> ignore
-            else
-                (this:>IRsmState).OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
-        member this.AddNonTerminalEdge (nonTerminal, targetState) =
-            let exists,targetStates = (this:>IRsmState).OutgoingNonTerminalEdges.TryGetValue nonTerminal
-            if exists
-            then
-                targetStates.Add targetState |> ignore
-            else
-                (this:>IRsmState).OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])
-        member this.Box
-            with get () =
-                    match rsmBox with
-                    | None -> failwith "Rsm state without rsm box."
-                    | Some b -> b
-            and set v = rsmBox <- Some v
-*)
 [<Struct>]
 type RSMVertexMutableContent =
     val OutgoingTerminalEdges : ResizeArray<RSMTerminalEdge>
@@ -98,7 +53,8 @@ type RSMVertexMutableContent =
             OutgoingNonTerminalEdges = nonTerminalEdges
         }
 
-type RSMBox() =
+type RSMBox(nonTerminal:INonterminal) =
+    let nonTerminal = nonTerminal
     let mutable startState = None
     let finalStates = HashSet<RsmState>()
     member this.AddState (state:RsmState) =
@@ -117,6 +73,7 @@ type RSMBox() =
 
     interface IRsmBox with
         member this.FinalStates = finalStates
+        member this.Nonterminal = nonTerminal
 
 type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     let finalStates = HashSet<_>()
@@ -130,7 +87,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
         startStateOfExtendedRSM.AddNonTerminalEdge(originalStartState, intermediateState)
         // We doesn't use AddTerminalEdge because we don't want to add EOF to ErrorRecoveryLabels
         intermediateState.OutgoingTerminalEdges.Add(EOF, HashSet[|finalState|])
-        let box = RSMBox()
+        let box = RSMBox(NonterminalBase "__Extended__")
         box.AddState startStateOfExtendedRSM
         box.AddState intermediateState
         box.AddState finalState
@@ -140,24 +97,10 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     member this.OriginalStartState = startBox.StartState
 
     member this.ToDot (filePath,
-        (terminalMapping: Dictionary<int<terminalSymbol>, char>),
-        (nonTerminalMapping:  Dictionary<RsmState, string>))=
+        (terminalMapping: Dictionary<int<terminalSymbol>, char>))=
         let visited = HashSet<_>()
-        let vertexId =
-            let mutable firstFreeVertexId = 0
-            let visitedVertices = Dictionary<_,_>()
-            fun (v:RsmState) ->
-                let exists, id = visitedVertices.TryGetValue v
-                if exists
-                then id
-                else
-                    let id = firstFreeVertexId
-                    firstFreeVertexId <- firstFreeVertexId + 1
-                    visitedVertices.Add (v,id)
-                    id
-
+        
         let rec toDot (v: RsmState) =
-            let id = vertexId v
             if not <| visited.Contains v
             then
                 let added = visited.Add v
@@ -166,20 +109,20 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
                         if v.IsFinal
                         then
                             if v.IsStart
-                            then yield $"%i{id} [shape = doublecircle style = filled fillcolor=green label=%A{nonTerminalMapping[v]}]"
-                            else yield $"%i{id} [shape = doublecircle]"
+                            then yield $"%i{v.Id} [shape = doublecircle style = filled fillcolor=green label=%A{v.Box.Nonterminal.Name}]"
+                            else yield $"%i{v.Id} [shape = doublecircle]"
                         elif v.IsStart
-                        then yield $"%i{id} [style = filled fillcolor=green label=%A{nonTerminalMapping[v]}]"
+                        then yield $"%i{v.Id} [style = filled fillcolor=green label=%A{v.Box.Nonterminal.Name}]"
                         for e in v.OutgoingTerminalEdges do
                             for target in e.Value do
                                 yield
-                                    if terminalMapping.Count = 0 then $"%i{id} -> %i{vertexId target} [label = t_%i{e.Key}]"
-                                    else $"%i{id} -> %i{vertexId target} [label = %A{string terminalMapping[e.Key]}]"
+                                    if terminalMapping.Count = 0 then $"%i{v.Id} -> %i{target.Id} [label = t_%i{e.Key}]"
+                                    else $"%i{v.Id} -> %i{target.Id} [label = %A{string terminalMapping[e.Key]}]"
                                 yield! toDot target
 
                         for e in v.OutgoingNonTerminalEdges do
                             for target in e.Value do
-                                yield $"%i{id} -> %i{vertexId target} [label = %A{nonTerminalMapping[e.Key]}]"
+                                yield $"%i{v.Id} -> %i{target.Id} [label = %A{e.Key.Box.Nonterminal.Name}]"
                                 yield! toDot target
                     }
             else Seq.empty
@@ -193,6 +136,5 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
         |> fun x -> System.IO.File.WriteAllLines(filePath, x)
 
     member this.ToDot filePath =
-        let terminalMapping = Dictionary<_,_>()
-        let nonTerminalMapping = Dictionary<_,_>()
-        this.ToDot (filePath, terminalMapping, nonTerminalMapping)
+        let terminalMapping = Dictionary<_,_>()        
+        this.ToDot (filePath, terminalMapping)

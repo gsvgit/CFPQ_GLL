@@ -60,12 +60,12 @@ let rec getAllSymbols regexp =
     match regexp with
     | Empty | Epsilon -> []
     | Symbol x -> [x]
-    | Many regexp (*| Option regexp*)-> getAllSymbols regexp
+    | Many regexp -> getAllSymbols regexp
     | Alternative (left,right) | Sequence (left,right) -> getAllSymbols left @ getAllSymbols right
 
-let buildRSMBox getTerminalFromString regexp =
+let buildRSMBox ntName getTerminalFromString regexp =
     let thisEdgesMustBeAddedLater = ResizeArray()
-    let box = RSMBox()
+    let box = RSMBox(NonterminalBase ntName)
     let alphabet = HashSet (getAllSymbols regexp)
     let stateToRsmState = Dictionary<_,RsmState>()
     let getRsmState state isStart isFinal =
@@ -180,7 +180,7 @@ let build layoutSymbols rules =
             match rule with
             | Rule (ntName,ntRegex) ->
                 let regexp = addLayout ntRegex layoutSymbols
-                let box, _addEdges = buildRSMBox getTerminalFromString regexp
+                let box, _addEdges = buildRSMBox ntName getTerminalFromString regexp
                 nonTerminalToStartState.Add (ntName, box.StartState)
                 addEdges.AddRange _addEdges
                 box
@@ -189,5 +189,4 @@ let build layoutSymbols rules =
 
     addEdges |> ResizeArray.iter (fun f -> f (fun x -> nonTerminalToStartState.[x]))
 
-
-    RSM(boxes, boxes[0]), terminalMapping, nonTerminalToStartState
+    RSM(boxes, boxes[0]), terminalMapping

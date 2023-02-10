@@ -378,9 +378,9 @@ type MatchedRanges () =
 
 [<RequireQualifiedAccess>]
 type TriplesStoredSPPFNode =
-    | EpsilonNode of int<inputGraphVertex> * int<rsmState> * int<distance>
+    | EpsilonNode of int<inputGraphVertex> * INonterminal * int<distance>
     | TerminalNode of int<inputGraphVertex> * int<terminalSymbol> * int<inputGraphVertex> * int<distance>
-    | NonTerminalNode of int<inputGraphVertex> * int<rsmState> * int<inputGraphVertex> * int<distance>
+    | NonTerminalNode of int<inputGraphVertex> * INonterminal * int<inputGraphVertex> * int<distance>
     | IntermediateNode of int<inputGraphVertex> * int<rsmState> * int<distance>
     | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmState> * int<rsmState>
 
@@ -440,7 +440,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     and handleEpsilonNode parentId (node:IEpsilonNode) =
         let node = node :?> EpsilonNode
         let currentId = nodesCount
-        nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(getVertexId node.Position, getStateId node.NonTerminalStartState, 0<distance>))
+        nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(getVertexId node.Position, node.NonTerminalStartState.Box.Nonterminal, 0<distance>))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
 
@@ -450,7 +450,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
         else
             let currentId = nodesCount
             visitedNonTerminalNodes.Add(node, currentId)
-            nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(getVertexId node.LeftPosition, getStateId node.NonTerminalStartState, getVertexId node.RightPosition, node.Distance))
+            nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(getVertexId node.LeftPosition, node.NonTerminalStartState.Box.Nonterminal, getVertexId node.RightPosition, node.Distance))
             addEdge parentId currentId
             nodesCount <- nodesCount + 1
             node.RangeNodes
@@ -483,8 +483,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
 
     let printEdge (x,y) = sprintf $"%i{x}->%i{y}"
     let printNode nodeId node
-        (terminalMapping: Dictionary<int<terminalSymbol>, char>)
-        (nonTerminalMapping: Dictionary<int<rsmState>, string>)=
+        (terminalMapping: Dictionary<int<terminalSymbol>, char>) =        
         match node with
         | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to, w) ->
             if terminalMapping.Count = 1
@@ -492,25 +491,17 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
             else sprintf $"%i{nodeId} [label = \"%A{_from}, {terminalMapping[_terminal]}, %A{_to}, Weight: {w}\", shape = rectangle]"
         | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState, w) ->
             sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}, Weight: {w}\", shape = plain]"
-        | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to, w) ->
-            if nonTerminalMapping.Count = 0
-            then sprintf $"%i{nodeId} [label = \"%A{_from}, N_%i{_nonTerminal}, %A{_to}\", shape = invtrapezium]"
-            else sprintf $"%i{nodeId} [label = \"%A{_from}, {nonTerminalMapping[_nonTerminal]}, %A{_to}, Weight: {w}\", shape = invtrapezium]"
-        | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal, w) ->
-            if nonTerminalMapping.Count = 0
-            then sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: N_%i{_nonTerminal}, Weight: {w}\", shape = invhouse]"
-            else sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: {nonTerminalMapping[_nonTerminal]}, Weight: {w}\", shape = invhouse]"
-
+        | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to, w) ->            
+            sprintf $"%i{nodeId} [label = \"%A{_from}, {_nonTerminal.Name}, %A{_to}, Weight: {w}\", shape = invtrapezium]"
+        | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal, w) ->                        
+            sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: {_nonTerminal.Name}, Weight: {w}\", shape = invhouse]"
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
             sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
 
-    member this.ToDot (terminalMapping, nonTerminalMapping: Dictionary<RsmState, string>, filePath) =
-        let nonTerminalMapping' = Dictionary<_,_>()
-        for k in nonTerminalMapping.Keys do
-            nonTerminalMapping'.Add(getStateId k, nonTerminalMapping.[k])
-        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value terminalMapping nonTerminalMapping')); yield! (ResizeArray.map printEdge edges); "}"])
+    member this.ToDot (terminalMapping, filePath) =        
+        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value terminalMapping)); yield! (ResizeArray.map printEdge edges); "}"])
 
-    member this.ToDot filePath = this.ToDot (Dictionary<_, _>(), Dictionary<_, _>(), filePath)
+    member this.ToDot filePath = this.ToDot (Dictionary<_, _>(), filePath)
 
     member this.Edges with get() = edges
     member this.Nodes with get () = nodes

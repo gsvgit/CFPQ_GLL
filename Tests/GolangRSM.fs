@@ -106,9 +106,9 @@ let golangSrc () =
                       +|+ returnLit ** Expr ** t ';'
     ] |> build [' '; '\t'; '\n'; '\r']
 
-let _, terminalMapping, nonTerminalMapping = golangSrc ()
+let _, terminalMapping = golangSrc ()
 
-let golangRSM () = golangSrc () |> fun (rsm, _, _) -> rsm
+let golangRSM () = golangSrc () |> fun (rsm, _) -> rsm
 
 let functionSample = """
 func longFuncName(x int, y bool, longName int) int {
