@@ -35,8 +35,6 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
         hash <- hash * 23 + rsmState.GetHashCode()
         hash <- hash * 23 + inputPosition.GetHashCode()
         hash <- hash * 23 + gssVertex.GetHashCode()
-        hash <- hash * 23 + int leftPartMinWeight
-        //hash <- hash * 23 + matchedRange.GetHashCode()
         hash
     member val IsFinal = false with get, set
     member this.RsmState = rsmState
@@ -52,8 +50,6 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
         && (y :?> Descriptor).RsmState = this.RsmState
         && (y :?> Descriptor).InputPosition = this.InputPosition
         && (y :?> Descriptor).GssVertex = this.GssVertex
-        && (y :?> Descriptor).Weight = this.Weight
-        //&& (y :?> Descriptor).MatchedRange = this.MatchedRange
 
 and RsmState (isStart: bool, isFinal: bool) =
     let id = getFirstFreeRsmStateId()

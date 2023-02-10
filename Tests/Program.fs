@@ -132,8 +132,8 @@ let main _ =
             ErrorRecoveringTest.``Error recovering tests``
         ] |> testSequenced
 
-    //runTestsWithCLIArgs [] [||] tests
-    0
+    runTestsWithCLIArgs [] [||] tests
+    //0
 
 
 
