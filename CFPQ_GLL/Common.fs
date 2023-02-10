@@ -3,7 +3,7 @@ module CFPQ_GLL.Common
 open System.Collections.Generic
 
 [<Measure>] type terminalSymbol
-[<Measure>] type distance
+[<Measure>] type weight
 [<Measure>] type rsmStateId
 
 type Char =
@@ -26,7 +26,7 @@ let getFirstFreeRsmStateId =
         let res = cnt
         cnt <- cnt + 1<rsmStateId>
         res
-type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, leftPartMinWeight: int<distance>) =
+type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, leftPartMinWeight: int<weight>) =
     let mutable leftPartMinWeight = leftPartMinWeight
     let hashCode =
         let mutable hash = 17
@@ -130,9 +130,9 @@ and LinearInputGraphVertexBase (id:int32) =
     
 and [<Struct>] TerminalEdgeTarget =
     val TargetVertex: LinearInputGraphVertexBase
-    val Weight: int<distance>
+    val Weight: int<weight>
     new (targetVertex, weight) = {TargetVertex = targetVertex; Weight = weight}
-    new (targetVertex) = {TargetVertex = targetVertex; Weight = 0<distance>}
+    new (targetVertex) = {TargetVertex = targetVertex; Weight = 0<weight>}
 
 and [<Struct>] Range<'position> =
     val StartPosition: 'position
@@ -154,22 +154,22 @@ and [<Struct>] MatchedRangeWithNode =
     new (inputFrom, inputTo, rsmFrom, rsmTo) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); Node = None}
 
 and ITerminalNode =
-    abstract Distance: int<distance> with get, set
+    abstract Weight: int<weight> with get, set
     abstract Parents: ResizeArray<IRangeNode>
 and IEpsilonNode =
     abstract Parents: ResizeArray<IRangeNode>
 and INonTerminalNode =
-    abstract Distance: int<distance> with get, set
+    abstract Weight: int<weight> with get, set
     abstract Parents: ResizeArray<IRangeNode>
     abstract RangeNodes: ResizeArray<IRangeNode>
     abstract LeftPosition : LinearInputGraphVertexBase
     abstract RightPosition : LinearInputGraphVertexBase
     abstract NonTerminalStartState : RsmState
 and IIntermediateNode =
-    abstract Distance: int<distance> with get, set
+    abstract Weight: int<weight> with get, set
     abstract Parents: ResizeArray<IRangeNode>
 and IRangeNode =
-    abstract Distance: int<distance> with get, set
+    abstract Weight: int<weight> with get, set
     abstract Parents: ResizeArray<INonRangeNode>
     abstract IntermediateNodes: HashSet<INonRangeNode>
 and IGssEdge =
@@ -185,6 +185,6 @@ and IGssVertex =
     abstract HandledDescriptors: HashSet<Descriptor>
 
 and INonRangeNode =
-    abstract Distance: int<distance>
+    abstract Weight: int<weight>
     abstract Parents: ResizeArray<IRangeNode>
 

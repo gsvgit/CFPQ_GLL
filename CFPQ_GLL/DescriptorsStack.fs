@@ -27,12 +27,12 @@ type DefaultDescriptorsStack (seq: Descriptor seq) =
 
 type ErrorRecoveringDescriptorsStack () =
     let defaultDescriptorsStack = Stack<Descriptor>()
-    let errorRecoveringDescriptorsStacks = SortedDictionary<int<distance>, Stack<Descriptor>>()
+    let errorRecoveringDescriptorsStacks = SortedDictionary<int<weight>, Stack<Descriptor>>()
 
     interface IDescriptorsStack with
         member this.Push descriptor =
             let pathWeight = descriptor.Weight
-            if pathWeight = 0<distance> then defaultDescriptorsStack.Push descriptor
+            if pathWeight = 0<weight> then defaultDescriptorsStack.Push descriptor
             else
                 if errorRecoveringDescriptorsStacks.ContainsKey(pathWeight) |> not then
                     errorRecoveringDescriptorsStacks[pathWeight] <- Stack<_>()

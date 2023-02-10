@@ -11,17 +11,17 @@ open CFPQ_GLL.InputGraph
 type InputGraphEdge =
     val TerminalSymbol: Char
     val TargetVertex: int<inputGraphVertex>
-    val Weight: int<distance>
+    val Weight: int<weight>
     new (terminal, targetVertex, weight) = {TerminalSymbol = terminal; TargetVertex = targetVertex; Weight = weight}
 
 type DemoInputGraphEdge =
-    | TerminalEdge of int<inputGraphVertex>*Char*int<inputGraphVertex>*int<distance>
-    | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>*int<distance>
+    | TerminalEdge of int<inputGraphVertex>*Char*int<inputGraphVertex>*int<weight>
+    | EpsilonEdge of int<inputGraphVertex>*int<inputGraphVertex>*int<weight>
 
-let DefaultTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 0<distance>)
-let ErrorTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 1<distance>)
-let DefaultEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 0<distance>)
-let ErrorEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 1<distance>)
+let DefaultTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 0<weight>)
+let ErrorTerminalEdge(_from, terminal, _to) = TerminalEdge(_from, terminal, _to, 1<weight>)
+let DefaultEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 0<weight>)
+let ErrorEpsilonEdge(_from, _to) = EpsilonEdge(_from, _to, 1<weight>)
 
 [<Struct>]
 type InputGraphTerminalEdge = // Usages don't found

@@ -159,11 +159,11 @@ let private run
                                 else dummyRangeNode
                             MatchedRangeWithNode(matchedRange, rangeNode)
                         makeIntermediateNode leftSubRange rightSubRange
-                    let newDistance =
+                    let newWeight =
                         match newRange.Node with
-                        | Some n -> n.Distance
-                        | None -> 0<distance>
-                    let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, newDistance)//currentDescriptor.Weight)
+                        | Some n -> n.Weight
+                        | None -> 0<weight>
+                    let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, newWeight)//currentDescriptor.Weight)
                     //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
                     d.IsFinal <- findCorrect
                     addDescriptor d
@@ -206,8 +206,8 @@ let private run
                        let leftSubRange = currentDescriptor.MatchedRange
                        let weight =
                            match rightSubRange.Node with
-                           | Some x -> x.Distance
-                           | None -> 0<distance>
+                           | Some x -> x.Weight
+                           | None -> 0<weight>
                        weight, makeIntermediateNode leftSubRange rightSubRange
                    let d =  Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight)
                    //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
@@ -259,8 +259,8 @@ let private run
             let currentTerminal,targetVertex = currentDescriptor.InputPosition.OutgoingEdge
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
                 if terminal <> currentTerminal
-                then errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<distance>))
-            errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<distance>))
+                then errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
+            errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
 
         let symbol, vertex = outgoingTerminalEdgeInGraph
@@ -275,7 +275,7 @@ let private run
 
 
 
-    let mutable weight = -1<distance>
+    let mutable weight = -1<weight>
     let mutable cnt = 0
     let mutable _continue = true
     while
@@ -324,7 +324,7 @@ let evalFromState
                   , Unchecked.defaultof<RsmState>
                )
     let gssVertex = gss.AddNewVertex(startVertex, query.StartState)
-    Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<distance>)
+    Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<weight>)
     |> descriptorToProcess.Push
 
     run
