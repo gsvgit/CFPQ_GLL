@@ -3,6 +3,7 @@ module Tests.ErrorRecoveringTest
 
 open System
 open System.Collections.Generic
+open System.Text
 open CFPQ_GLL.Common
 open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
@@ -15,268 +16,295 @@ open Tests.InputGraph
 open Tests.LinearGraphReader
 open CFPQ_GLL.RsmBuilder
 
-let test2 (graph: InputGraph) q =
+let reverseDict (dict: Dictionary<'a, 'b>) =
+    let x = dict |> Dictionary.KeyCollection |> Seq.map (fun k -> dict[k], k)
+    let result = Dictionary()
+    for k, v in x do
+        result.Add(k, v)
+    result
 
+let run
+    (graph: InputGraph)
+    (q: RSM)
+    (terminalMapping: Dictionary<char, int<terminalSymbol>>)
+    (nonTerminalMapping: Dictionary<string, RsmState>)
+    dotFileName
+    =
     let startV = 0<inputGraphVertex>
     let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)
-    graph.ToDot (0, "graph.dot")
+
+    let reversedTerminalMapping =
+        let result = reverseDict terminalMapping
+        result.Add(-1<terminalSymbol>, 'ε')
+        result
+
+    let reversedNonTerminalMapping = reverseDict nonTerminalMapping
+
+    //graph.ToDot (0, "graph.dot")
+    //printfn "Graph is saved to graph.dot"
+
     let startVertices,mapping = graph.ToCfpqCoreGraph startV
     let finalVertices = mapping[finalV]
+
     let start = DateTime.Now
     let result = GLL.errorRecoveringEval finalVertices startVertices q GLL.AllPaths
-    printfn $"{(DateTime.Now - start).TotalMilliseconds}"
+    //printfn $"Execution time: {(DateTime.Now - start).TotalMilliseconds}"
 
     match result with
-    | GLL.QueryResult.MatchedRanges ranges ->
+    | GLL.QueryResult.MatchedRanges _ ->
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
         let root = sppf |> Array.filter (fun n -> finalVertices = n.RightPosition && startVertices = n.LeftPosition) |> Array.minBy(fun n -> n.Distance)
-        let distances = sppf |> Array.map (fun n -> n.Distance) |> Array.sort
-        //printfn $"D for %s{validDotFileName}: %A{distances}"
+        let distances = sppf |> Array.filter (fun n -> finalVertices = n.RightPosition && startVertices = n.LeftPosition)  |> Array.map (fun n -> n.Distance) |> Array.sort |> Array.toList
+        //printfn $"Distances: {distances}"
+
+
         let actual = TriplesStoredSPPF([|root|], Dictionary())
-        ()
-        //actual.ToDot "sppf.dot"
+        actual.ToDot (reversedTerminalMapping, reversedNonTerminalMapping, dotFileName)
+        //printfn $"SPPF is saved to {validDotFileName}"
 
-        //Tests.GLLTests.dumpResultToConsole actual
+        let output =
+            match calculateActual root with
+            | a, b, c, d, e, f -> $"({a}, {b}, {c}, {d}, {e}, {f}<distance>)"
+
+        printfn $"{output}"
+
     | _ -> failwith "Unexpected result."
-    0
 
-let testFromString (maker: string -> InputGraph) text q =
-    test2 (maker text) q
+let gllTestCase
+    lazySource
+    (input: string)
+    expected =
+    let query, tm, _ = lazySource()
+    let graphMaker = mkLinearGraph id tm
+    let graph = graphMaker input
+    let startV = 0<inputGraphVertex>
+    let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(graph.NumberOfVertices() - 1)
+    testCase input <| fun () -> runErrorRecoveringGLLAndCheckResult input graph startV finalV query expected
+
+let mkTestList f (inputs: string seq) =
+
+    inputs
+    |> Seq.iteri (fun i s ->
+        let query, tm, ntm = f()
+        let graphMaker = mkLinearGraph id tm
+        printf $"""mkTest "{s}" """
+        run (graphMaker s) query tm ntm $"{i}.dot"
+    )
+
 
 let ``Error recovering tests`` =
 
-    let `` On mini ML RSM`` =
-        let rsm () =
-            let rsm, terminalMapping =
-                let Num = nt "Num"
-                let Arithmetic = nt "Arithmetic"
-                let Var = nt "Var"
-                let Atom = nt "Atom"
-                let Prod = nt "Prod"
-                let Program = nt "Program"
-                let Expr = nt "Expr"
-                let Compare = nt "Compare"
-                let space = t " " *|* t "\n" *|* t "\r" *|* t "\t"
-                let ws x = many space ++ x
+    let ``On [*x rsm`` =
 
-                [
-                    Program => Expr // many Expr ++ many space
+        let src () =
+            let Lst = nt "List"
+            let Elem = nt "Elem"
+            [
+                Lst => t '[' ** Elem
+                Elem => t 'x' +|+ Lst
+            ] |> build [' ']
 
-                    Num  => ws(([|1..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
-                             ++ many ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* )))
-                    Var  => ws(([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
-                            ++ many (    ([|'a'..'z'|] |> Array.map (string >> t) |> Array.reduce ( *|* ))
-                                     *|* ([|0..9|] |> Array.map (string >> t) |> Array.reduce ( *|* ))))
-                    Atom => (* Num
-                            *|* *) Var //(Var ++ many (space ++ Atom))
-                            //*|* (ws (t "(") ++ Expr ++ ws (t ")"))
-                            //*|* (Var ++ t "[" ++ Expr ++ t"]")
-                    //Prod => nonemptyList Atom (ws (t "*" *|* t "/"))
-                    //Arithmetic => nonemptyList Prod (ws(t "+" *|* t "-"))
-                    //Compare => nonemptyList Arithmetic (ws ((opt (t"!") ++ t "=") *|* ((t ">" *|* t "<") ++ opt (t "="))))
-                    Expr => Atom *|*
-                        //Compare
-                        (**|* *) (ws(literal "let") (* ++ opt(ws(literal "rec"))*) ++ space ++ Var ++ many (space ++ Var) ++ ws(t "=") ++ Expr ++ ws(literal "in") ++ Expr)
-                        //*|* (ws(literal "if") ++ Expr ++ ws(literal "then") ++ Expr ++ opt (ws(literal "else") ++ Expr))
-                        //*|* (ws(literal "while") ++ Expr ++ ws(literal "do") ++ Expr)
-                ]
-                |> build
-            rsm, terminalMapping
+        let mkTest = gllTestCase src
 
-        let incorrectInsertions =
-            let testName = "Incorrect insertion"
-            testCase testName <| fun () ->
-                let q,terminalMapping = rsm ()
-                let graph = mkLinearGraph id terminalMapping "lt x = y in x"
-                let startV = 0<inputGraphVertex>
-                let finishV = 13<inputGraphVertex>
-                let expected =
-                    let nodes = Dictionary<_,_>()
-                    nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
-                    nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,1<rsmState>))
-                    nodes.Add(2, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>,2<rsmState>))
-                    nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,2<rsmState>))
-                    nodes.Add(4, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,2<inputGraphVertex>))
-                    nodes.Add(5, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>,1<inputGraphVertex>,2<rsmState>,1<rsmState>))
-                    nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (2<inputGraphVertex>,2<terminalSymbol>,1<inputGraphVertex>))
-
-                    let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (2,5); (5,6); |])
-                    let distances = [|0<distance>|]
-                    (nodes,edges,distances)
-
-                runErrorRecoveringGLLAndCheckResult testName graph startV finishV q expected
-
-        testList "Mini ML" [
-            incorrectInsertions
+        testList "Latest bug" [
+            mkTest "[ [" (0, 4, 4, 10, 3, 1<distance>)
+            mkTest "[ [x" (0, 4, 4, 10, 3, 0<distance>)
+            mkTest "[" (0, 2, 2, 4, 1, 1<distance>)
+            mkTest " x" (0, 3, 2, 6, 2, 1<distance>)
+            mkTest "" (0, 2, 2, 4, 1, 2<distance>)
+            mkTest "[x[" (0, 3, 2, 6, 2, 1<distance>)
         ] |> testSequenced
 
-    let ``On ab RSM`` =
 
-        let abRSM () =
-            // S -> ab
-            let startState = RsmState(true, false) //:> IRsmState
-            let state = RsmState(false, false) //:> IRsmState
-            let finalState = RsmState(false, true) //:> IRsmState
-            let box = RSMBox()
-            box.AddState startState
-            box.AddState state
-            box.AddState finalState
-            startState.AddTerminalEdge(1<terminalSymbol>, state)
-            state.AddTerminalEdge(2<terminalSymbol>, finalState)
-            RSM([|box|], box)
+    let ``On ca*b* rsm`` =
 
-        let abGraphMaker = mkLinearGraph id (
-            Dictionary([KeyValuePair('a',1<terminalSymbol>); KeyValuePair('b', 2<terminalSymbol>)])
-        )
+        let src () =
+            let S = nt "S"
+            [
+                S => t 'c' ** many (t 'a') ** many (t 'b')
+            ] |> build [' ']
 
-        let ``Deletions and insertions`` =
+        let mkTest = gllTestCase src
 
-            let graphMaker = abGraphMaker
-
-            let ab =
-                let testName = "ab"
-                testCase testName <| fun () ->
-                    let graph = graphMaker "ab"
-                    let startV = 0<inputGraphVertex>
-                    let finishV = 2<inputGraphVertex>
-                    let q = abRSM ()
-                    let expected =
-                        let nodes = Dictionary<_,_>()
-                        nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
-                        nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,1<rsmState>))
-                        nodes.Add(2, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>,2<rsmState>))
-                        nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,2<rsmState>))
-                        nodes.Add(4, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,2<inputGraphVertex>))
-                        nodes.Add(5, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>,1<inputGraphVertex>,2<rsmState>,1<rsmState>))
-                        nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (2<inputGraphVertex>,2<terminalSymbol>,1<inputGraphVertex>))
-
-                        let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (2,5); (5,6);|])
-                        let distances = [|0<distance>|]
-                        (nodes,edges,distances)
-
-                    runErrorRecoveringGLLAndCheckResult testName graph startV finishV q expected
-
-            let abb =
-                let testName = "abb"
-                testCase testName <| fun () ->
-                    let graph = graphMaker "abb"
-                    let startV = 0<inputGraphVertex>
-                    let finishV = 3<inputGraphVertex>
-                    let q = abRSM ()
-                    let expected =
-                        let nodes = Dictionary<_,_>()
-                        nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
-                        nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,1<rsmState>))
-                        nodes.Add(2, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>,1<rsmState>))
-                        nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,1<rsmState>))
-                        nodes.Add(4, TriplesStoredSPPFNode.IntermediateNode (3<inputGraphVertex>,2<rsmState>))
-                        nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,3<inputGraphVertex>,0<rsmState>,2<rsmState>))
-                        nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,3<inputGraphVertex>))
-                        nodes.Add(7, TriplesStoredSPPFNode.RangeNode (3<inputGraphVertex>,2<inputGraphVertex>,2<rsmState>,1<rsmState>))
-                        nodes.Add(8, TriplesStoredSPPFNode.TerminalNode (3<inputGraphVertex>,2<terminalSymbol>,2<inputGraphVertex>))
-                        nodes.Add(9, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>,1<inputGraphVertex>,1<rsmState>,1<rsmState>))
-                        nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (2<inputGraphVertex>,-1<terminalSymbol>,1<inputGraphVertex>))
-
-
-                        let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (2,9); (9,10); |])
-                        let distances = [|1<distance>|]
-                        (nodes,edges,distances)
-
-                    runErrorRecoveringGLLAndCheckResult testName graph startV finishV q expected
-
-            let bb =
-                let testName = "bb"
-                testCase testName <| fun () ->
-                    let graph = graphMaker "bb"
-                    let startV = 0<inputGraphVertex>
-                    let finishV = 2<inputGraphVertex>
-                    let q = abRSM ()
-                    let expected =
-                        let nodes = Dictionary<_,_>()
-                        nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
-                        nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,1<rsmState>))
-                        nodes.Add(2, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>,1<rsmState>))
-                        nodes.Add(3, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,1<rsmState>))
-                        nodes.Add(4, TriplesStoredSPPFNode.IntermediateNode (0<inputGraphVertex>,2<rsmState>))
-                        nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,2<rsmState>))
-                        nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,0<inputGraphVertex>))
-                        nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,2<rsmState>,1<rsmState>))
-                        nodes.Add(8, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,2<terminalSymbol>,2<inputGraphVertex>))
-                        nodes.Add(9, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>,1<inputGraphVertex>,1<rsmState>,1<rsmState>))
-                        nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (2<inputGraphVertex>,-1<terminalSymbol>,1<inputGraphVertex>))
-
-
-                        let edges = ResizeArray<_>([|(0,1); (1,2); (2,3); (3,4); (4,5); (5,6); (4,7); (7,8); (2,9)
-                                                     (9,10);|])
-                        let distances = [|2<distance>|]
-                        (nodes,edges,distances)
-
-                    runErrorRecoveringGLLAndCheckResult testName graph startV finishV q expected
-
-            testList "Deletions and insertions" [
-                ab
-                abb
-                bb
-            ] |> testSequenced
-
-        testList "On ab RSM" [
-            ``Deletions and insertions``
+        testList "ca*b*" [
+            mkTest "" (0, 1, 1, 1, 0, 1<distance>)
+            mkTest "cab" (0, 3, 1, 5, 2, 0<distance>)
+            mkTest "caabb" (0, 5, 1, 9, 4, 0<distance>)
+            mkTest "caaaba" (0, 6, 1, 11, 5, 1<distance>)
+            mkTest "ab" (0, 3, 1, 5, 2, 1<distance>)
+            mkTest "ccab" (0, 4, 1, 7, 3, 1<distance>)
         ] |> testSequenced
 
-    let ``On ca*b* RSM`` =
 
-        let CAStarBStarRSM () =
-            // S -> ca*b*
-            let startState = RsmState(true, false)// :> IRsmState
-            let aState = RsmState(false, true) //:> IRsmState
-            let bState = RsmState(false, true)// :> IRsmState
-            let box = RSMBox()
-            box.AddState startState
-            box.AddState aState
-            box.AddState bState
-            startState.OutgoingTerminalEdges.Add(3<terminalSymbol>, HashSet[|aState|])
-            aState.OutgoingTerminalEdges.Add(1<terminalSymbol>, HashSet[|aState|])
-            aState.OutgoingTerminalEdges.Add(2<terminalSymbol>, HashSet[|bState|])
-            bState.OutgoingTerminalEdges.Add(2<terminalSymbol>, HashSet[|bState|])
-            RSM([|box|], box)
+    let ``On ab rsm`` =
 
-        let abGraphMaker = mkLinearGraph id (
-            Dictionary([KeyValuePair('a',1<terminalSymbol>); KeyValuePair('b', 2<terminalSymbol>); KeyValuePair('c', 3<terminalSymbol>)])
-        )
+        let src () =
+            let S = nt "S"
+            [
+                S => t 'a' ** t 'b'
+            ] |> build [' ']
 
+        let mkTest = gllTestCase src
 
-
-        let ``Deletions and insertions`` =
-
-            let graphMaker = abGraphMaker
-
-            let test =
-                let testName = "bb"
-                testCase testName <| fun () ->
-                    let graph = graphMaker "bb"
-                    let startV = 0<inputGraphVertex>
-                    let finishV = 2<inputGraphVertex>
-                    let q = CAStarBStarRSM ()
-                    let expected =
-                        let nodes = Dictionary<_,_>()
-
-
-                        let edges = ResizeArray<_>([||])
-                        let distances = [||]
-                        (nodes,edges,distances)
-
-                    runErrorRecoveringGLLAndCheckResult testName graph startV finishV q expected
-
-            testList "Deletions and insertions" [
-
-            ] |> testSequenced
-
-        testList "On ab RSM" [
-            ``Deletions and insertions``
+        testList "ab" [
+            mkTest "" (0, 2, 1, 3, 1, 2<distance>)
+            mkTest "ab" (0, 2, 1, 3, 1, 0<distance>)
+            mkTest "abbbb" (0, 9, 1, 15, 8, 3<distance>)
+            mkTest "ba" (0, 6, 1, 9, 4, 2<distance>)
+            mkTest "a" (0, 2, 1, 3, 1, 1<distance>)
+            mkTest "b" (0, 2, 1, 3, 1, 1<distance>)
+            mkTest "a b " (0, 4, 1, 7, 3, 0<distance>)
+            mkTest "a b b b b " (0, 16, 1, 29, 15, 3<distance>)
+            mkTest "b   a " (0, 7, 1, 13, 6, 2<distance>)
         ] |> testSequenced
 
-    testList "Error recovering tests" [
-        ``On ab RSM``
-        //``On ca*b* RSM``
+
+    let ``On golang rsm`` =
+
+        let mkTest = gllTestCase GolangRSM.golangSrc
+
+        testList "On golang rsm" [
+            mkTest GolangRSM.functionSample (0, 129, 63, 319, 128, 0<distance>)
+            mkTest GolangRSM.expressionSample (0, 183, 163, 527, 182, 0<distance>)
+            mkTest GolangRSM.cycleSample (0, 199, 165, 561, 198, 0<distance>)
+            mkTest "func f() int {}" (2, 15, 6, 38, 16, 0<distance>)
+            //mkTest "fnc f() int {}" (2, 15, 6, 38, 16, 1<distance>)
+            // mkTest "fnc f() int {" (2, 15, 6, 38, 16, 2<distance>)
+            // mkTest "fnc f() {}" (2, 14, 6, 36, 15, 4<distance>)
+            // mkTest "unc f() int {}" (2, 15, 6, 38, 16, 1<distance>)
+            mkTest "" (1, 0, 1, 1, 0, 0<distance>)
+            // mkTest "x" (0, 1, 1, 1, 0, 1<distance>)
+            // mkTest "func f() int { return 1 }" (1, 28, 19, 75, 29, 1<distance>)
+            // mkTest "fu\nnc f() int { return 1; } "  (1, 28, 13, 69, 28, 1<distance>)
+        ] |> testSequenced
+
+    let ``On Dyck lang`` =
+
+        let src () =
+            let S = nt "S"
+            [
+                S => Epsilon +|+ t '(' ** S ** t ')' ** S
+            ] |> build [' ']
+
+        let mkTest = gllTestCase src
+
+        testList "On Dyck lang" [
+            mkTest "" (1, 0, 1, 1, 0, 0<distance>)
+            mkTest "()" (2, 2, 3, 9, 3, 0<distance>)
+            mkTest "()()" (3, 4, 5, 17, 6, 0<distance>)
+            mkTest "()(())" (4, 6, 7, 25, 9, 0<distance>)
+            mkTest "(()())" (4, 6, 7, 25, 9, 0<distance>)
+            mkTest "(" (1, 3, 2, 9, 3, 1<distance>)
+            mkTest ")" (0, 1, 1, 1, 0, 1<distance>)
+            mkTest "(()" (3, 5, 5, 20, 9, 1<distance>)
+            mkTest "(()()" (5, 7, 8, 30, 12, 1<distance>)
+        ]
+
+    let ``On multi Dyck lang`` =
+
+        let src () =
+            let S = nt "S"
+            let S1 = nt "S1"
+            let S2 = nt "S2"
+            let S3 = nt "S3"
+            [
+                S => Epsilon +|+ S1 +|+ S2 +|+ S3
+                S1 => t '(' ** S ** t ')' ** S
+                S2 => t '{' ** S ** t '}' ** S
+                S3 => t '[' ** S ** t ']' ** S
+            ] |> build [' ']
+
+        let mkTest = gllTestCase src
+
+        testList "On multi Dyck lang" [
+            mkTest "{{[[]]}}()" (6, 10, 16, 46, 15, 0<distance>)
+            mkTest "{[]}{(())()}" (7, 12, 19, 55, 18, 0<distance>)
+            // mkTest "{]" (2, 7, 5, 23, 11, 2<distance>)
+            // mkTest "[(}" (3, 26, 14, 80, 51, 3<distance>)
+            // mkTest "[(])" (4, 14, 11, 47, 21, 2<distance>)
+        ]
+
+    let ``On Dyck lang  by regexp`` =
+
+        let src () =
+            let S = nt "S"
+            [
+                S => many(t '(' ** S ** t ')')
+            ] |> build [' ']
+
+        let mkTest = gllTestCase src
+
+        testList "On Dyck lang by regexp" [
+            mkTest "" (1, 0, 1, 1, 0, 0<distance>)
+            mkTest "()" (1, 2, 2, 6, 2, 0<distance>)
+            mkTest "()()" (2, 4, 3, 13, 5, 0<distance>)
+            mkTest "()(())" (2, 6, 4, 18, 7, 0<distance>)
+            mkTest "(()())" (2, 6, 4, 18, 7, 0<distance>)
+            mkTest "(" (1, 3, 2, 7, 2, 1<distance>)
+            mkTest ")" (0, 1, 1, 1, 0, 1<distance>)
+            mkTest "(()" (2, 5, 4, 16, 7, 1<distance>)
+            mkTest "(()()" (3, 9, 6, 30, 16, 1<distance>)
+        ]
+
+    let ``On multi Dyck lang by regexp`` =
+
+        let src () =
+            let S = nt "S"
+            [
+                S => many (t '(' ** S ** t ')' +|+  t '{' ** S ** t '}' +|+ t '[' ** S ** t ']')
+            ] |> build [' ']
+
+        let mkTest = gllTestCase src
+
+        testList "On multi Dyck lang by regexp" [
+            mkTest "" (1, 0, 1, 1, 0, 0<distance>)
+            mkTest "()" (1, 2, 2, 6, 2, 0<distance>)
+            mkTest "()()" (2, 4, 3, 13, 5, 0<distance>)
+            mkTest "()(())" (2, 6, 4, 18, 7, 0<distance>)
+            mkTest "(()())" (2, 6, 4, 18, 7, 0<distance>)
+            mkTest "(" (1, 3, 2, 7, 2, 1<distance>)
+            mkTest ")" (0, 1, 1, 1, 0, 1<distance>)
+            mkTest "(()" (2, 5, 4, 16, 7, 1<distance>)
+            mkTest "(()()" (3, 9, 6, 30, 16, 1<distance>)
+            mkTest "{{[[]]}}()" (2, 10, 6, 28, 11, 0<distance>)
+            mkTest "{[]}{(())()}" (3, 12, 7, 35, 14, 0<distance>)
+            // mkTest "{]" (3, 11, 6, 27, 13, 2<distance>)
+            // mkTest "[(}" (3, 25, 7, 63, 44, 3<distance>)
+            // mkTest "[(])" (3, 17, 8, 43, 24, 2<distance>)
+            mkTest "[ { [ ] ] " (3, 16, 7, 45, 23, 1<distance>)
+        ]
+
+    let ``Ambiguous`` =
+
+        let src () =
+            let S = nt "S"
+            [
+                S => t 'a'
+                     +|+ S
+                     +|+ S ** S
+                     +|+ S ** S ** S
+            ] |> build [' ']
+
+        let mkTest = gllTestCase src
+
+        testList "Ambiguous" [
+            mkTest "" (0, 1, 1, 1, 0, 1<distance>)
+            mkTest "a" (0, 1, 1, 1, 0, 0<distance>)
+            mkTest "a " (0, 2, 1, 3, 1, 0<distance>)
+            mkTest "aa" (0, 2, 3, 5, 1, 0<distance>)
+            mkTest "a a" (0, 3, 3, 7, 2, 0<distance>)
+            mkTest "aaa" (0, 3, 5, 9, 2, 0<distance>)
+        ]
+
+    testList "Error recovering" [
+        ``On [*x rsm``
+        ``On ca*b* rsm``
+        ``On ab rsm``
+        ``On golang rsm``
+        ``On Dyck lang``
+        ``On multi Dyck lang``
+        ``On Dyck lang  by regexp``
+        ``On multi Dyck lang by regexp``
+        ``Ambiguous``
     ] |> testSequenced
 

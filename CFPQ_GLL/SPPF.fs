@@ -67,7 +67,6 @@ and NonTerminalNode (nonTerminalStartState: RsmState, graphRange: Range<LinearIn
     let parents = ResizeArray<IRangeNode>()
     let mutable distance =
         let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Distance) (Int32.MaxValue * 1<distance>)
-        //printfn $"nonterm weight = %A{res}"
         if res = Int32.MaxValue * 1<distance>
         then printfn "!!!"
         assert (res < Int32.MaxValue * 1<distance>)
@@ -126,7 +125,7 @@ type MatchedRanges () =
 
         and handleNonRangeNode (node:INonRangeNode) =
             match (node :?> NonRangeNode) with
-            | NonRangeNode.TerminalNode t -> failwith "Terminal node can not be parent."
+            | NonRangeNode.TerminalNode _ -> failwith "Terminal node can not be parent."
             | NonRangeNode.NonTerminalNode n -> handleNonTerminalNode n
             | NonRangeNode.IntermediateNode i -> handleIntermediateNode i
             | NonRangeNode.EpsilonNode _ -> failwith "Epsilon node can not be parent."
@@ -150,38 +149,96 @@ type MatchedRanges () =
 
         handleRangeNode rangeNode
 
+    // member internal this.AddTerminalNode (range:Range<ILinearInputGraphVertex>, terminal, distance) =
+    //     let terminalNodes = range.EndPosition.TerminalNodes
+    //     let exists, nodes = terminalNodes.TryGetValue range.StartPosition
+    //     assert ((not exists) || (exists && nodes.Count = 1))
+    //     if exists
+    //     then
+    //         let terminalNode = nodes.Values |> Seq.head
+    //         if terminalNode.Distance > distance
+    //         then
+    //             let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
+    //             nodes.Clear()
+    //             nodes.Add(terminal, newTerminalNode)
+    //             terminalNode.Parents |> Seq.iter (newTerminalNode.Parents.Add >> ignore)
+    //             terminalNode.Parents |> Seq.iter MatchedRanges.updateDistances
+    //             newTerminalNode
+    //         else
+    //             terminalNode
+    //     else
+    //         let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
+    //         let d = Dictionary<_,_>()
+    //         d.Add(terminal, newTerminalNode)
+    //         terminalNodes.Add(range.StartPosition, d)
+    //         newTerminalNode
+
+    // Original
+        // member internal this.AddTerminalNode (range:Range<ILinearInputGraphVertex>, terminal, distance) =
+        // let terminalNodes = range.EndPosition.TerminalNodes
+        // let exists, nodes = terminalNodes.TryGetValue range.StartPosition
+        // if exists
+        // then
+        //     let exists, terminalNode = nodes.TryGetValue terminal
+        //     if exists
+        //     then
+        //         if terminalNode.Distance > distance
+        //         then
+        //             terminalNode.Distance <- distance
+        //             terminalNode.Parents |> Seq.iter MatchedRanges.updateDistances
+        //         terminalNode
+        //     else
+        //         let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
+        //         nodes.Add(terminal, newTerminalNode)
+        //         newTerminalNode
+        // else
+        //     let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
+        //     let d = Dictionary<_,_>()
+        //     d.Add(terminal, newTerminalNode)
+        //     terminalNodes.Add(range.StartPosition, d)
+        //     newTerminalNode
+
     member internal this.AddTerminalNode (range:Range<LinearInputGraphVertexBase>, terminal, distance) =
-        //printfn $"Trem = %A{terminal}, distance = %A{distance}"
+        if terminal = Epsilon
+        then ()
         let terminalNodes = range.EndPosition.TerminalNodes
         let exists, nodes = terminalNodes.TryGetValue range.StartPosition
-        if exists
-        then
-            let exists, terminalNode = nodes.TryGetValue terminal
+        let newNode =
             if exists
-            then terminalNode
+            then
+                let exists, terminalNode = nodes.TryGetValue terminal
+                if exists then terminalNode
+                else
+                    let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
+                    nodes.Add(terminal, newTerminalNode)
+                    newTerminalNode
             else
                 let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
-                nodes.Add(terminal, newTerminalNode)
+                let d = Dictionary<_,_>()
+                d.Add(terminal, newTerminalNode)
+                terminalNodes.Add(range.StartPosition, d)
                 newTerminalNode
-        else
-            let newTerminalNode = TerminalNode(terminal,range,distance) :> ITerminalNode
-            let d = Dictionary<_,_>()
-            d.Add(terminal, newTerminalNode)
-            terminalNodes.Add(range.StartPosition, d)
-            newTerminalNode
+
+        newNode
 
     member internal this.AddNonTerminalNode (range:Range<LinearInputGraphVertexBase>, nonTerminalStartState:RsmState) =
         let rangeNodes = range.EndPosition.RangeNodes
         let nonTerminalNodes = range.StartPosition.NonTerminalNodesStartedHere
         let exists, nodes = nonTerminalNodes.TryGetValue range.EndPosition
         let mkNewNonTerminal () =
-            let rangeNodes =
+            let rangeNodes = // TODO: check
                     let res = ResizeArray()
+                    let mutable curMinDistance = Int32.MaxValue * 1<distance>
                     for final in nonTerminalStartState.Box.FinalStates do
-                        let matchedRange = MatchedRange (range, Range<RsmState>(nonTerminalStartState, final))
-                        let exists, rangeNode = rangeNodes.TryGetValue matchedRange                            
-                        if exists then res.Add rangeNode
-                    res
+                        let matchedRange = MatchedRange (range, Range<_>(nonTerminalStartState, final))
+                        let exists, rangeNode = rangeNodes.TryGetValue matchedRange
+                        if exists
+                        then
+                            res.Add rangeNode
+                            if rangeNode.Distance < curMinDistance
+                            then curMinDistance <- rangeNode.Distance
+                    res |> ResizeArray.filter (fun n -> n.Distance = curMinDistance)
+
             let node = NonTerminalNode(nonTerminalStartState, range, rangeNodes)
             rangeNodes |> ResizeArray.iter (fun n -> n.Parents.Add (NonRangeNode.NonTerminalNode node) |> ignore)
             nonTerminalStartState.NonTerminalNodes.Add node
@@ -203,14 +260,14 @@ type MatchedRanges () =
             nonTerminalNodes.Add(range.EndPosition, d)
             newNonTerminalNode
 
-    member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode, enableErrorRecovering:bool) =
+    member internal this.AddToMatchedRange (matchedRange: MatchedRange, node:INonRangeNode) =
         let rangeNodes = matchedRange.InputRange.EndPosition.RangeNodes
-
+        //printfn $"Weight: %d{node.Distance}"
         let exists, rangeNode = rangeNodes.TryGetValue matchedRange
         let node =
             if exists
             then
-                if not(enableErrorRecovering && node.Distance > rangeNode.Distance) then
+                if node.Distance <= rangeNode.Distance then
                     rangeNode.IntermediateNodes.Add node |> ignore
                     node.Parents.Add rangeNode
 
@@ -227,7 +284,8 @@ type MatchedRanges () =
                 rangeNodes.Add(matchedRange, rangeNode)
                 rangeNode
         node
-    member internal this.AddIntermediateNode (leftSubRange: MatchedRangeWithNode, rightSubRange: MatchedRangeWithNode, enableErrorRecovering: bool) =
+
+    member internal this.AddIntermediateNode (leftSubRange: MatchedRangeWithNode, rightSubRange: MatchedRangeWithNode) =
         match leftSubRange.Node with
         | None -> rightSubRange
         | Some n ->
@@ -266,7 +324,7 @@ type MatchedRanges () =
                                         , rightSubRange.Range.InputRange.EndPosition
                                         , leftSubRange.Range.RSMRange.StartPosition
                                         , rightSubRange.Range.RSMRange.EndPosition)
-            let rangeNode = this.AddToMatchedRange (newMatchedRange, NonRangeNode.IntermediateNode intermediateNode, enableErrorRecovering)
+            let rangeNode = this.AddToMatchedRange (newMatchedRange, NonRangeNode.IntermediateNode intermediateNode)
             let newRange = MatchedRangeWithNode(newMatchedRange, rangeNode)
             newRange
 
@@ -320,10 +378,10 @@ type MatchedRanges () =
 
 [<RequireQualifiedAccess>]
 type TriplesStoredSPPFNode =
-    | EpsilonNode of int<inputGraphVertex> * int<rsmState>
-    | TerminalNode of int<inputGraphVertex> * int<terminalSymbol> * int<inputGraphVertex>
-    | NonTerminalNode of int<inputGraphVertex> * int<rsmState> * int<inputGraphVertex>
-    | IntermediateNode of int<inputGraphVertex> * int<rsmState>
+    | EpsilonNode of int<inputGraphVertex> * int<rsmState> * int<distance>
+    | TerminalNode of int<inputGraphVertex> * int<terminalSymbol> * int<inputGraphVertex> * int<distance>
+    | NonTerminalNode of int<inputGraphVertex> * int<rsmState> * int<inputGraphVertex> * int<distance>
+    | IntermediateNode of int<inputGraphVertex> * int<rsmState> * int<distance>
     | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmState> * int<rsmState>
 
 type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<LinearInputGraphVertexBase,int<inputGraphVertex>>) =
@@ -366,7 +424,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     let rec handleIntermediateNode parentId (node:IIntermediateNode) =
         let node = node :?> IntermediateNode
         let currentId = nodesCount
-        nodes.Add(currentId, TriplesStoredSPPFNode.IntermediateNode(getVertexId node.InputPosition, getStateId node.RSMState))
+        nodes.Add(currentId, TriplesStoredSPPFNode.IntermediateNode(getVertexId node.InputPosition, getStateId node.RSMState, (node :> IIntermediateNode).Distance))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
         handleRangeNode (Some currentId) node.LeftSubtree
@@ -375,14 +433,14 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     and handleTerminalNode parentId (node:ITerminalNode) =
         let node = node :?> TerminalNode
         let currentId = nodesCount
-        nodes.Add(currentId, TriplesStoredSPPFNode.TerminalNode(getVertexId node.LeftPosition, node.Terminal, getVertexId node.RightPosition))
+        nodes.Add(currentId, TriplesStoredSPPFNode.TerminalNode(getVertexId node.LeftPosition, node.Terminal, getVertexId node.RightPosition, (node :> ITerminalNode).Distance))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
 
     and handleEpsilonNode parentId (node:IEpsilonNode) =
         let node = node :?> EpsilonNode
         let currentId = nodesCount
-        nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(getVertexId node.Position, getStateId node.NonTerminalStartState))
+        nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(getVertexId node.Position, getStateId node.NonTerminalStartState, 0<distance>))
         addEdge parentId currentId
         nodesCount <- nodesCount + 1
 
@@ -392,7 +450,7 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
         else
             let currentId = nodesCount
             visitedNonTerminalNodes.Add(node, currentId)
-            nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(getVertexId node.LeftPosition, getStateId node.NonTerminalStartState, getVertexId node.RightPosition))
+            nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(getVertexId node.LeftPosition, getStateId node.NonTerminalStartState, getVertexId node.RightPosition, node.Distance))
             addEdge parentId currentId
             nodesCount <- nodesCount + 1
             node.RangeNodes
@@ -424,21 +482,35 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     do  roots |> Array.iter (handleNonTerminalNode None)
 
     let printEdge (x,y) = sprintf $"%i{x}->%i{y}"
-    let printNode nodeId node =
+    let printNode nodeId node
+        (terminalMapping: Dictionary<int<terminalSymbol>, char>)
+        (nonTerminalMapping: Dictionary<int<rsmState>, string>)=
         match node with
-        | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to) ->
-            sprintf $"%i{nodeId} [label = \"%A{_from}, t_%i{_terminal}, %A{_to}\", shape = rectangle]"
-        | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState) ->
-            sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}\", shape = plain]"
-        | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to) ->
-            sprintf $"%i{nodeId} [label = \"%A{_from}, N_%i{_nonTerminal}, %A{_to}\", shape = invtrapezium]"
-        | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal) ->
-            sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: N_%i{_nonTerminal}\", shape = invhouse]"
+        | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to, w) ->
+            if terminalMapping.Count = 1
+            then sprintf $"%i{nodeId} [label = \"%A{_from}, t_{_terminal}, %A{_to}, Weight: {w}\", shape = rectangle]"
+            else sprintf $"%i{nodeId} [label = \"%A{_from}, {terminalMapping[_terminal]}, %A{_to}, Weight: {w}\", shape = rectangle]"
+        | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState, w) ->
+            sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}, Weight: {w}\", shape = plain]"
+        | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to, w) ->
+            if nonTerminalMapping.Count = 0
+            then sprintf $"%i{nodeId} [label = \"%A{_from}, N_%i{_nonTerminal}, %A{_to}\", shape = invtrapezium]"
+            else sprintf $"%i{nodeId} [label = \"%A{_from}, {nonTerminalMapping[_nonTerminal]}, %A{_to}, Weight: {w}\", shape = invtrapezium]"
+        | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal, w) ->
+            if nonTerminalMapping.Count = 0
+            then sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: N_%i{_nonTerminal}, Weight: {w}\", shape = invhouse]"
+            else sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: {nonTerminalMapping[_nonTerminal]}, Weight: {w}\", shape = invhouse]"
+
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
             sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
 
-    member this.ToDot filePath =
-        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])
+    member this.ToDot (terminalMapping, nonTerminalMapping: Dictionary<RsmState, string>, filePath) =
+        let nonTerminalMapping' = Dictionary<_,_>()
+        for k in nonTerminalMapping.Keys do
+            nonTerminalMapping'.Add(getStateId k, nonTerminalMapping.[k])
+        System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value terminalMapping nonTerminalMapping')); yield! (ResizeArray.map printEdge edges); "}"])
+
+    member this.ToDot filePath = this.ToDot (Dictionary<_, _>(), Dictionary<_, _>(), filePath)
 
     member this.Edges with get() = edges
     member this.Nodes with get () = nodes
