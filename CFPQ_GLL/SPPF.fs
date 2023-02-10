@@ -3,12 +3,9 @@ module CFPQ_GLL.SPPF
 open System
 open System.Collections.Generic
 open CFPQ_GLL.Common
-open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open Microsoft.FSharp.Core
 open FSharpx.Collections
-
-type Distance = Unreachable | Reachable of int
 
 type TerminalNode (terminal: Char, graphRange: Range<LinearInputGraphVertexBase>, weight) =
     let parents = ResizeArray<IRangeNode>()
@@ -360,7 +357,7 @@ type MatchedRanges () =
             then
                 nonTerminalNode.LeftPosition.NonTerminalNodesStartedHere.[nonTerminalNode.RightPosition].Remove nonTerminalNode.NonTerminalStartState
                 nonTerminalNode.Parents
-                |> Seq.iter (fun node -> handleRangeNode node)
+                |> Seq.iter handleRangeNode
             else
                 let oldWeight = nonTerminalNode.Weight
                 let newWeight = nonTerminalNode.RangeNodes |> ResizeArray.fold (fun v n -> min v n.Weight) (Int32.MaxValue * 1<weight>)
@@ -368,7 +365,7 @@ type MatchedRanges () =
                 then
                     node.Weight <- newWeight
                     nonTerminalNode.Parents
-                    |> Seq.iter (fun node -> MatchedRanges.updateWeights node)
+                    |> Seq.iter MatchedRanges.updateWeights
 
         handleTerminalNode node
 

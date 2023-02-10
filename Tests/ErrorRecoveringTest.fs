@@ -3,9 +3,7 @@ module Tests.ErrorRecoveringTest
 
 open System
 open System.Collections.Generic
-open System.Text
 open CFPQ_GLL.Common
-open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
 open CFPQ_GLL

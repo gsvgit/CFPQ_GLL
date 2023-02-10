@@ -1,10 +1,8 @@
 module Tests.GLLTests
 
 open System.Collections.Generic
-open CFPQ_GLL
 open CFPQ_GLL.Common
 open CFPQ_GLL.GLL
-open CFPQ_GLL.InputGraph
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
 open Expecto

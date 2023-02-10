@@ -3,9 +3,7 @@ module Benchmarks.ErrorRecoveringBenchmark
 open System.IO
 open CFPQ_GLL
 open CFPQ_GLL.Common
-open CFPQ_GLL.InputGraph
 open BenchmarkDotNet.Attributes
-open BenchmarkDotNet.Running
 
 let path = "/home/viktor/RiderProjects/CFPQ_GLL/golang"
 

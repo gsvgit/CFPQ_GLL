@@ -1,9 +1,7 @@
 module CFPQ_GLL.RSM
 
 open System.Collections.Generic
-open System.Data
 open CFPQ_GLL.Common
-open CFPQ_GLL.InputGraph
 
 [<Measure>] type rsmState
 
@@ -76,9 +74,7 @@ type RSMBox(nonTerminal:INonterminal) =
         member this.Nonterminal = nonTerminal
 
 type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
-    let finalStates = HashSet<_>()
-    let finalStatesForBox = Dictionary<int<rsmState>,ResizeArray<_>>()
-    let startStateOfExtendedRSM = RsmState() //:> IRsmState
+    let startStateOfExtendedRSM = RsmState()
 
     do
         let originalStartState = startBox.StartState
@@ -96,8 +92,7 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
     member this.IsFinalStateForOriginalStartBox state = (startBox :> IRsmBox).FinalStates.Contains state
     member this.OriginalStartState = startBox.StartState
 
-    member this.ToDot (filePath,
-        (terminalMapping: Dictionary<int<terminalSymbol>, char>))=
+    member this.ToDot filePath =        
         let visited = HashSet<_>()
         
         let rec toDot (v: RsmState) =
@@ -132,7 +127,3 @@ type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
          yield "}"
         }
         |> fun x -> System.IO.File.WriteAllLines(filePath, x)
-
-    member this.ToDot filePath =
-        let terminalMapping = Dictionary<_,_>()        
-        this.ToDot (filePath, terminalMapping)

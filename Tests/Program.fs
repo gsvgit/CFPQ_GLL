@@ -1,17 +1,9 @@
 
-open System.Collections.Generic
 open CFPQ_GLL
-open CFPQ_GLL.Common
-open CFPQ_GLL.GLL
-open CFPQ_GLL.InputGraph
 open Tests
-open Tests.InputGraph
-open CFPQ_GLL.SPPF
 open Expecto
 open Logging
 open CFPQ_GLL.RsmBuilder
-open Tests.LinearGraphReader
-
 
 let config = {FsCheckConfig.defaultConfig with maxTest = 10000}
 

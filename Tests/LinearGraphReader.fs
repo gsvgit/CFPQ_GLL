@@ -1,9 +1,6 @@
 module Tests.LinearGraphReader
 
 open System.IO
-open System.Collections.Generic
-open CFPQ_GLL
-open CFPQ_GLL.InputGraph
 open Expecto
 open CFPQ_GLL.Common
 open FSharpx.Collections

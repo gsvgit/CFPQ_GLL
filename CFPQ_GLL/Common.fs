@@ -6,6 +6,8 @@ open System.Collections.Generic
 [<Measure>] type weight
 [<Measure>] type rsmStateId
 
+[<Measure>] type inputGraphVertex
+
 type Char =
     Char of char | EOF | Epsilon 
     override this.ToString() =
@@ -107,8 +109,7 @@ and LinearInputGraphVertexBase (id:int32) =
     let descriptors = HashSet<Descriptor>()
     let terminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<Char, ITerminalNode>>()
     let nonTerminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<RsmState, INonTerminalNode>>()
-    let rangeNodes = Dictionary<MatchedRange, IRangeNode>()
-        //Dictionary<MatchedRange, IRangeNode>()
+    let rangeNodes = Dictionary<MatchedRange, IRangeNode>()        
     let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>()
     override this.GetHashCode() = id
     

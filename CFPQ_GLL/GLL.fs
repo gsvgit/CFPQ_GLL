@@ -4,7 +4,6 @@ open System.Collections.Generic
 open CFPQ_GLL.Common
 open CFPQ_GLL.RSM
 open CFPQ_GLL.GSS
-open CFPQ_GLL.InputGraph
 open CFPQ_GLL.SPPF
 open CFPQ_GLL.DescriptorsStack
 open FSharpx.Collections

@@ -1,9 +1,7 @@
 module Tests.InputGraph
 
 open System.Collections.Generic
-open CFPQ_GLL
 open CFPQ_GLL.Common
-open CFPQ_GLL.InputGraph
 
 [<Measure>] type inputGraphTerminalEdge
 
