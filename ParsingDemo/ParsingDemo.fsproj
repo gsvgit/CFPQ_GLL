@@ -7,18 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
-    <AvaloniaResource Include="Assets\**" />
-    <None Remove=".gitignore" />
+    <Compile Include="MainWindow.axaml.fs" />
+    <Compile Include="App.axaml.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="ViewModels\ViewModelBase.fs" />
-    <Compile Include="ViewModels\MainWindowViewModel.fs" />
-    <Compile Include="Views\MainWindow.axaml.fs" />
-    <Compile Include="ViewLocator.fs" />
-    <Compile Include="App.axaml.fs" />
-    <Compile Include="Program.fs" />
+    <None Remove=".gitignore" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +25,9 @@
     <PackageReference Include="Avalonia.Desktop" Version="0.10.18" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.18" />
-    <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.18" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tests\Tests.fsproj" />
   </ItemGroup>
 </Project>

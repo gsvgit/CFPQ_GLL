@@ -6,7 +6,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "Tests\Tests.fsproj
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Benchmarks", "Benchmarks\Benchmarks.fsproj", "{22338132-7D21-4212-9EED-73C8107E890A}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ParsingDemo", "ParsingDemo\ParsingDemo.fsproj", "{32C3D993-C158-48BE-B711-60D9B75EA69D}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ParsingDemo", "ParsingDemo\ParsingDemo.fsproj", "{F8221045-EA49-4CF5-A421-529BFABD8E84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,9 +26,9 @@ Global
 		{22338132-7D21-4212-9EED-73C8107E890A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22338132-7D21-4212-9EED-73C8107E890A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22338132-7D21-4212-9EED-73C8107E890A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{32C3D993-C158-48BE-B711-60D9B75EA69D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{32C3D993-C158-48BE-B711-60D9B75EA69D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{32C3D993-C158-48BE-B711-60D9B75EA69D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{32C3D993-C158-48BE-B711-60D9B75EA69D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8221045-EA49-4CF5-A421-529BFABD8E84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8221045-EA49-4CF5-A421-529BFABD8E84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8221045-EA49-4CF5-A421-529BFABD8E84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8221045-EA49-4CF5-A421-529BFABD8E84}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
