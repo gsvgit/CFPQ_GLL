@@ -14,6 +14,12 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
+    <DockPanel>
+        <Button DockPanel.Dock="Top" Command="{Binding ParseButtonClicked}">Parse</Button>
+        <Grid ColumnDefinitions="*, 4, *" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <TextBox Name="InputCodeTextBox" AcceptsReturn="True" TextWrapping="Wrap" Grid.Column="0"/>
+            <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
+            <Image Grid.Column="2"/>
+        </Grid>
+    </DockPanel>
 </Window>
