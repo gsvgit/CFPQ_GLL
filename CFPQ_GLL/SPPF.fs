@@ -108,9 +108,11 @@ type MatchedRanges () =
                 let oldWeight = rangeNode.Weight
                 let mutable newWeight = Int32.MaxValue * 1<weight>
                 for node in rangeNode.IntermediateNodes do
-                    newWeight <- min newWeight node.Weight
+                    newWeight <- min newWeight node.Weight                
                 if oldWeight > newWeight
                 then
+                    rangeNode.IntermediateNodes.RemoveWhere(fun n -> n.Weight > newWeight)
+                    |> ignore
                     rangeNode.Weight <- newWeight
                     rangeNode.Parents
                     |> Seq.iter handleNonRangeNode
