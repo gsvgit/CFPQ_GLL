@@ -3,7 +3,6 @@ module CFPQ_GLL.SPPF
 open System
 open System.Collections.Generic
 open CFPQ_GLL.Common
-open CFPQ_GLL.RSM
 open Microsoft.FSharp.Core
 open FSharpx.Collections
 
@@ -376,8 +375,9 @@ type TriplesStoredSPPFNode =
     | TerminalNode of int<inputGraphVertex> * Char * int<inputGraphVertex> * int<weight>
     | NonTerminalNode of int<inputGraphVertex> * INonterminal * int<inputGraphVertex> * int<weight>
     | IntermediateNode of int<inputGraphVertex> * int<rsmStateId> * int<weight>
-    | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmStateId> * int<rsmStateId>
+    | RangeNode of int<inputGraphVertex> * int<inputGraphVertex> * int<rsmStateId> * int<rsmStateId> * int<weight>
 
+type Color = Black | Red
 type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<LinearInputGraphVertexBase,int<inputGraphVertex>>) =
         
     let mutable firstFreeGraphVertexId =
@@ -399,42 +399,46 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
     let edges = ResizeArray<_>()
     let visitedRangeNodes = Dictionary<IRangeNode,_>()
     let visitedNonTerminalNodes = Dictionary<INonTerminalNode,_>()
-    let addEdge parentId currentId =
+    let addEdge parentId currentId color =
         match parentId with
-        | Some x -> edges.Add(x,currentId)
+        | Some x -> edges.Add(x,currentId, color)
         | None -> ()
 
     let rec handleIntermediateNode parentId (node:IIntermediateNode) =
+        let weight = node.Weight
         let node = node :?> IntermediateNode
         let currentId = nodesCount
         nodes.Add(currentId, TriplesStoredSPPFNode.IntermediateNode(getVertexId node.InputPosition, node.RSMState.Id, (node :> IIntermediateNode).Weight))
-        addEdge parentId currentId
+        addEdge parentId currentId weight
         nodesCount <- nodesCount + 1
         handleRangeNode (Some currentId) node.LeftSubtree
         handleRangeNode (Some currentId) node.RightSubtree
 
     and handleTerminalNode parentId (node:ITerminalNode) =
+        let weight = node.Weight
         let node = node :?> TerminalNode
         let currentId = nodesCount
         nodes.Add(currentId, TriplesStoredSPPFNode.TerminalNode(getVertexId node.LeftPosition, node.Terminal, getVertexId node.RightPosition, (node :> ITerminalNode).Weight))
-        addEdge parentId currentId
+        addEdge parentId currentId weight
         nodesCount <- nodesCount + 1
 
     and handleEpsilonNode parentId (node:IEpsilonNode) =
+        let weight = 0<weight>
         let node = node :?> EpsilonNode
         let currentId = nodesCount
         nodes.Add(currentId, TriplesStoredSPPFNode.EpsilonNode(getVertexId node.Position, node.NonTerminalStartState.Box.Nonterminal, 0<weight>))
-        addEdge parentId currentId
+        addEdge parentId currentId weight
         nodesCount <- nodesCount + 1
 
     and handleNonTerminalNode parentId (node:INonTerminalNode) =
+        let weight = node.Weight
         if visitedNonTerminalNodes.ContainsKey node
-        then addEdge parentId visitedNonTerminalNodes.[node]
+        then addEdge parentId visitedNonTerminalNodes.[node] weight
         else
             let currentId = nodesCount
             visitedNonTerminalNodes.Add(node, currentId)
             nodes.Add(currentId, TriplesStoredSPPFNode.NonTerminalNode(getVertexId node.LeftPosition, node.NonTerminalStartState.Box.Nonterminal, getVertexId node.RightPosition, node.Weight))
-            addEdge parentId currentId
+            addEdge parentId currentId weight
             nodesCount <- nodesCount + 1
             node.RangeNodes
             |> ResizeArray.iter (handleRangeNode (Some currentId))
@@ -447,8 +451,9 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
         | NonRangeNode.IntermediateNode p -> handleIntermediateNode parentId p
 
     and handleRangeNode parentId (node:IRangeNode) =
+        let weight = node.Weight
         if visitedRangeNodes.ContainsKey node
-        then addEdge parentId visitedRangeNodes.[node]
+        then addEdge parentId visitedRangeNodes.[node] weight
         else
             let node = node :?> RangeNode
             let currentId = nodesCount
@@ -456,27 +461,29 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
             nodes.Add(currentId, TriplesStoredSPPFNode.RangeNode(getVertexId node.InputStartPosition,
                                                                  getVertexId node.InputEndPosition,
                                                                  node.RSMStartPosition.Id,
-                                                                 node.RSMEndPosition.Id))
-            addEdge parentId currentId
+                                                                 node.RSMEndPosition.Id,
+                                                                 weight))
+            addEdge parentId currentId weight
             nodesCount <- nodesCount + 1
             (node :> IRangeNode).IntermediateNodes
             |> Seq.iter (handleNonRangeNode (Some currentId))
 
     do  roots |> Array.iter (handleNonTerminalNode None)
 
-    let printEdge (x,y) = sprintf $"%i{x}->%i{y}"
+    let getColor weight = if weight = 0<weight> then "black" else "red"
+    let printEdge (x,y,weight) = sprintf $"%i{x}->%i{y} [color={getColor weight}]"
     let printNode nodeId node =
         match node with
         | TriplesStoredSPPFNode.TerminalNode (_from,_terminal,_to, w) ->
-            sprintf $"%i{nodeId} [label = \"%A{_from}, {string _terminal}, %A{_to}, Weight: {w}\", shape = rectangle]"
+            sprintf $"%i{nodeId} [label = \"%A{_from}, {string _terminal}, %A{_to}, Weight: {w}\", shape = rectangle, color = {getColor w}]"
         | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState, w) ->
-            sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}, Weight: {w}\", shape = plain]"
+            sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}, Weight: {w}\", shape = plain, color = {getColor w}]"
         | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to, w) ->            
-            sprintf $"%i{nodeId} [label = \"%A{_from}, {_nonTerminal.Name}, %A{_to}, Weight: {w}\", shape = invtrapezium]"
+            sprintf $"%i{nodeId} [label = \"%A{_from}, {_nonTerminal.Name}, %A{_to}, Weight: {w}\", shape = invtrapezium, color = {getColor w}]"
         | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal, w) ->                        
-            sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: {_nonTerminal.Name}, Weight: {w}\", shape = invhouse]"
-        | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo) ->
-            sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse]"
+            sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: {_nonTerminal.Name}, Weight: {w}\", shape = invhouse, color = {getColor w}]"
+        | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo, w) ->
+            sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse, color = {getColor w}]"
 
     member this.ToDot filePath =        
         System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])
