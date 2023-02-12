@@ -5,7 +5,7 @@ open CFPQ_GLL
 open CFPQ_GLL.Common
 open BenchmarkDotNet.Attributes
 
-let path = "/home/viktor/RiderProjects/CFPQ_GLL/golang"
+let path = "/home/gsv/golang"
 
 type BenchmarkData = {
     Name: string
@@ -37,6 +37,7 @@ let benchmarkData =
 let runGLL (data: BenchmarkData) =
     GLL.errorRecoveringEval data.FinishVertex data.StartVertex (data.RSM ()) GLL.AllPaths |> ignore
 
+[<IterationCount(10)>]
 type ErrorRecoveringBenchmark () =
 
     member val Data = benchmarkData with get, set
