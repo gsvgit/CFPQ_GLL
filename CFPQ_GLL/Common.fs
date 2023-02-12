@@ -42,7 +42,12 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
     member this.GssVertex = gssVertex
     member this.MatchedRange = matchedRange
     member this.Weight
-        with get() = leftPartMinWeight
+        with get() =
+            let treeWeight =
+                match this.MatchedRange.Node with
+                | Some n -> n.Weight
+                | None -> 0<weight>
+            this.GssVertex.MinimalWeightOfLeftPart + treeWeight
         and set v = leftPartMinWeight <- v
     override this.GetHashCode() = hashCode
     override this.Equals (y:obj) =
@@ -175,6 +180,7 @@ and IGssEdge =
     abstract MatchedRange: MatchedRangeWithNode
 
 and IGssVertex =
+    abstract MinimalWeightOfLeftPart: int<weight> with get, set
     abstract InputPosition: LinearInputGraphVertexBase
     abstract RsmState: RsmState
     abstract OutgoingEdges: ResizeArray<IGssEdge>

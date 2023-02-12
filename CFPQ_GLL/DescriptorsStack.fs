@@ -41,6 +41,7 @@ type ErrorRecoveringDescriptorsStack () =
                 assert moved
                 let currentMin = enumerator.Current
                 let result = errorRecoveringDescriptorsStacks[currentMin].Pop ()
+                if result.Weight > currentMin then failwith "!!!"
                 if errorRecoveringDescriptorsStacks[currentMin].Count = 0
                 then errorRecoveringDescriptorsStacks.Remove currentMin |> ignore
                 result

@@ -317,7 +317,7 @@ let evalFromState
                   , Unchecked.defaultof<RsmState>
                   , Unchecked.defaultof<RsmState>
                )
-    let gssVertex = gss.AddNewVertex(startVertex, query.StartState)
+    let gssVertex = gss.AddNewVertex(startVertex, query.StartState, 0<weight>)
     Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<weight>)
     |> descriptorToProcess.Push
 
