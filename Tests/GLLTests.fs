@@ -48,7 +48,7 @@ let private runGLLAndCheckResultForManuallyCreatedGraph
     (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx) =
 
     let validDotFileName = testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
-    let result = evalFunction startVertex q AllPaths
+    let result,_ = evalFunction startVertex q AllPaths
 
     match result with
     | QueryResult.MatchedRanges ranges ->

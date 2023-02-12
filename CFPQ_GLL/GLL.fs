@@ -256,15 +256,15 @@ let private run
             errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
 
-        let symbol, vertex = outgoingTerminalEdgeInGraph
-        assert (symbol <> Epsilon)
-        handleEdge symbol vertex
-
         for kvp in errorRecoveryEdges do
             if kvp.Key = Epsilon then
                 handleEpsilonEdge kvp.Value
             else
                 handleEdge kvp.Key kvp.Value
+        
+        let symbol, vertex = outgoingTerminalEdgeInGraph
+        assert (symbol <> Epsilon)
+        handleEdge symbol vertex
 
 
 
@@ -299,6 +299,7 @@ let private run
     match mode with
     | ReachabilityOnly -> QueryResult.ReachabilityFacts (Dictionary<_,_>())
     | AllPaths -> QueryResult.MatchedRanges matchedRanges
+    ,cnt
 
 let evalFromState
         (descriptorToProcess:IDescriptorsStack)

@@ -36,7 +36,7 @@ let run
     let finalVertices = mapping[finalV]
 
     let start = DateTime.Now
-    let result = GLL.errorRecoveringEval finalVertices startVertices q GLL.AllPaths
+    let result,_ = GLL.errorRecoveringEval finalVertices startVertices q GLL.AllPaths
     //printfn $"Execution time: {(DateTime.Now - start).TotalMilliseconds}"
 
     match result with
