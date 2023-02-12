@@ -6,7 +6,19 @@
         x:Class="ParsingDemo.MainWindow"
         Title="ParsingDemo">
     <DockPanel>
-        <Button DockPanel.Dock="Top" Click="OnParseButtonClick">Parse</Button>
+        <DockPanel LastChildFill="True" DockPanel.Dock="Top">
+            <Button  Click="OnParseButtonClick">Parse</Button>
+            <Separator Width="10"/>
+            <TextBlock VerticalAlignment="Center">Descriptors handled: </TextBlock>
+            <TextBox Name="DescriptorsHandleTextBox" Watermark="Descriptors handled"></TextBox>
+            <Separator Width="10"/>
+            <TextBlock VerticalAlignment="Center">Parsing time: </TextBlock>
+            <TextBox Name="ParsingTimeTextBox" Watermark="Parsing time"></TextBox>
+            <Separator Width="10"/>
+            <TextBlock VerticalAlignment="Center">Rendering time: </TextBlock>
+            <TextBox Name="RenderingTimeTextBox" Watermark="RenderingTime"></TextBox>
+        </DockPanel>
+        
         <Grid ColumnDefinitions="*, 4, *" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TextBox Name="InputCodeTextBox" AcceptsReturn="True" TextWrapping="Wrap" Grid.Column="0"/>
             <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>

@@ -7,6 +7,7 @@ open Avalonia.Markup.Xaml
 open CFPQ_GLL
 open CFPQ_GLL.Common
 open CFPQ_GLL.SPPF
+open Expecto.Logging
 open Tests
 
 type MainWindow () as this = 
@@ -52,6 +53,10 @@ type MainWindow () as this =
     let rsm = GolangRSM.golangRSM ()
     
     let mutable inputCodeTextBox = Unchecked.defaultof<TextBox>
+    let mutable descriptorsHandleTextBox = Unchecked.defaultof<TextBox>
+    
+    let mutable parsingTimeTextBox = Unchecked.defaultof<TextBox>
+    let mutable renderingTimeTextBox = Unchecked.defaultof<TextBox>
     let mutable parseTreeImage = Unchecked.defaultof<Image>
 
     do this.InitializeComponent()
@@ -61,6 +66,9 @@ type MainWindow () as this =
         AvaloniaXamlLoader.Load(this)
         inputCodeTextBox <- this.FindControl<TextBox>("InputCodeTextBox")
         inputCodeTextBox.Text <- defaultText
+        descriptorsHandleTextBox <- this.FindControl<TextBox>("DescriptorsHandleTextBox")
+        parsingTimeTextBox <- this.FindControl<TextBox>("ParsingTimeTextBox")
+        renderingTimeTextBox <- this.FindControl<TextBox>("RenderingTimeTextBox")
         parseTreeImage <- this.FindControl<Image>("ParseTreeImage")
         
     member this.OnParseButtonClick(sender: obj,e: RoutedEventArgs) =
@@ -71,9 +79,13 @@ type MainWindow () as this =
         let finalV = LanguagePrimitives.Int32WithMeasure<inputGraphVertex>(input.NumberOfVertices() - 1)
         let startVertices,mapping = input.ToCfpqCoreGraph startV
         let finalVertices = mapping[finalV]
-        let result = GLL.errorRecoveringEval finalVertices startVertices rsm GLL.AllPaths
+        let start = System.DateTime.Now
+        let result,descriptorsHandled = GLL.errorRecoveringEval finalVertices startVertices rsm GLL.AllPaths
+        descriptorsHandleTextBox.Text <- string descriptorsHandled
+        parsingTimeTextBox.Text <- string (System.DateTime.Now - start).TotalMilliseconds + " ms"
         match result with
         | GLL.QueryResult.MatchedRanges _ ->
+            let start = System.DateTime.Now
             let sppf = rsm.OriginalStartState.NonTerminalNodes.ToArray()
             let root = sppf |> Array.filter (fun n -> finalVertices = n.RightPosition && startVertices = n.LeftPosition) |> Array.minBy(fun n -> n.Weight)
             //let weights = sppf |> Array.filter (fun n -> finalVertices = n.RightPosition && startVertices = n.LeftPosition)  |> Array.map (fun n -> n.Weight) |> Array.sort |> Array.toList
@@ -85,5 +97,6 @@ type MainWindow () as this =
             
             let image = new Avalonia.Media.Imaging.Bitmap("tmp.dot.png");
             parseTreeImage.Source <- image
+            renderingTimeTextBox.Text <- string (System.DateTime.Now - start).TotalMilliseconds + " ms"
         //let x = inputCodeTextBox.Text <- "dsaasdasdasd"
         ()
