@@ -1,7 +1,6 @@
 
 open CFPQ_GLL
 open Tests
-open Expecto
 open Logging
 open CFPQ_GLL.RsmBuilder
 
@@ -11,14 +10,17 @@ let debug src input name =
     let graph = LinearGraphReader.mkLinearGraph id input
     graph.ToDot $"{name}_graph.dot"
     (query :> RSM.RSM).ToDot $"{name}_rsm.dot"
-    ErrorRecoveringTest.run graph query $"{name}_sppf.dot"
+    ErrorRecoveringTest.run graph query $"{name}_sppf.dot" |> ignore
+    ChangeTargetLevel GLL Info
 
 let runTests () =
     ErrorRecoveringTest.initTestCases ()
-    runTestsWithCLIArgs [] [||] (ErrorRecoveringTest.tests ())
+    Expecto.Tests.runTestsWithCLIArgs [] [||] (ErrorRecoveringTest.tests ())
 
 [<EntryPoint>]
 let main _ =
+
+    debug ErrorRecoveringTest.DyckLang.LazyRsm "()" "debug"
 
     ErrorRecoveringTest.generateTests ErrorRecoveringTest.SimpleGolang [
         """1+ ; r1 ; """

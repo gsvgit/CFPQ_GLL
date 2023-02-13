@@ -16,8 +16,28 @@ type QueryResult =
     | ReachabilityFacts of Dictionary<LinearInputGraphVertexBase,HashSet<LinearInputGraphVertexBase>>
     | MatchedRanges of MatchedRanges
 
-let logGll logLevel = Logging.printLog Logging.GLL logLevel
 
+let logGll logLevel = Logging.printLog Logging.GLL logLevel
+let logDescriptorInfo (descriptor: Descriptor) =
+    let ppSpaces = Logging.formatAsLog Logging.GLL "" |> String.length |> fun x -> String.replicate x " "
+    let msg =
+        [
+            $"\n{ppSpaces}Processing descriptor {descriptor.GetHashCode()}"
+            $"Descriptor rsm state: {descriptor.RsmState.Box.Nonterminal.Name} with distance {descriptor.Weight}"
+            $"Descriptor graph edge: {fst descriptor.InputPosition.OutgoingEdge}"
+            $"""Descriptor rsm terminals: {descriptor.RsmState.OutgoingTerminalEdges.Keys |> Seq.map string |> String.concat ", "}"""
+            $"""Descriptor rsm nonterminals: {descriptor.RsmState.OutgoingNonTerminalEdges.Keys |> Seq.map (fun x -> x.Box.Nonterminal.Name) |> String.concat ", " } """
+            $"Weight: %A{descriptor.Weight}"
+            $"Descriptor is final: {descriptor.IsFinal}"
+        ] |> String.concat $"\n{ppSpaces}"
+    logGll Logging.Trace $"{msg}"
+
+let logDescriptorCreated (d: Descriptor) =
+    logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
+    d
+let logDescriptorCreatedByTerminal t (d: Descriptor) =
+    logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} by terminal ( {t} ) with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
+    d
 
 let private run
         (gss:GSS)
@@ -26,48 +46,6 @@ let private run
         (startVertex:LinearInputGraphVertexBase)
         (finalVertex:LinearInputGraphVertexBase)
         (query:RSM) mode =
-
-    // let encodeTerminal t =
-    //     match int t with
-    //     | -1 -> "epsilon"
-    //     | 0 -> "["
-    //     | 1 -> "space"
-    //     | 2 -> "x"
-    //     | 2147483646 -> "EOF"
-    //     | _ -> failwith "Unknown terminal"
-    //
-    // let encodeNonTerminal nt =
-    //     match nt with
-    //     | 20852350 -> "Elem"
-    //     | 17230008 -> "List"
-    //     | _ -> failwith "Unknown nonterminal"
-
-    let encodeTerminal t =
-        match int t with
-        | -1 -> "epsilon"
-        | 0 -> "1"
-        | 1 -> "space"
-        | 2 -> "+"
-        | 3 -> "r"
-        | 4 -> ";"
-        | 2147483646 -> "EOF"
-        | _ -> failwith "Unknown terminal"
-
-    let encodeNonTerminal nt =
-        match nt with
-        | 11315292 -> "Program"
-        | 8361080 -> "Block"
-        | 60620523 -> "IntExpr"
-        | 55429698 -> "Statement"
-        | 8713795 -> "Top lvl"
-        | 6158855 -> "(10)"
-        | 29105235 -> "(9)"
-        | 62333418 -> "(3)"
-        | 8140857 -> "(8)"
-        | 24129853 -> "(4)"
-        | 15842089 -> "(5)"
-        | 61566768 -> "Start"
-        | x -> $"Unknown: {x}"
 
     let buildSppf =
         match mode with
@@ -78,7 +56,6 @@ let private run
 
 
     let inline addDescriptor (descriptor:Descriptor) =
-        //assert ( not (gss.IsThisDescriptorAlreadyHandled descriptor && descriptor.IsFinal))
         if (not <| gss.IsThisDescriptorAlreadyHandled descriptor) || descriptor.IsFinal then
             descriptorsToProcess.Push descriptor
 
@@ -150,15 +127,13 @@ let private run
                                                (startVertex = currentlyCreatedNode.LeftPosition)
                                                && (finalVertex = currentlyCreatedNode.RightPosition)
                                                && (query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState)
-                                //logGll Logging.Trace $"findCorrect = {startVertex = currentlyCreatedNode.LeftPosition} && {finalVertex = currentlyCreatedNode.RightPosition} && {query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState}"
                                 matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
                             else dummyRangeNode
                         MatchedRangeWithNode(matchedRange, rangeNode)
                     makeIntermediateNode leftSubRange rightSubRange
                 let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange)
-                logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
                 d.IsFinal <- findCorrect
-                addDescriptor d
+                logDescriptorCreated d |> addDescriptor
 
         let outgoingTerminalEdgeInGraph = currentDescriptor.InputPosition.OutgoingEdge
 
@@ -173,9 +148,7 @@ let private run
                                 , currentDescriptor.InputPosition
                                 , kvp.Key
                                 , currentDescriptor.MatchedRange)
-               let d = Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange)
-               logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
-               d |> addDescriptor
+               Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange) |> logDescriptorCreated |> addDescriptor
                for matchedRange in positionsForPops do
                    let newRange =
                        let rightSubRange =
@@ -194,12 +167,11 @@ let private run
                            MatchedRangeWithNode(newMatchedRange, rangeNode)
                        let leftSubRange = currentDescriptor.MatchedRange
                        makeIntermediateNode leftSubRange rightSubRange
-                   let d =  Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange)
-                   logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
-                   d |> addDescriptor
+                   Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange)
+                   |> logDescriptorCreated
+                   |> addDescriptor
 
         let handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: RsmState) =
-            //logGll Logging.Debug $"(handleTerminalOrEpsilonEdge) Terminal: {terminalSymbol}  Weight: {graphEdgeTarget.Weight}"
             let graphTargetVertex = graphEdgeTarget.TargetVertex
 
             let newMatchedRange =
@@ -221,10 +193,9 @@ let private run
                         else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, rangeNode)
                 makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
-
-            let d = Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange)
-            logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} by terminal ( {terminalSymbol} ) with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
-            d |> addDescriptor
+            Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange)
+            |> logDescriptorCreatedByTerminal terminalSymbol
+            |> addDescriptor
 
         let handleTerminalEdge terminalSymbol graphTargetVertex rsmTargetVertex =
             handleTerminalOrEpsilonEdge terminalSymbol graphTargetVertex rsmTargetVertex
@@ -266,27 +237,13 @@ let private run
 
     let mutable cnt = 0
     let mutable _continue = true
-    while
-        _continue do
-        if cnt = 32
-        then ()
-        logGll Logging.Trace $"------------ Step {cnt} ------------"
+    while _continue do
         let descriptor = descriptorsToProcess.Pop()
-        logGll Logging.Trace $"Processing descriptor {descriptor.GetHashCode()} "
-        logGll Logging.Trace $"Descriptor rsm state: {descriptor.RsmState.Box.Nonterminal.Name} with distance {descriptor.Weight}"
-        logGll Logging.Trace $"Descriptor graph edge: {fst descriptor.InputPosition.OutgoingEdge}"
-        logGll Logging.Trace $"""Descriptor rsm terminals: {descriptor.RsmState.OutgoingTerminalEdges.Keys |> Seq.map string |> String.concat ", "}"""
-        logGll Logging.Trace $"""Descriptor rsm nonterminals: {descriptor.RsmState.OutgoingNonTerminalEdges.Keys |> Seq.map (fun x -> x.Box.Nonterminal.Name) |> String.concat ", " } """
+        logDescriptorInfo descriptor
         cnt <- cnt + 1
-        //if descriptor.Weight > weight then
-        //    weight <- descriptor.Weight
-        logGll Logging.Trace $"Weight: %A{descriptor.Weight}"
         if descriptor.IsFinal
         then _continue <- false
         else descriptor |> handleDescriptor
-
-    //printfn $"Processed {cnt} descriptors"
-    ////logGll Logging.Info $"descriptors handled: %A{cnt}"
 
     match mode with
     | ReachabilityOnly -> QueryResult.ReachabilityFacts (Dictionary<_,_>())
@@ -327,33 +284,3 @@ let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertex s
     let gss = GSS()
     let matchedRanges = MatchedRanges()
     evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM) mode
-
-
-//let onInputGraphChanged (changedVertices:seq<ILinearInputGraphVertex>) =
-//    let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.Descriptors) |> Array.ofSeq
-//    descriptorsToContinueFrom
-//    |> Array.iter (fun descriptor ->
-//        let removed = descriptor.GssVertex.HandledDescriptors.Remove descriptor
-//        assert removed
-//        let removed = descriptor.InputPosition.Descriptors.Remove descriptor
-//        assert removed
-//        let removed = descriptor.RsmState.Descriptors.Remove descriptor
-//        assert removed
-//        )
-//    fun
-//        reachableVertices
-//        gss
-//        matchedRanges
-//        startVertices
-//        query
-//        mode
-//         ->
-//            run
-//                gss
-//                matchedRanges
-//                (DefaultDescriptorsStack descriptorsToContinueFrom)
-//                startVertices
-//                (HashSet())
-//                query
-//                mode
-
