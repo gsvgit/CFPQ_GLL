@@ -155,11 +155,7 @@ let private run
                             else dummyRangeNode
                         MatchedRangeWithNode(matchedRange, rangeNode)
                     makeIntermediateNode leftSubRange rightSubRange
-                let newWeight =
-                    match newRange.Node with
-                    | Some n -> n.Weight
-                    | None -> 0<weight>
-                let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange, newWeight)//currentDescriptor.Weight)
+                let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange)
                 //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
                 d.IsFinal <- findCorrect
                 addDescriptor d
@@ -177,11 +173,11 @@ let private run
                                 , currentDescriptor.InputPosition
                                 , kvp.Key
                                 , currentDescriptor.MatchedRange)
-               let d = Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange, currentDescriptor.Weight)
+               let d = Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange)
                //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
                d |> addDescriptor
                for matchedRange in positionsForPops do               
-                   let weight,newRange =
+                   let newRange =
                        let rightSubRange =
                            let newMatchedRange =
                               MatchedRange(
@@ -197,12 +193,8 @@ let private run
                                 else dummyRangeNode
                            MatchedRangeWithNode(newMatchedRange, rangeNode)
                        let leftSubRange = currentDescriptor.MatchedRange
-                       let weight =
-                           match rightSubRange.Node with
-                           | Some x -> x.Weight
-                           | None -> 0<weight>
-                       weight, makeIntermediateNode leftSubRange rightSubRange
-                   let d =  Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange, currentDescriptor.Weight + weight)
+                       makeIntermediateNode leftSubRange rightSubRange
+                   let d =  Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange)
                    //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
                    d |> addDescriptor
 
@@ -230,7 +222,7 @@ let private run
                     MatchedRangeWithNode(matchedRange, rangeNode)
                 makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
 
-            let d = Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange, currentDescriptor.Weight + (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>))
+            let d = Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange)
             //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} by terminal ( {encodeTerminal terminalSymbol} ) with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
             d |> addDescriptor
 
@@ -250,9 +242,17 @@ let private run
         let errorRecoveryEdges =
             let errorRecoveryEdges = Dictionary()
             let currentTerminal,targetVertex = currentDescriptor.InputPosition.OutgoingEdge
+            let coveredByCurrentTerminal =
+                let exists, s = currentDescriptor.RsmState.OutgoingTerminalEdges.TryGetValue currentTerminal
+                if exists then s else HashSet<_>()
+            printfn "Recovery symbols"
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
-                if terminal <> currentTerminal
-                then errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
+                let coveredByTerminal = HashSet(currentDescriptor.RsmState.OutgoingTerminalEdges[terminal])
+                coveredByTerminal.ExceptWith coveredByCurrentTerminal
+                if terminal <> currentTerminal && coveredByTerminal.Count > 0
+                then
+                    printfn $"Smb: {terminal}"
+                    errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
             errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
 
@@ -265,8 +265,6 @@ let private run
         let symbol, vertex = outgoingTerminalEdgeInGraph
         assert (symbol <> Epsilon)
         handleEdge symbol vertex
-
-
 
     let mutable weight = -1<weight>
     let mutable cnt = 0
@@ -286,9 +284,9 @@ let private run
         //logGll Logging.Trace $"""Descriptor rsm terminals: {descriptor.RsmState.OutgoingTerminalEdges.Keys |> Seq.map encodeTerminal |> String.concat ", "}"""
         //logGll Logging.Trace $"""Descriptor rsm nonterminals: {descriptor.RsmState.OutgoingNonTerminalEdges.Keys |> Seq.map (fun x -> x.GetHashCode() |> encodeNonTerminal) |> String.concat ", " } """
         cnt <- cnt + 1
-        if descriptor.Weight > weight then
-            weight <- descriptor.Weight
-            //printfn $"New weight: %A{weight}"
+        //if descriptor.Weight > weight then
+        //    weight <- descriptor.Weight
+        printfn $"Weight: %A{descriptor.Weight}"
         if descriptor.IsFinal
         then _continue <- false
         else descriptor |> handleDescriptor
@@ -318,7 +316,7 @@ let evalFromState
                   , Unchecked.defaultof<RsmState>
                )
     let gssVertex = gss.AddNewVertex(startVertex, query.StartState, 0<weight>)
-    Descriptor(query.StartState, startVertex, gssVertex, emptyRange, 0<weight>)
+    Descriptor(query.StartState, startVertex, gssVertex, emptyRange)
     |> descriptorToProcess.Push
 
     run

@@ -28,8 +28,8 @@ let getFirstFreeRsmStateId =
         let res = cnt
         cnt <- cnt + 1<rsmStateId>
         res
-type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, leftPartMinWeight: int<weight>) =
-    let mutable leftPartMinWeight = leftPartMinWeight
+type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) as this =
+    let weightChanged = Event<Descriptor>()
     let hashCode =
         let mutable hash = 17
         hash <- hash * 23 + rsmState.GetHashCode()
@@ -48,7 +48,6 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
                 | Some n -> n.Weight
                 | None -> 0<weight>
             this.GssVertex.MinimalWeightOfLeftPart + treeWeight
-        and set v = leftPartMinWeight <- v
     override this.GetHashCode() = hashCode
     override this.Equals (y:obj) =
         y :? Descriptor

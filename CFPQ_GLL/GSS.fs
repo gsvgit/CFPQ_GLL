@@ -71,7 +71,7 @@ type GSS () =
     member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =
         let exists, handledDescriptor = descriptor.GssVertex.HandledDescriptors.TryGetValue descriptor
         let result = exists && handledDescriptor.Weight <= descriptor.Weight
-        if exists && handledDescriptor.Weight > descriptor.Weight then handledDescriptor.Weight <- descriptor.Weight
+        //if exists && handledDescriptor.Weight > descriptor.Weight then handledDescriptor.Weight <- descriptor.Weight
         result
 
     member this.AddDescriptorToHandled (descriptor:Descriptor) =
