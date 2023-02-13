@@ -28,8 +28,7 @@ let getFirstFreeRsmStateId =
         let res = cnt
         cnt <- cnt + 1<rsmStateId>
         res
-type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode, leftPartMinWeight: int<weight>) =
-    let mutable leftPartMinWeight = leftPartMinWeight
+type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) =    
     let hashCode =
         let mutable hash = 17
         hash <- hash * 23 + rsmState.GetHashCode()
@@ -42,8 +41,12 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
     member this.GssVertex = gssVertex
     member this.MatchedRange = matchedRange
     member this.Weight
-        with get() = leftPartMinWeight
-        and set v = leftPartMinWeight <- v
+        with get() =
+            let treeWeight =
+                match this.MatchedRange.Node with
+                | Some n -> n.Weight
+                | None -> 0<weight>
+            this.GssVertex.MinimalWeightOfLeftPart + treeWeight
     override this.GetHashCode() = hashCode
     override this.Equals (y:obj) =
         y :? Descriptor
@@ -175,6 +178,7 @@ and IGssEdge =
     abstract MatchedRange: MatchedRangeWithNode
 
 and IGssVertex =
+    abstract MinimalWeightOfLeftPart: int<weight> with get, set
     abstract InputPosition: LinearInputGraphVertexBase
     abstract RsmState: RsmState
     abstract OutgoingEdges: ResizeArray<IGssEdge>

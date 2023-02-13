@@ -8,11 +8,15 @@ type GSSEdge (gssVertex: IGssVertex, rsmState: RsmState, matchedRange: MatchedRa
         member this.RsmState = rsmState
         member this.MatchedRange = matchedRange
 
-and GssVertex (inputPosition: LinearInputGraphVertexBase, rsmState: RsmState) =
+and GssVertex (inputPosition: LinearInputGraphVertexBase, rsmState: RsmState, minWeightOfLeftPart:int<weight>) =
+    let mutable minimalWeightOfLeftPart = minWeightOfLeftPart
     let outgoingEdges = ResizeArray<IGssEdge>()
     let popped = ResizeArray<MatchedRangeWithNode>()
     let handledDescriptors = HashSet<Descriptor>()
     interface IGssVertex with
+        member this.MinimalWeightOfLeftPart
+            with get () = minimalWeightOfLeftPart
+            and set v = minimalWeightOfLeftPart <- v
         member this.InputPosition = inputPosition
         member this.RsmState = rsmState
         member this.OutgoingEdges = outgoingEdges
@@ -27,13 +31,17 @@ type GssVertexId =
 
 type GSS () =
     let vertices = Dictionary<GssVertexId, GssVertex>()
-    member this.AddNewVertex (inputPosition: LinearInputGraphVertexBase, rsmState:RsmState) =
+    member this.AddNewVertex (inputPosition: LinearInputGraphVertexBase, rsmState:RsmState, weight:int<weight>) =
         let gssVertexId = GssVertexId(inputPosition, rsmState)
         let exists, gssVertex = vertices.TryGetValue gssVertexId
         if exists
-        then gssVertex
+        then
+            let _gssVertex = (gssVertex :> IGssVertex) 
+            if _gssVertex.MinimalWeightOfLeftPart > weight
+            then _gssVertex.MinimalWeightOfLeftPart <- weight
+            gssVertex
         else
-            let gssVertex = GssVertex(inputPosition, rsmState)
+            let gssVertex = GssVertex(inputPosition, rsmState, weight)
             vertices.Add(gssVertexId, gssVertex)
             gssVertex
 
@@ -42,7 +50,11 @@ type GSS () =
                          , inputPositionToContinue: LinearInputGraphVertexBase
                          , rsmStateToContinue: RsmState
                          , matchedRange: MatchedRangeWithNode) =
-        let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue) :> IGssVertex
+        let weight =
+            match matchedRange.Node with
+            | Some n -> n.Weight
+            | None -> 0<weight>
+        let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue, currentGSSVertex.MinimalWeightOfLeftPart + weight) :> IGssVertex
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
 
         // There is no need to check GSS edges duplication.
@@ -59,7 +71,7 @@ type GSS () =
     member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =
         let exists, handledDescriptor = descriptor.GssVertex.HandledDescriptors.TryGetValue descriptor
         let result = exists && handledDescriptor.Weight <= descriptor.Weight
-        if exists && handledDescriptor.Weight > descriptor.Weight then handledDescriptor.Weight <- descriptor.Weight
+        //if exists && handledDescriptor.Weight > descriptor.Weight then handledDescriptor.Weight <- descriptor.Weight
         result
 
     member this.AddDescriptorToHandled (descriptor:Descriptor) =
