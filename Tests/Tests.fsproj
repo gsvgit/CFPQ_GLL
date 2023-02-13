@@ -12,7 +12,6 @@
         <Compile Include="GLLTests.fs" />
         <Compile Include="RSMCalculator.fs" />
         <Compile Include="GolangRSM.fs" />
-        <Compile Include="MiniML.fs" />
         <Compile Include="ErrorRecoveringTest.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>

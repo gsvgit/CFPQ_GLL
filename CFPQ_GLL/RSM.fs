@@ -3,54 +3,6 @@ module CFPQ_GLL.RSM
 open System.Collections.Generic
 open CFPQ_GLL.Common
 
-[<Measure>] type rsmState
-
-type RSMEdges =
-    | TerminalEdge of int<rsmState>*Char*int<rsmState>
-    | NonTerminalEdge of _from:int<rsmState>*_nonTerminalSymbolStartState:int<rsmState>*_to:int<rsmState>
-
-    member this.StartState =
-        match this with
-        | TerminalEdge (_from,_,_)
-        | NonTerminalEdge (_from,_,_) -> _from
-
-    member this.FinalState =
-        match this with
-        | TerminalEdge (_,_,_to)
-        | NonTerminalEdge (_,_,_to) -> _to
-
-    member this.Terminal =
-        match this with
-        | TerminalEdge (_,t,_) -> t
-        | NonTerminalEdge _ -> failwith "Cannot get terminal from nonterminal edge."
-
-[<Struct>]
-type RSMTerminalEdge =
-    val State : int<rsmState>
-    val TerminalSymbol : int<terminalSymbol>
-    new (state, terminalSymbol) = {State = state; TerminalSymbol = terminalSymbol}
-
-[<Struct>]
-type RSMNonTerminalEdge =
-    val State : RsmState
-    val NonTerminalSymbolStartState : RsmState
-    new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}
-
-type TerminalEdgesStorage =
-    | Small of array<RSMTerminalEdge>
-    | Big of Dictionary<int<terminalSymbol>,ResizeArray<int<rsmState>>>
-
-
-[<Struct>]
-type RSMVertexMutableContent =
-    val OutgoingTerminalEdges : ResizeArray<RSMTerminalEdge>
-    val OutgoingNonTerminalEdges: ResizeArray<RSMNonTerminalEdge>
-    new (terminalEdges, nonTerminalEdges) =
-        {
-            OutgoingTerminalEdges = terminalEdges
-            OutgoingNonTerminalEdges = nonTerminalEdges
-        }
-
 type RSMBox(nonTerminal:INonterminal) =
     let nonTerminal = nonTerminal
     let mutable startState = None

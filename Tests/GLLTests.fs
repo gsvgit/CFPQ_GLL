@@ -8,28 +8,6 @@ open CFPQ_GLL.SPPF
 open Expecto
 open Tests.InputGraph
 
-let fillRsmBox (box:RSMBox, statesMapping: Dictionary<int<rsmState>, RsmState>, startSate:int<rsmState>, finalStates: HashSet<int<rsmState>>, edges: array<RSMEdges>) =
-
-    let getState stateId =
-        let exists, state = statesMapping.TryGetValue stateId
-        if exists
-        then state
-        else
-            let state = RsmState((stateId = startSate), finalStates.Contains stateId)
-            statesMapping.Add(stateId, state)
-            box.AddState state
-            state
-    getState startSate |> ignore
-    for edge in edges do
-        let startState = getState edge.StartState
-        let finalState = getState edge.FinalState
-        match edge with
-        | NonTerminalEdge(_from,_nonTerm,_to ) ->
-            let nonTerm = getState _nonTerm
-            startState.AddNonTerminalEdge(nonTerm, finalState)
-        | RSMEdges.TerminalEdge (_from,_term,_to ) ->
-            startState.AddTerminalEdge(_term, finalState)
-    statesMapping
 
 (*let dumpResultToConsole (sppf:TriplesStoredSPPF<_>) =
     sppf.Edges |> Seq.iter (fun (x,y) -> printf $"(%i{x},%i{y}); ")
@@ -70,7 +48,7 @@ let private runGLLAndCheckResultForManuallyCreatedGraph
     (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx) =
 
     let validDotFileName = testName.Replace(',', ' ').Replace(' ', '_') + ".dot"
-    let result = evalFunction startVertex q AllPaths
+    let result,_ = evalFunction startVertex q AllPaths
 
     match result with
     | QueryResult.MatchedRanges ranges ->

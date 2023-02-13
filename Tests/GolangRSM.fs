@@ -15,8 +15,7 @@ let golangSrc () =
     let BoolTerm = nt "BoolTerm"
     let Comp = nt "Comp"
     let BoolVals = nt "BoolVals"
-
-    let Expr = nt "Expr"
+    
     let ExprList = nt "ExprList"
 
     let Assign = nt "Assign"
@@ -50,35 +49,28 @@ let golangSrc () =
     let returnLit = literal "return"
 
     let space = [' '; '\t'; '\n'; '\r'] |> mkAlt
-    let Spaces = nt "Spaces"
+    
 
     [
         Program   =>  many space ** many FuncDecl
-        Spaces   =>  many space
+        
         Num       =>  protect (numeralsEx0 ** many numerals)
         Var       =>  protect (some letters)
 
-        IntExpr   =>  IntExpr ** t '+' ** IntTerm
-                      +|+ IntExpr ** t '-' ** IntTerm
-                      +|+ IntTerm
-        IntTerm   =>  IntTerm ** t '*' ** Power  +|+ Power
-        Power     =>  Factor ** t '^' ** Power +|+ Factor
+        IntExpr   =>  nonemptyList IntTerm (t '+' +|+ t '-')
+        IntTerm   =>  nonemptyList Power (t '*')
+        Power     =>  nonemptyList Factor (t '^')
         Factor    =>  BoolExpr +|+ Num +|+ t '(' ** IntExpr ** t ')'
 
-
-        BoolExpr  =>  BoolExpr ** literal "||" ** BoolTerm +|+ BoolTerm
-        BoolTerm  =>  BoolTerm ** literal "&&" ** Comp +|+ Comp
-        Comp      =>  IntExpr ** t '<' ** IntExpr
-                      +|+ IntExpr ** t '>' ** IntExpr
-                      +|+ IntExpr ** literal "<=" ** IntExpr
-                      +|+ IntExpr ** literal ">=" ** IntExpr
-                      +|+ IntExpr ** literal "==" ** IntExpr
-                      +|+ IntExpr ** literal "!=" ** IntExpr
+        BoolExpr  =>  nonemptyList BoolTerm (literal "||")
+        BoolTerm  =>  nonemptyList Comp (literal "&&")
+        Comp      =>  IntExpr
+                          ** (t '<' +|+ t '>' +|+ literal "<=" +|+ literal ">=" +|+ literal "==" +|+  literal "!=")
+                          ** IntExpr
                       +|+ BoolVals
         BoolVals  =>  Var +|+ trueVal +|+ falseVal +|+ t '(' ** BoolExpr ** t ')'
 
-        Expr => IntExpr
-        ExprList => list Expr (t ',')
+        ExprList => list IntExpr (t ',')
 
         ArgDecl     =>  protect (Var ** t ' ') ** VarType
         ArgDeclList =>  list ArgDecl (t ',')
@@ -90,9 +82,9 @@ let golangSrc () =
         While => literal "while" ** t '(' ** BoolExpr ** t ')' ** t '{' ** Block ** t '}'
 
         FuncDecl => protect(literal "func" ** t ' ') ** Var ** t '(' ** ArgDeclList ** t ')' ** VarType ** t '{' ** Block ** t '}'
-        VarDecl  => protect(literal "var" ** t ' ') ** protect(Var ** t ' ') ** (intType +|+ boolType) ** t '=' ** Expr
+        VarDecl  => protect(literal "var" ** t ' ') ** protect(Var ** t ' ') ** (intType +|+ boolType) ** t '=' ** IntExpr
 
-        Assign => Var ** t '=' ** Expr
+        Assign => Var ** t '=' ** IntExpr
 
         Block     =>  many Statement
         Statement =>  VarDecl ** t ';'
@@ -103,7 +95,7 @@ let golangSrc () =
                       +|+ If
                       +|+ For
                       +|+ While
-                      +|+ returnLit ** Expr ** t ';'
+                      +|+ returnLit ** IntExpr ** t ';'
     ] |> build [' '; '\t'; '\n'; '\r']
 
 let _ = golangSrc ()
