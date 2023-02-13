@@ -33,7 +33,11 @@ type LogLevel =
 let mutable currentTextWriter = Console.Out
 let public ConfigureWriter writer = currentTextWriter <- writer
 
-let mutable currentTargets = System.Collections.Generic.Dictionary<LogTarget, LogLevel>()
+let defaultLoggerConfig =
+    [SPPF; RSM; GSS; GLL; RSMBuilder; DescriptorStack]
+    |> List.map (fun x -> System.Collections.Generic.KeyValuePair(x, Info))
+
+let mutable currentTargets = System.Collections.Generic.Dictionary<LogTarget, LogLevel>(defaultLoggerConfig)
 let public AddTarget = currentTargets.Add
 let public AddTargets = currentTargets.Add >> ignore |> List.iter
 let public ChangeTargetLevel logTarget logLevel = currentTargets[logTarget] <- logLevel

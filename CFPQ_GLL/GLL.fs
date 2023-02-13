@@ -130,7 +130,7 @@ let private run
 
                 | _ -> currentDescriptor.MatchedRange
 
-            for gssEdge in gss.Pop(currentDescriptor, matchedRange)do                         
+            for gssEdge in gss.Pop(currentDescriptor, matchedRange)do
                 let newRange =
                     let leftSubRange = gssEdge.MatchedRange
                     let rightSubRange =
@@ -150,13 +150,13 @@ let private run
                                                (startVertex = currentlyCreatedNode.LeftPosition)
                                                && (finalVertex = currentlyCreatedNode.RightPosition)
                                                && (query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState)
-                                ////logGll Logging.Trace $"findCorrect = {startVertex = currentlyCreatedNode.LeftPosition} && {finalVertex = currentlyCreatedNode.RightPosition} && {query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState}"
+                                //logGll Logging.Trace $"findCorrect = {startVertex = currentlyCreatedNode.LeftPosition} && {finalVertex = currentlyCreatedNode.RightPosition} && {query.OriginalStartState = currentlyCreatedNode.NonTerminalStartState}"
                                 matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.NonTerminalNode currentlyCreatedNode)
                             else dummyRangeNode
                         MatchedRangeWithNode(matchedRange, rangeNode)
                     makeIntermediateNode leftSubRange rightSubRange
                 let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange)
-                //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
+                logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
                 d.IsFinal <- findCorrect
                 addDescriptor d
 
@@ -174,9 +174,9 @@ let private run
                                 , kvp.Key
                                 , currentDescriptor.MatchedRange)
                let d = Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange)
-               //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
+               logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
                d |> addDescriptor
-               for matchedRange in positionsForPops do               
+               for matchedRange in positionsForPops do
                    let newRange =
                        let rightSubRange =
                            let newMatchedRange =
@@ -195,11 +195,11 @@ let private run
                        let leftSubRange = currentDescriptor.MatchedRange
                        makeIntermediateNode leftSubRange rightSubRange
                    let d =  Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange)
-                   //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
+                   logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
                    d |> addDescriptor
 
         let handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: RsmState) =
-            ////logGll Logging.Debug $"(handleTerminalOrEpsilonEdge) Terminal: {encodeTerminal terminalSymbol}  Weight: {graphEdgeTarget.Weight}"
+            //logGll Logging.Debug $"(handleTerminalOrEpsilonEdge) Terminal: {terminalSymbol}  Weight: {graphEdgeTarget.Weight}"
             let graphTargetVertex = graphEdgeTarget.TargetVertex
 
             let newMatchedRange =
@@ -223,7 +223,7 @@ let private run
                 makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
 
             let d = Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange)
-            //logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} by terminal ( {encodeTerminal terminalSymbol} ) with rsm state {d.RsmState.GetHashCode() |> encodeNonTerminal} with distance {d.Weight}"
+            logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} by terminal ( {terminalSymbol} ) with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
             d |> addDescriptor
 
         let handleTerminalEdge terminalSymbol graphTargetVertex rsmTargetVertex =
@@ -245,13 +245,11 @@ let private run
             let coveredByCurrentTerminal =
                 let exists, s = currentDescriptor.RsmState.OutgoingTerminalEdges.TryGetValue currentTerminal
                 if exists then s else HashSet<_>()
-            printfn "Recovery symbols"
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
                 let coveredByTerminal = HashSet(currentDescriptor.RsmState.OutgoingTerminalEdges[terminal])
                 coveredByTerminal.ExceptWith coveredByCurrentTerminal
                 if terminal <> currentTerminal && coveredByTerminal.Count > 0
                 then
-                    printfn $"Smb: {terminal}"
                     errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
             errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
@@ -261,32 +259,28 @@ let private run
                 handleEpsilonEdge kvp.Value
             else
                 handleEdge kvp.Key kvp.Value
-        
+
         let symbol, vertex = outgoingTerminalEdgeInGraph
         assert (symbol <> Epsilon)
         handleEdge symbol vertex
 
-    let mutable weight = -1<weight>
     let mutable cnt = 0
     let mutable _continue = true
     while
         _continue do
         if cnt = 32
         then ()
-        //logGll Logging.Trace $"------------ Step {cnt} ------------"
+        logGll Logging.Trace $"------------ Step {cnt} ------------"
         let descriptor = descriptorsToProcess.Pop()
-        match descriptor.MatchedRange.Node with
-        | Some x -> ()
-        | None -> ()
-        //logGll Logging.Trace $"Processing descriptor {descriptor.GetHashCode()} "
-        //logGll Logging.Trace $"Descriptor rsm state: {descriptor.RsmState.GetHashCode() |> encodeNonTerminal} with distance {descriptor.Weight}"
-        //logGll Logging.Trace $"Descriptor graph edge: {fst descriptor.InputPosition.OutgoingEdge |> encodeTerminal}"
-        //logGll Logging.Trace $"""Descriptor rsm terminals: {descriptor.RsmState.OutgoingTerminalEdges.Keys |> Seq.map encodeTerminal |> String.concat ", "}"""
-        //logGll Logging.Trace $"""Descriptor rsm nonterminals: {descriptor.RsmState.OutgoingNonTerminalEdges.Keys |> Seq.map (fun x -> x.GetHashCode() |> encodeNonTerminal) |> String.concat ", " } """
+        logGll Logging.Trace $"Processing descriptor {descriptor.GetHashCode()} "
+        logGll Logging.Trace $"Descriptor rsm state: {descriptor.RsmState.Box.Nonterminal.Name} with distance {descriptor.Weight}"
+        logGll Logging.Trace $"Descriptor graph edge: {fst descriptor.InputPosition.OutgoingEdge}"
+        logGll Logging.Trace $"""Descriptor rsm terminals: {descriptor.RsmState.OutgoingTerminalEdges.Keys |> Seq.map string |> String.concat ", "}"""
+        logGll Logging.Trace $"""Descriptor rsm nonterminals: {descriptor.RsmState.OutgoingNonTerminalEdges.Keys |> Seq.map (fun x -> x.Box.Nonterminal.Name) |> String.concat ", " } """
         cnt <- cnt + 1
         //if descriptor.Weight > weight then
         //    weight <- descriptor.Weight
-        printfn $"Weight: %A{descriptor.Weight}"
+        logGll Logging.Trace $"Weight: %A{descriptor.Weight}"
         if descriptor.IsFinal
         then _continue <- false
         else descriptor |> handleDescriptor

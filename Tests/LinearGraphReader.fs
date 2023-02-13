@@ -26,7 +26,7 @@ let readLinearGraph
     (onText: string -> string)
     (filePath: string) =
 
-    File.ReadAllText(filePath) |> mkLinearGraph onText 
+    File.ReadAllText(filePath) |> mkLinearGraph onText
 
 let ``Linear graph creating tests`` =
 
@@ -34,8 +34,8 @@ let ``Linear graph creating tests`` =
     let bTerminal = Char 'b'
 
     let assertGraphEqual (actual: InputGraph) (expected: InputGraph) =
-        actual.ToDot (1,"actual.dot")
-        expected.ToDot(1, "expected.dot")
+        actual.ToDot "actual.dot"
+        expected.ToDot "expected.dot"
         let actualVertices = actual.AllVertices()
         let expectedVertices = expected.AllVertices()
         Expect.sequenceEqual actualVertices expectedVertices "Vertices should be equal"
