@@ -1,6 +1,7 @@
 module CFPQ_GLL.Common
 
 open System.Collections.Generic
+open System.Security.Cryptography
 
 [<Measure>] type terminalSymbol
 [<Measure>] type weight
@@ -30,17 +31,30 @@ let getFirstFreeRsmStateId =
         res
 type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) as this =
     let weightChanged = Event<Descriptor>()
+    let mutable handled = false
     let hashCode =
         let mutable hash = 17
         hash <- hash * 23 + rsmState.GetHashCode()
         hash <- hash * 23 + inputPosition.GetHashCode()
         hash <- hash * 23 + gssVertex.GetHashCode()
         hash
+        
+    do gssVertex.WeightChanged.Add (fun _ -> if not handled then weightChanged.Trigger(this))
+       match matchedRange.Node with
+       | Some n -> n.WeightChanged.Add(fun _ ->
+                            printfn "???"
+                            if not handled then weightChanged.Trigger(this))
+       | None -> ()
+    
+    member this.WeightChanged = weightChanged.Publish
     member val IsFinal = false with get, set
     member this.RsmState = rsmState
     member this.InputPosition = inputPosition
     member this.GssVertex = gssVertex
     member this.MatchedRange = matchedRange
+    member this.Handled
+        with get () = handled
+        and set v = handled <- v
     member this.Weight
         with get() =
             let treeWeight =
@@ -170,6 +184,7 @@ and IIntermediateNode =
     abstract Weight: int<weight> with get, set
     abstract Parents: ResizeArray<IRangeNode>
 and IRangeNode =
+    abstract WeightChanged: IEvent<unit> with get
     abstract Weight: int<weight> with get, set
     abstract Parents: ResizeArray<INonRangeNode>
     abstract IntermediateNodes: HashSet<INonRangeNode>
@@ -179,6 +194,7 @@ and IGssEdge =
     abstract MatchedRange: MatchedRangeWithNode
 
 and IGssVertex =
+    abstract WeightChanged: IEvent<unit> with get
     abstract MinimalWeightOfLeftPart: int<weight> with get, set
     abstract InputPosition: LinearInputGraphVertexBase
     abstract RsmState: RsmState

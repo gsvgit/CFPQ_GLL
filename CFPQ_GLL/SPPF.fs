@@ -47,15 +47,18 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
     let mutable weight =
         intermediateNodes |> Seq.fold (fun v n -> min v n.Weight) (Int32.MaxValue * 1<weight>)
     let parents = ResizeArray<INonRangeNode>()
-
+    let weightChanged = Event<unit>()
     member this.InputStartPosition = matchedRange.InputRange.StartPosition
     member this.InputEndPosition = matchedRange.InputRange.EndPosition
     member this.RSMStartPosition = matchedRange.RSMRange.StartPosition
     member this.RSMEndPosition = matchedRange.RSMRange.EndPosition
     interface IRangeNode with
+        member this.WeightChanged = weightChanged.Publish
         member this.Weight
             with get () = weight
-            and set v = weight <- v
+            and set v =
+                weightChanged.Trigger()
+                weight <- v
         member this.Parents = parents
         member this.IntermediateNodes = intermediateNodes
 
