@@ -245,13 +245,13 @@ let private run
             let coveredByCurrentTerminal =
                 let exists, s = currentDescriptor.RsmState.OutgoingTerminalEdges.TryGetValue currentTerminal
                 if exists then s else HashSet<_>()
-            printfn "Recovery symbols"
+            //printfn "Recovery symbols"
             for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
                 let coveredByTerminal = HashSet(currentDescriptor.RsmState.OutgoingTerminalEdges[terminal])
                 coveredByTerminal.ExceptWith coveredByCurrentTerminal
                 if terminal <> currentTerminal && coveredByTerminal.Count > 0
                 then
-                    printfn $"Smb: {terminal}"
+                    //printfn $"Smb: {terminal}"
                     errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
             errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
@@ -286,7 +286,7 @@ let private run
         cnt <- cnt + 1
         //if descriptor.Weight > weight then
         //    weight <- descriptor.Weight
-        printfn $"Weight: %A{descriptor.Weight}"
+        //printfn $"Weight: %A{descriptor.Weight}"
         if descriptor.IsFinal
         then _continue <- false
         else descriptor |> handleDescriptor
@@ -329,10 +329,15 @@ let evalFromState
         mode
 
 
-let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertex startVertex (query:RSM) mode =
+let errorRecoveringEval<'inputVertex when 'inputVertex: equality> (finishVertex:LinearInputGraphVertexBase) startVertex (query:RSM) mode =
     let gss = GSS()
     let matchedRanges = MatchedRanges()
     evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM) mode
+    //evalFromState (PriorityQueueDescriptorStack (fun w i -> (float ((w + 1<weight>) * (w + 1<weight>))) / float (i + 1))) gss matchedRanges startVertex finishVertex (query:RSM) mode
+    // good
+    //evalFromState (PriorityQueueDescriptorStack (fun w i -> (System.Math.Pow (float (w + 1<weight>), 2.5)) / float (i + 1))) gss matchedRanges startVertex finishVertex (query:RSM) mode
+    //bad
+    //evalFromState (PriorityQueueDescriptorStack (fun w i -> float (finishVertex.Id - (i + 1)) + 2.5 * float w)) gss matchedRanges startVertex finishVertex (query:RSM) mode
 
 
 //let onInputGraphChanged (changedVertices:seq<ILinearInputGraphVertex>) =

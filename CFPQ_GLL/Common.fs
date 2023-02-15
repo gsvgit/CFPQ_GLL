@@ -30,7 +30,7 @@ let getFirstFreeRsmStateId =
         cnt <- cnt + 1<rsmStateId>
         res
 type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) as this =
-    let weightChanged = Event<Descriptor>()
+    //let weightChanged = Event<Descriptor>()
     let mutable handled = false
     let hashCode =
         let mutable hash = 17
@@ -39,14 +39,14 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
         hash <- hash * 23 + gssVertex.GetHashCode()
         hash
         
-    do gssVertex.WeightChanged.Add (fun _ -> if not handled then weightChanged.Trigger(this))
+    (*do gssVertex.WeightChanged.Add (fun _ -> if not handled then weightChanged.Trigger(this))
        match matchedRange.Node with
        | Some n -> n.WeightChanged.Add(fun _ ->
                             printfn "???"
                             if not handled then weightChanged.Trigger(this))
        | None -> ()
-    
-    member this.WeightChanged = weightChanged.Publish
+    *)
+    //member this.WeightChanged = weightChanged.Publish
     member val IsFinal = false with get, set
     member this.RsmState = rsmState
     member this.InputPosition = inputPosition
@@ -194,7 +194,7 @@ and IGssEdge =
     abstract MatchedRange: MatchedRangeWithNode
 
 and IGssVertex =
-    abstract WeightChanged: IEvent<unit> with get
+    //abstract WeightChanged: IEvent<unit> with get
     abstract MinimalWeightOfLeftPart: int<weight> with get, set
     abstract InputPosition: LinearInputGraphVertexBase
     abstract RsmState: RsmState

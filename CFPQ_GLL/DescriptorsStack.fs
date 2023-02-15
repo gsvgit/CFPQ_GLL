@@ -2,14 +2,20 @@ module CFPQ_GLL.DescriptorsStack
 
 open System.Collections.Generic
 open CFPQ_GLL.Common
-open FSharpx.Collections
 
 type IDescriptorsStack =
     abstract Push: Descriptor -> unit
     abstract Pop: unit -> Descriptor
     abstract IsEmpty: bool with get
 
-
+type PriorityQueueDescriptorStack (priorityFunction) =
+    let queue = PriorityQueue<_,float>()
+    interface IDescriptorsStack with
+        member this.IsEmpty with get () = queue.Count = 0
+        member this.Pop () = queue.Dequeue()
+        member this.Push (descriptor:Descriptor) =
+            queue.Enqueue(descriptor, priorityFunction descriptor.Weight descriptor.InputPosition.Id)
+            
 type DefaultDescriptorsStack (seq: Descriptor seq) =
     let stack = Stack<_>(seq)
     new () = DefaultDescriptorsStack(Seq.empty)
@@ -21,16 +27,16 @@ type DefaultDescriptorsStack (seq: Descriptor seq) =
 
 
 type ErrorRecoveringDescriptorsStack () as this =
-    let onDescriptorWeightChanged descriptor =
-        printfn "!!!!"
-        (this :> IDescriptorsStack).Push descriptor
+    //let onDescriptorWeightChanged descriptor =
+    //    printfn "!!!!"
+    //    (this :> IDescriptorsStack).Push descriptor
     let mutable cnt = 0
     let defaultDescriptorsStack = Stack<Descriptor>()
     let errorRecoveringDescriptorsStacks = SortedDictionary<int<weight>, Stack<Descriptor>>()
     
     interface IDescriptorsStack with
         member this.Push descriptor =
-            descriptor.WeightChanged.Add onDescriptorWeightChanged
+            //descriptor.WeightChanged.Add onDescriptorWeightChanged
             let pathWeight = descriptor.Weight
             if pathWeight = 0<weight> then defaultDescriptorsStack.Push descriptor
             else
@@ -46,7 +52,7 @@ type ErrorRecoveringDescriptorsStack () as this =
                 assert moved
                 let currentMin = enumerator.Current
                 let result = errorRecoveringDescriptorsStacks[currentMin].Pop ()
-                printfn $"Pooped from: {currentMin}"
+                //printfn $"Pooped from: {currentMin}"
                 //if result.Weight < currentMin
                 //then
                     //cnt <- cnt + 1

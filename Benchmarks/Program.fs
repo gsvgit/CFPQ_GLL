@@ -11,6 +11,6 @@ let main _ =
         runGLL d
         printfn $"[{System.DateTime.Now}] Completed {d.Name}"
     )*)
-    BenchmarkDataGeneration.generateBenchmarkData [|1000; 5000; 10000; |] [| 0; 1; 2; |]
+    //BenchmarkDataGeneration.generateBenchmarkData [|1000; 1000; 1000; 5000; 5000; 5000; 10000; 10000; 10000; |] [| 0; 1; 2; 3; 4 |]
     
     0

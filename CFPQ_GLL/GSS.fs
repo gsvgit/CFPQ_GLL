@@ -13,16 +13,16 @@ and GssVertex (inputPosition: LinearInputGraphVertexBase, rsmState: RsmState, mi
     let outgoingEdges = ResizeArray<IGssEdge>()
     let popped = ResizeArray<MatchedRangeWithNode>()
     let handledDescriptors = HashSet<Descriptor>()
-    let weightChanged = Event<unit>()
+    //let weightChanged = Event<unit>()
     interface IGssVertex with
         member this.MinimalWeightOfLeftPart
             with get () = minimalWeightOfLeftPart
             and set v =
                 //printfn "~~~~"
-                weightChanged.Trigger()
+                //weightChanged.Trigger()
                 minimalWeightOfLeftPart <- v
             
-        member this.WeightChanged = weightChanged.Publish
+        //member this.WeightChanged = weightChanged.Publish
         member this.InputPosition = inputPosition
         member this.RsmState = rsmState
         member this.OutgoingEdges = outgoingEdges
