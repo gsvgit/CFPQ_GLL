@@ -108,7 +108,7 @@ type MatchedRanges () =
                 let oldWeight = rangeNode.Weight
                 let mutable newWeight = Int32.MaxValue * 1<weight>
                 for node in rangeNode.IntermediateNodes do
-                    newWeight <- min newWeight node.Weight                
+                    newWeight <- min newWeight node.Weight
                 if oldWeight > newWeight
                 then
                     rangeNode.IntermediateNodes.RemoveWhere(fun n -> n.Weight > newWeight)
@@ -275,7 +275,7 @@ type MatchedRanges () =
                 rangeNode
             else
                 let rangeNode = RangeNode(matchedRange, HashSet<_> [|node|])
-                node.Parents.Add rangeNode                                                   
+                node.Parents.Add rangeNode
                 rangeNodes.Add(matchedRange, rangeNode)
                 rangeNode
         node
@@ -381,7 +381,7 @@ type TriplesStoredSPPFNode =
 
 type Color = Black | Red
 type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<INonTerminalNode>, vertexMap:Dictionary<LinearInputGraphVertexBase,int<inputGraphVertex>>) =
-        
+
     let mutable firstFreeGraphVertexId =
         if vertexMap.Values.Count = 0
         then 0<inputGraphVertex>
@@ -480,14 +480,14 @@ type TriplesStoredSPPF<'inputVertex when 'inputVertex: equality> (roots:array<IN
             sprintf $"%i{nodeId} [label = \"%A{_from}, {string _terminal}, %A{_to}, Weight: {w}\", shape = rectangle, color = {getColor w}]"
         | TriplesStoredSPPFNode.IntermediateNode (_inputPos, _rsmState, w) ->
             sprintf $"%i{nodeId} [label = \"Interm Input: %A{_inputPos}; RSM: %i{_rsmState}, Weight: {w}\", shape = plain, color = {getColor w}]"
-        | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to, w) ->            
+        | TriplesStoredSPPFNode.NonTerminalNode (_from,_nonTerminal,_to, w) ->
             sprintf $"%i{nodeId} [label = \"%A{_from}, {_nonTerminal.Name}, %A{_to}, Weight: {w}\", shape = invtrapezium, color = {getColor w}]"
-        | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal, w) ->                        
+        | TriplesStoredSPPFNode.EpsilonNode (_pos, _nonTerminal, w) ->
             sprintf $"%i{nodeId} [label = \"EpsNode Input: %A{_pos}; RSM: {_nonTerminal.Name}, Weight: {w}\", shape = invhouse, color = {getColor w}]"
         | TriplesStoredSPPFNode.RangeNode (_inputFrom, _inputTo, _rsmFrom, _rsmTo, w) ->
             sprintf $"%i{nodeId} [label = \"RangeNode Input: %A{_inputFrom}, %A{_inputTo}; RSM: %i{_rsmFrom}, %i{_rsmTo}\", shape = ellipse, color = {getColor w}]"
 
-    member this.ToDot filePath =        
+    member this.ToDot filePath =
         System.IO.File.WriteAllLines(filePath, ["digraph g {"; yield! (nodes |> Seq.map (fun kvp -> printNode kvp.Key kvp.Value)); yield! (ResizeArray.map printEdge edges); "}"])
 
     member this.Edges with get() = edges

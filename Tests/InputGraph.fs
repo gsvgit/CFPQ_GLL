@@ -101,6 +101,6 @@ type InputGraph (edges, enableErrorRecovering) =
             let vertex = getVertex kvp.Key
             for edge in kvp.Value.OutgoingTerminalEdges do
                 let targetVertex = getVertex edge.TargetVertex
-                (vertex :?> LinearInputGraphVertexBase).AddOutgoingEdge (edge.TerminalSymbol, TerminalEdgeTarget(targetVertex, edge.Weight))
+                vertex.AddOutgoingEdge (edge.TerminalSymbol, TerminalEdgeTarget(targetVertex, edge.Weight))
 
         newStartVertex,verticesMapping

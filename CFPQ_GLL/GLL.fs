@@ -34,10 +34,10 @@ let logDescriptorInfo (descriptor: Descriptor) =
 
 let logDescriptorCreated (d: Descriptor) =
     logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
-    d
+
 let logDescriptorCreatedByTerminal t (d: Descriptor) =
     logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} by terminal ( {t} ) with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
-    d
+
 
 let private run
         (gss:GSS)
@@ -133,7 +133,8 @@ let private run
                     makeIntermediateNode leftSubRange rightSubRange
                 let d = Descriptor(gssEdge.RsmState, currentDescriptor.InputPosition, gssEdge.GssVertex, newRange)
                 d.IsFinal <- findCorrect
-                logDescriptorCreated d |> addDescriptor
+                logDescriptorCreated d
+                addDescriptor d
 
         let outgoingTerminalEdgeInGraph = currentDescriptor.InputPosition.OutgoingEdge
 
@@ -148,7 +149,9 @@ let private run
                                 , currentDescriptor.InputPosition
                                 , kvp.Key
                                 , currentDescriptor.MatchedRange)
-               Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange) |> logDescriptorCreated |> addDescriptor
+               let d = Descriptor(kvp.Key, currentDescriptor.InputPosition, newGSSVertex, emptyRange)
+               logDescriptorCreated d
+               addDescriptor d
                for matchedRange in positionsForPops do
                    let newRange =
                        let rightSubRange =
@@ -167,9 +170,9 @@ let private run
                            MatchedRangeWithNode(newMatchedRange, rangeNode)
                        let leftSubRange = currentDescriptor.MatchedRange
                        makeIntermediateNode leftSubRange rightSubRange
-                   Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange)
-                   |> logDescriptorCreated
-                   |> addDescriptor
+                   let d = Descriptor(finalState, matchedRange.Range.InputRange.EndPosition, currentDescriptor.GssVertex, newRange)
+                   logDescriptorCreated d
+                   addDescriptor d
 
         let handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: RsmState) =
             let graphTargetVertex = graphEdgeTarget.TargetVertex
@@ -193,9 +196,9 @@ let private run
                         else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, rangeNode)
                 makeIntermediateNode currentDescriptor.MatchedRange currentlyMatchedRange
-            Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange)
-            |> logDescriptorCreatedByTerminal terminalSymbol
-            |> addDescriptor
+            let d = Descriptor(rsmTargetVertex, graphTargetVertex, currentDescriptor.GssVertex, newMatchedRange)
+            logDescriptorCreatedByTerminal terminalSymbol d
+            addDescriptor d
 
         let handleTerminalEdge terminalSymbol graphTargetVertex rsmTargetVertex =
             handleTerminalOrEpsilonEdge terminalSymbol graphTargetVertex rsmTargetVertex

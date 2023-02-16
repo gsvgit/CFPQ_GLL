@@ -184,6 +184,7 @@ let Golang = GllTestGroup ("Golang", GolangRSM.golangSrc)
 
 let SimpleGolang =
     let src () =
+        //
         let IntExpr = nt "IntExpr"
         let Statement = nt "Statement"
         let Block = nt "Block"
@@ -198,20 +199,6 @@ let SimpleGolang =
     GllTestGroup ("SimpleGolang", src)
 
 let ProgramLike =
-    // Потенциальные тесты (не уверен, стоит ли их добавлять, грамматика неоднозначная и sppf-ки выглядят больно)
-    // "{{}{}"
-    // "{{} aa b {}}"
-    // "{{} aa b aa b ; {}}"
-    // "{{} aa b {;} aa b {}}"
-    // "{{} aa b {;} aa b ; {} } "
-    // "{c d;}"
-    // "{c d}"
-    // "{aa b; c d}"
-    // "{c d c d;}"
-    // "{c d c d;"
-    // "c d c d;}"
-    // "c d c d;"
-    // "c d {} c d;"
     let src () =
         let S = nt "S"
         let B = nt "B"
@@ -332,6 +319,32 @@ let initTestCases () =
         "fu\nnc f() int { return 1; } ", (1, 28, 12, 68, 28, 1<weight>)
     ]
 
+    List.iter SimpleGolang.AddTestCase [
+        "1+ ; r1 ; ", (0, 11, 6, 26, 10, 1<weight>)
+        "", (1, 0, 2, 2, 0, 0<weight>)
+        "1+", (3, 8, 8, 19, 8, 2<weight>)
+        "r 1+;", (0, 5, 4, 12, 4, 1<weight>)
+        "r;", (0, 3, 4, 8, 2, 1<weight>)
+        "1 + 1;;", (0, 7, 4, 16, 6, 1<weight>)
+        "rr;", (0, 8, 5, 16, 6, 2<weight>)
+    ]
+
+    List.iter ProgramLike.AddTestCase [
+        "{{}{}", (4, 9, 9, 34, 18, 1<weight>)
+        "{{} aa b {}}", (4, 16, 14, 51, 22, 1<weight>)
+        "{{} aa b aa b ; {}}", (5, 23, 18, 70, 30, 1<weight>)
+        "{{} aa b {;} aa b {}}", (6, 27, 21, 84, 37, 3<weight>)
+        "{{} aa b {;} aa b ; {} } ", (6, 30, 21, 92, 43, 2<weight>)
+        "{c d;}", (0, 6, 5, 15, 5, 0<weight>)
+        "{c d}", (1, 6, 6, 20, 8, 1<weight>)
+        "{aa b; c d}", (2, 12, 10, 37, 15, 1<weight>)
+        "{c d c d;}", (2, 13, 11, 39, 16, 1<weight>)
+        "{c d c d;", (3, 13, 12, 41, 17, 2<weight>)
+        "c d c d;}", (2, 13, 11, 39, 16, 2<weight>)
+        "c d c d;", (0, 8, 3, 17, 7, 2<weight>)
+        "c d {} c d;", (5, 17, 16, 56, 24, 3<weight>)
+
+    ]
 
 let testGroups = [
     BracketStarX

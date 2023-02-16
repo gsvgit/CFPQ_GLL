@@ -19,14 +19,6 @@ let runTests () =
 
 [<EntryPoint>]
 let main _ =
-
-    debug ErrorRecoveringTest.DyckLang.LazyRsm "()" "debug"
-
-    ErrorRecoveringTest.generateTests ErrorRecoveringTest.SimpleGolang [
-        """1+ ; r1 ; """
-        ""
-        "1+" // Вот здесь странная деревяшка (2.dot)
-    ]
     runTests ()
 
 
