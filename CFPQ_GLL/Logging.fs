@@ -33,19 +33,24 @@ type LogLevel =
 let mutable currentTextWriter = Console.Out
 let public ConfigureWriter writer = currentTextWriter <- writer
 
-let mutable currentTargets = System.Collections.Generic.Dictionary<LogTarget, LogLevel>()
+let defaultLoggerConfig =
+    [SPPF; RSM; GSS; GLL; RSMBuilder; DescriptorStack]
+    |> List.map (fun x -> System.Collections.Generic.KeyValuePair(x, Info))
+
+let mutable currentTargets = System.Collections.Generic.Dictionary<LogTarget, LogLevel>(defaultLoggerConfig)
 let public AddTarget = currentTargets.Add
 let public AddTargets = currentTargets.Add >> ignore |> List.iter
 let public ChangeTargetLevel logTarget logLevel = currentTargets[logTarget] <- logLevel
 
+let formatAsLog (target: LogTarget) message =
+    $"[%A{target}] [%A{DateTime.Now}] %s{message}"
 
 let private writeLineString (target: LogTarget) (logLevel: LogLevel) message =
     let exist = currentTargets.ContainsKey(target)
     if exist then
         let lvl = currentTargets[target]
         if lvl >= logLevel then
-            let res = $"[%A{target}] [%A{DateTime.Now}] %s{message}"
-            currentTextWriter.WriteLine(res)
+            currentTextWriter.WriteLine(formatAsLog target message)
             currentTextWriter.Flush()
 
 let public printLog logTarget logLevel format =

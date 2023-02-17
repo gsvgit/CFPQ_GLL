@@ -62,7 +62,7 @@ type InputGraph (edges, enableErrorRecovering) =
         vertices.[v].OutgoingTerminalEdges
     member this.NumberOfVertices() = vertices.Count
     member this.AllVertices() = vertices.Keys |> Array.ofSeq
-    member this.ToDot(drawSink, file) =
+    member this.ToDot(file) =
         seq{
             yield "digraph InputGraph{"
             yield "node [shape = plaintext]"
@@ -82,7 +82,7 @@ type InputGraph (edges, enableErrorRecovering) =
     member this.AddVertex v = addVertex v |> ignore
 
     member this.ToCfpqCoreGraph (startVertex: int<inputGraphVertex>) =
-        this.ToDot (0,"coreGraph.dot")
+        this.ToDot ("coreGraph.dot")
         let mutable firstFreeVertexId = 0
         let verticesMapping = Dictionary<int<inputGraphVertex>, LinearInputGraphVertexBase>()
         let getVertex vertexId =
@@ -101,6 +101,6 @@ type InputGraph (edges, enableErrorRecovering) =
             let vertex = getVertex kvp.Key
             for edge in kvp.Value.OutgoingTerminalEdges do
                 let targetVertex = getVertex edge.TargetVertex
-                (vertex :?> LinearInputGraphVertexBase).AddOutgoingEdge (edge.TerminalSymbol, TerminalEdgeTarget(targetVertex, edge.Weight))
+                vertex.AddOutgoingEdge (edge.TerminalSymbol, TerminalEdgeTarget(targetVertex, edge.Weight))
 
         newStartVertex,verticesMapping
