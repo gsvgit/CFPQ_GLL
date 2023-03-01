@@ -7,8 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="ErrorRecoveringBenchmark.fs" />
-        <Compile Include="BenchmarkDataGeneration.fs" />
+        <Compile Include="BenchmarkData.fs" />
+        <Compile Include="BenchmarkConfig.fs" />
+        <Compile Include="Benchmark.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
