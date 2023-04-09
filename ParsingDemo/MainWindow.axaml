@@ -7,22 +7,28 @@
         Title="ParsingDemo">
     <DockPanel>
         <DockPanel LastChildFill="True" DockPanel.Dock="Top">
-            <Button  Click="OnParseButtonClick">Parse</Button>
+            <Button Click="OnParseButtonClick" Background="Green">Parse</Button>
             <Separator Width="10"/>
             <TextBlock VerticalAlignment="Center">Descriptors handled: </TextBlock>
-            <TextBox Name="DescriptorsHandleTextBox" Watermark="Descriptors handled"></TextBox>
+            <TextBox Name="DescriptorsHandleTextBox" Watermark="Descriptors handled" IsReadOnly="True"></TextBox>
             <Separator Width="10"/>
             <TextBlock VerticalAlignment="Center">Parsing time: </TextBlock>
-            <TextBox Name="ParsingTimeTextBox" Watermark="Parsing time"></TextBox>
+            <TextBox Name="ParsingTimeTextBox" Watermark="Parsing time" IsReadOnly="True"></TextBox>
             <Separator Width="10"/>
             <TextBlock VerticalAlignment="Center">Rendering time: </TextBlock>
-            <TextBox Name="RenderingTimeTextBox" Watermark="RenderingTime"></TextBox>
+            <TextBox Name="RenderingTimeTextBox" Watermark="RenderingTime" IsReadOnly="True"></TextBox>
         </DockPanel>
         
         <Grid ColumnDefinitions="*, 4, *" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TextBox Name="InputCodeTextBox" AcceptsReturn="True" TextWrapping="Wrap" Grid.Column="0"/>
             <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
-            <Image Name="ParseTreeImage" Grid.Column="2"/>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <ZoomBorder  Name="ZoomBorder" Stretch="None" ZoomSpeed="1.2"
+                            ClipToBounds="True" Focusable="True"
+                            VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                    <Image Name="ParseTreeImage" />
+                </ZoomBorder>
+            </ScrollViewer>
         </Grid>
     </DockPanel>
 </Window>

@@ -71,7 +71,7 @@ type MainWindow () as this =
         renderingTimeTextBox <- this.FindControl<TextBox>("RenderingTimeTextBox")
         parseTreeImage <- this.FindControl<Image>("ParseTreeImage")
         
-    member this.OnParseButtonClick(sender: obj,e: RoutedEventArgs) =
+    member this.OnParseButtonClick(sender: obj, e: RoutedEventArgs) =
         //let image = new Avalonia.Media.Imaging.Bitmap("/home/gsv/Downloads/nick-gavrilov-F-rvSJl6qI0-unsplash.jpg");
         //parseTreeImage.Source <- image
         let input = LinearGraphReader.mkLinearGraph id inputCodeTextBox.Text
