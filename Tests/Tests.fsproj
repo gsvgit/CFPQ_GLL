@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -10,6 +10,8 @@
         <Compile Include="InputGraph.fs" />
         <Compile Include="LinearGraphReader.fs" />
         <Compile Include="GLLTests.fs" />
+        <Compile Include="DynamicTests.fs" />
+        <Compile Include="(A or B)Start_DynamicTests.fs" />
         <Compile Include="RSMCalculator.fs" />
         <Compile Include="GolangRSM.fs" />
         <Compile Include="ErrorRecoveringTest.fs" />
