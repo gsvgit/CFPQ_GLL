@@ -47,6 +47,7 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
     let mutable weight =
         intermediateNodes |> Seq.fold (fun v n -> min v n.Weight) (Int32.MaxValue * 1<weight>)
     let parents = ResizeArray<INonRangeNode>()
+    let gssEdges = ResizeArray<IGssVertex*IGssEdge>()
 
     member this.InputStartPosition = matchedRange.InputRange.StartPosition
     member this.InputEndPosition = matchedRange.InputRange.EndPosition
@@ -58,6 +59,7 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
             and set v = weight <- v
         member this.Parents = parents
         member this.IntermediateNodes = intermediateNodes
+        member this.GssEdges = gssEdges
 
 and NonTerminalNode (nonTerminalStartState: RsmState, graphRange: Range<LinearInputGraphVertexBase>, rangeNodes:ResizeArray<IRangeNode>) =
     let parents = ResizeArray<IRangeNode>()
@@ -335,18 +337,31 @@ type MatchedRanges () =
         and handleRangeNode (rangeNode: IRangeNode) =
             if rangeNode.IntermediateNodes.Count = 0
             then
+                (rangeNode :?> RangeNode).InputEndPosition.RangeNodes.Clear()
+                //(rangeNode :?> RangeNode).InputStartPosition.NonTerminalNodesStartedHere.Clear()
+                for v,edge in rangeNode.GssEdges do
+                    let removed = v.OutgoingEdges.Remove edge
+                    //edge.GssVertex.HandledDescriptors.Clear()
+                    assert removed                
                 rangeNode.Parents
                 |> Seq.iter (fun node -> handleNonRangeNode (node :?> NonRangeNode))
             else MatchedRanges.updateWeights rangeNode
 
-        and handleNonRangeNode (nonRangeNode : NonRangeNode) =
+        and handleNonRangeNode (nonRangeNode : NonRangeNode) nodeToRemove =
             match nonRangeNode with
-            | NonRangeNode.IntermediateNode i -> handleIntermediateNode i
-            | NonRangeNode.NonTerminalNode n -> handleNonTerminalNode n
-            | NonRangeNode.EpsilonNode _ -> failwith "Epsilon node can not be parent."
-            | NonRangeNode.TerminalNode _ -> failwith "Terminal node can not be parent."
+            | NonRangeNode.IntermediateNode i ->
+                handleIntermediateNode i
+            | NonRangeNode.NonTerminalNode n ->
+                let removed = n.RangeNodes.Remove nodeToRemove
+                assert removed
+                handleNonTerminalNode n
+            | NonRangeNode.EpsilonNode _ -> failwith "Epsilon node can not be a parent."
+            | NonRangeNode.TerminalNode _ -> failwith "Terminal node can not be a parent."
 
         and handleIntermediateNode (intermediateNode: IIntermediateNode) =
+            let _node = intermediateNode :?> IntermediateNode
+            //(_node.RightSubtree:?> RangeNode).InputEndPosition.IntermediateNodes.Clear()
+            //_node.InputPosition.IntermediateNodes.Clear() //  [_node.] Remove (intermediateNode :?> IntermediateNode)
             intermediateNode.Parents
             |> Seq.iter (fun node ->
                 let removed = node.IntermediateNodes.Remove (NonRangeNode.IntermediateNode intermediateNode)
@@ -356,9 +371,16 @@ type MatchedRanges () =
         and handleNonTerminalNode (nonTerminalNode: INonTerminalNode) =
             if nonTerminalNode.RangeNodes.Count = 0
             then
-                nonTerminalNode.LeftPosition.NonTerminalNodesStartedHere.[nonTerminalNode.RightPosition].Remove nonTerminalNode.NonTerminalStartState
+                let removed = nonTerminalNode.NonTerminalStartState.NonTerminalNodes.Remove nonTerminalNode
+                assert removed
+                let removed = nonTerminalNode.LeftPosition.NonTerminalNodesStartedHere.[nonTerminalNode.RightPosition].Remove nonTerminalNode.NonTerminalStartState
+                assert removed
                 nonTerminalNode.Parents
-                |> Seq.iter handleRangeNode
+                |> Seq.iter (fun n ->
+                        let removed = n.IntermediateNodes.Remove (NonRangeNode.NonTerminalNode nonTerminalNode)
+                        assert removed
+                        handleRangeNode n
+                       )
             else
                 let oldWeight = nonTerminalNode.Weight
                 let newWeight = nonTerminalNode.RangeNodes |> ResizeArray.fold (fun v n -> min v n.Weight) (Int32.MaxValue * 1<weight>)

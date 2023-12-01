@@ -172,6 +172,8 @@ and IRangeNode =
     abstract Weight: int<weight> with get, set
     abstract Parents: ResizeArray<INonRangeNode>
     abstract IntermediateNodes: HashSet<INonRangeNode>
+    abstract GssEdges: ResizeArray<IGssVertex*IGssEdge>
+    
 and IGssEdge =
     abstract RsmState: RsmState
     abstract GssVertex: IGssVertex

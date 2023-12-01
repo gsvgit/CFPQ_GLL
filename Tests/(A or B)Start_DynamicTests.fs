@@ -23,9 +23,9 @@ let checkResult (testName:string) startVertices (q:RSM) (expectedNodes, expected
         let actual = TriplesStoredSPPF(sppf, Dictionary())
         GLLTests.dumpResultToConsole actual
         actual.ToDot validDotFileName
-        Expect.sequenceEqual actual.Nodes expectedNodes "Nodes should be equals."
-        Expect.sequenceEqual actual.Edges expectedEdges "Edges should be equals."
-        Expect.sequenceEqual distances expectedDistances "Distances should be equals."
+        Expect.sequenceEqual actual.Nodes expectedNodes "Nodes should be equal."
+        Expect.sequenceEqual actual.Edges expectedEdges "Edges should be equal."
+        Expect.sequenceEqual distances expectedDistances "Distances should be equal."
     | _ -> failwith "Result should be MatchedRanges"
 
 
@@ -100,8 +100,6 @@ let ``(a|b)* add A to end`` =
 
         let q,_ = rsm()
 
-
-
         let startVertices = (HashSet [|graphEntryPoint|])
 
         let reachableVertices, gss, matchedRanges =
@@ -115,7 +113,6 @@ let ``(a|b)* add A to end`` =
         graphExit.OutgoingEdges.Add(terminalA, HashSet [|newGraphExit|])
 
         let verticesWithChanges = HashSet [|graphExit|]
-
 
         let expected =
           let nodes = Dictionary<_,_>()
@@ -228,6 +225,53 @@ let ``(a|b)* add branch with B to start`` =
 
         checkResult (testName:string) startVertices (q:RSM) expected result
 
+let ``(a|b)* replace A with B`` =
+    let testName = "(a|b)* replace A with B"
+    testCase testName <| fun () ->
+
+        let v0,v1 = initialGraph()
+
+        let q,_ = rsm()
+
+
+        let startVertices = (HashSet [|v0|])
+
+        let reachableVertices, gss, matchedRanges =
+            Dictionary<_,_>(),
+            GSS(),
+            MatchedRanges()
+
+        let expected = expectedForInitialOneEdgeGraph
+        runGLLAndCheckResultForManuallyCreatedGraph (reachableVertices, gss, matchedRanges) testName startVertices q expected
+
+        v0.OutgoingEdges.Clear()
+        MatchedRanges.Invalidate v1.TerminalNodes.[v0].[terminalA]
+        v0.OutgoingEdges.Add(terminalB, HashSet [|v1|])
+
+        let verticesWithChanges = HashSet [|v0|]
+
+        let expected =
+          let nodes = Dictionary<_,_>()
+          nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,0<inputGraphVertex>))
+          nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
+          nodes.Add(4, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(5, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,1<inputGraphVertex>))
+          nodes.Add(6, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,2<inputGraphVertex>))
+          nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(8, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>,0<rsmState>))
+          nodes.Add(9, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>,1<terminalSymbol>,2<inputGraphVertex>))
+
+          let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,4); (8,9); (9,10)|])
+          let distances = [|0<distance>; 1<distance>; 2<distance>|]
+          (nodes,edges,distances)
+
+        let result = onInputGraphChanged verticesWithChanges reachableVertices gss matchedRanges startVertices q Mode.AllPaths
+        checkResult (testName:string) startVertices (q:RSM) expected result
+
+
 let ``(a|b)* replace last A with B`` =
     let testName = "(a|b)* replace last A with B"
     testCase testName <| fun () ->
@@ -295,11 +339,17 @@ let ``(a|b)* replace first A with B`` =
         runGLLAndCheckResultForManuallyCreatedGraph (reachableVertices, gss, matchedRanges) testName startVertices q expected
 
         v0.OutgoingEdges.Clear()
+        gss.ToDot("gss1.dot")
         MatchedRanges.Invalidate v1.TerminalNodes.[v0].[terminalA]
+        let removed = v1.TerminalNodes.[v0].Remove(terminalA)
+        assert removed
+        let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
+        let actual = TriplesStoredSPPF(sppf, Dictionary())
+        actual.ToDot "_1.dot"
         v0.OutgoingEdges.Add(terminalB, HashSet [|v1|])
 
         let verticesWithChanges = HashSet [|v0|]
-
+        gss.ToDot("gss2.dot")
         let expected =
           let nodes = Dictionary<_,_>()
           nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,0<inputGraphVertex>))
@@ -317,17 +367,18 @@ let ``(a|b)* replace first A with B`` =
           let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,4); (8,9); (9,10)|])
           let distances = [|0<distance>; 1<distance>; 2<distance>|]
           (nodes,edges,distances)
-
-        ()
+        
         let result = onInputGraphChanged verticesWithChanges reachableVertices gss matchedRanges startVertices q Mode.AllPaths
         checkResult (testName:string) startVertices (q:RSM) expected result
+        //()
 
 
 let tests =
   testList "(a|b)* dynamic tests" [
-  //  ``(a|b)* replace first A with B``
-    ``(a|b)* replace last A with B``
-    ``(a|b)* add A to end``
-    ``(a|b)* add B to end``
-    ``(a|b)* add branch with B to start``
+    //``(a|b)* replace A with B``
+    ``(a|b)* replace first A with B``
+   // ``(a|b)* replace last A with B``
+   // ``(a|b)* add A to end``
+   // ``(a|b)* add B to end``
+   // ``(a|b)* add branch with B to start``
   ]

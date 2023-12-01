@@ -56,6 +56,8 @@ type GSS () =
             | None -> 0<weight>
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue, currentGSSVertex.MinimalWeightOfLeftPart + weight) :> IGssVertex
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
+        matchedRange.Node
+        |> Option.iter (fun n -> n.GssEdges.Add((newGSSVertex,newEdge)))         
 
         // There is no need to check GSS edges duplication.
         // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova
@@ -78,3 +80,24 @@ type GSS () =
         descriptor.InputPosition.Descriptors.Add descriptor
         descriptor.GssVertex.HandledDescriptors.Add descriptor
         |> ignore
+
+    member this.ToDot (file:string) =
+        let dotEdges = ResizeArray<_>()
+        let dotVertices = Dictionary<_,_>()
+        let mutable firstFreeDotVertexId = 0
+        for kvp in vertices do
+            //dotVertices.Add $"{firstFreeDotVertexId} [label={kvp.Key.InputPosition}]"
+            dotVertices.Add(kvp.Value, firstFreeDotVertexId)
+            firstFreeDotVertexId <- firstFreeDotVertexId + 1
+        for kvp in vertices do
+            for e in (kvp.Value :> IGssVertex).OutgoingEdges do
+                dotEdges.Add $"{dotVertices[kvp.Value]} -> {dotVertices[e.GssVertex :?> GssVertex]}"
+                
+        [
+            "digraph g{"
+            yield! dotEdges
+            "}"
+        ]
+        |> fun lines -> System.IO.File.WriteAllLines(file, lines)
+            
+    

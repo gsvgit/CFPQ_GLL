@@ -287,3 +287,36 @@ let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertex s
     let gss = GSS()
     let matchedRanges = MatchedRanges()
     evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM) mode
+
+let onInputGraphChanged (changedVertices:seq<IInputGraphVertex>) =
+    changedVertices
+    |> Seq.iter (fun v ->
+                 v.IntermediateNodes.Clear()
+                 //v.NonTerminalNodesStartedHere.Clear()
+                 )
+    let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.Descriptors) |> Array.ofSeq
+    descriptorsToContinueFrom
+    |> Array.iter (fun descriptor ->
+        let removed = descriptor.GssVertex.HandledDescriptors.Remove descriptor
+        assert removed
+        let removed = descriptor.InputPosition.Descriptors.Remove descriptor
+        assert removed
+        let removed = descriptor.RsmState.Descriptors.Remove descriptor
+        assert removed
+        )
+    fun
+        reachableVertices
+        gss
+        matchedRanges
+        startVertices
+        query
+        mode
+         ->
+            run
+                reachableVertices
+                gss
+                matchedRanges
+                (Stack descriptorsToContinueFrom)
+                startVertices
+                query
+                mode
