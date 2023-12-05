@@ -255,17 +255,14 @@ let ``(a|b)* replace A with B`` =
           nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,0<inputGraphVertex>))
           nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
-          nodes.Add(3, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
-          nodes.Add(4, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,0<rsmState>))
-          nodes.Add(5, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,1<inputGraphVertex>))
-          nodes.Add(6, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,2<inputGraphVertex>))
-          nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
-          nodes.Add(8, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>,0<rsmState>))
-          nodes.Add(9, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
-          nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>,1<terminalSymbol>,2<inputGraphVertex>))
+          nodes.Add(3, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
+          nodes.Add(4, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
+          nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,1<inputGraphVertex>))
 
-          let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,4); (8,9); (9,10)|])
-          let distances = [|0<distance>; 1<distance>; 2<distance>|]
+
+          let edges = ResizeArray<_>([|(0,1); (1,2); (1,3); (4,5); (5,6)|])
+          let distances = [|0<distance>; 1<distance>|]
           (nodes,edges,distances)
 
         let result = onInputGraphChanged verticesWithChanges reachableVertices gss matchedRanges startVertices q Mode.AllPaths
@@ -339,47 +336,47 @@ let ``(a|b)* replace first A with B`` =
         runGLLAndCheckResultForManuallyCreatedGraph (reachableVertices, gss, matchedRanges) testName startVertices q expected
 
         v0.OutgoingEdges.Clear()
-        gss.ToDot("gss1.dot")
+        
         let _,t = v1.TerminalNodes.[v0].[terminalA].TryGetTarget()
         MatchedRanges.Invalidate t
         let removed = v1.TerminalNodes.[v0].Remove(terminalA)
         assert removed
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
         let actual = TriplesStoredSPPF(sppf, Dictionary())
-        actual.ToDot "_1.dot"
+        
         v0.OutgoingEdges.Add(terminalB, HashSet [|v1|])
 
         let verticesWithChanges = HashSet [|v0|]
-        gss.ToDot("gss2.dot")
+        
         let expected =
           let nodes = Dictionary<_,_>()
           nodes.Add(0, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,0<inputGraphVertex>))
           nodes.Add(1, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,0<inputGraphVertex>,0<rsmState>,0<rsmState>))
           nodes.Add(2, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
-          nodes.Add(3, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
-          nodes.Add(4, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,0<rsmState>))
-          nodes.Add(5, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>,1<inputGraphVertex>))
-          nodes.Add(6, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,2<inputGraphVertex>))
-          nodes.Add(7, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
-          nodes.Add(8, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>,0<rsmState>))
-          nodes.Add(9, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
-          nodes.Add(10, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>,0<terminalSymbol>,2<inputGraphVertex>))
+          nodes.Add(3, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
+          nodes.Add(4, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,1<inputGraphVertex>))
+          nodes.Add(5, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,1<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(6, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,1<terminalSymbol>,1<inputGraphVertex>))
+          nodes.Add(7, TriplesStoredSPPFNode.NonTerminalNode (0<inputGraphVertex>,0<rsmState>,2<inputGraphVertex>))
+          nodes.Add(8, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(9, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>,0<rsmState>))
+          nodes.Add(10, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>,2<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(11, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>,0<terminalSymbol>,2<inputGraphVertex>))
 
-          let edges = ResizeArray<_>([|(0,1); (1,2); (3,4); (4,5); (6,7); (7,8); (8,4); (8,9); (9,10)|])
+          let edges = ResizeArray<_>([|(0,1); (1,2); (1,3); (4,5); (5,6); (7,8); (8,9); (9,5); (9,10); (10,11)|])
           let distances = [|0<distance>; 1<distance>; 2<distance>|]
           (nodes,edges,distances)
         
         let result = onInputGraphChanged verticesWithChanges reachableVertices gss matchedRanges startVertices q Mode.AllPaths
         checkResult (testName:string) startVertices (q:RSM) expected result
-        //()
 
 
 let tests =
   testList "(a|b)* dynamic tests" [
-    //``(a|b)* replace A with B``
+    ``(a|b)* replace A with B``
     ``(a|b)* replace first A with B``
-    //``(a|b)* replace last A with B``
-    //``(a|b)* add A to end``
-    //``(a|b)* add B to end``
-    //``(a|b)* add branch with B to start``
+    ``(a|b)* replace last A with B``
+    ``(a|b)* add A to end``
+    ``(a|b)* add B to end``
+    ``(a|b)* add branch with B to start``
   ]
