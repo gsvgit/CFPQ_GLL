@@ -400,11 +400,8 @@ type MatchedRanges () =
             if rangeNode.IntermediateNodes.Count = 0
             then
                 rangeNode.IsAlive <- false
-                (rangeNode :?> RangeNode).InputEndPosition.RangeNodes.Clear()
-                //(rangeNode :?> RangeNode).InputStartPosition.NonTerminalNodesStartedHere.Clear()
                 for v,edge in rangeNode.GssEdges do
                     let removed = v.OutgoingEdges.Remove edge
-                    //edge.GssVertex.HandledDescriptors.Clear()
                     assert removed                
                 rangeNode.GetValidParents()
                 |> Seq.iter (fun node ->
@@ -424,9 +421,6 @@ type MatchedRanges () =
 
         and handleIntermediateNode (intermediateNode: IIntermediateNode) =
             intermediateNode.IsAlive <- false
-            let _node = intermediateNode :?> IntermediateNode
-            //(_node.RightSubtree:?> RangeNode).InputEndPosition.IntermediateNodes.Clear()
-            //_node.InputPosition.IntermediateNodes.Clear() //  [_node.] Remove (intermediateNode :?> IntermediateNode)
             intermediateNode.GetValidParents()
             |> Seq.iter (fun node ->
                 let removed = node.IntermediateNodes.Remove (NonRangeNode.IntermediateNode intermediateNode)
