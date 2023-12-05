@@ -234,4 +234,9 @@ let tryGetPossiblyWeakSppfNode (dict:Dictionary<'key,WeakReference<#ISppfNode<'t
             let removed = dict.Remove key
             assert removed
             false, Unchecked.defaultof<_>
-    if isAlive && value.IsAlive then true, value else false, value
+    if isAlive && value.IsAlive
+    then true, value
+    else
+        let removed = dict.Remove key
+        assert removed
+        false, value

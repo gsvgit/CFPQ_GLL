@@ -233,7 +233,6 @@ let ``(a|b)* replace A with B`` =
 
         let q,_ = rsm()
 
-
         let startVertices = (HashSet [|v0|])
 
         let reachableVertices, gss, matchedRanges =
@@ -377,8 +376,8 @@ let ``(a|b)* replace first A with B`` =
 
 let tests =
   testList "(a|b)* dynamic tests" [
-    ``(a|b)* replace A with B``
-    //``(a|b)* replace first A with B``
+    //``(a|b)* replace A with B``
+    ``(a|b)* replace first A with B``
     //``(a|b)* replace last A with B``
     //``(a|b)* add A to end``
     //``(a|b)* add B to end``

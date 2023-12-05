@@ -7,7 +7,7 @@ open Microsoft.FSharp.Core
 open FSharpx.Collections
 
 let filterValidParents (parents:HashSet<WeakReference<#ISppfNode<'t>>>) =
-    let count = parents.RemoveWhere (fun n -> let isAlive,n = n.TryGetTarget() in isAlive && n.IsAlive)
+    let count = parents.RemoveWhere (fun n -> let isAlive,n = n.TryGetTarget() in not (isAlive && n.IsAlive))
     parents |> Seq.map (fun n -> let _,n = n.TryGetTarget() in n)
 
 type TerminalNode (terminal: Char, graphRange: Range<LinearInputGraphVertexBase>, weight) =

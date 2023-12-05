@@ -18,7 +18,7 @@ type InputGraphVertexBase () =
         member this.OutgoingEdges = outgoingEdges
         member this.Descriptors = descriptors
         member this.GetValidDescriptors() =
-            let count = descriptors.RemoveWhere(fun d -> let isAlive, d = d.TryGetTarget() in isAlive && d.IsAlive)
+            let count = descriptors.RemoveWhere(fun d -> let isAlive, d = d.TryGetTarget() in not (isAlive && d.IsAlive))
             descriptors |> Seq.map (fun d -> let _,d = d.TryGetTarget() in d)
         member this.TerminalNodes = terminalNodes
         member this.NonTerminalNodesStartedHere = nonTerminalNodes
