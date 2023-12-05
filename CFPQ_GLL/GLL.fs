@@ -294,15 +294,15 @@ let onInputGraphChanged (changedVertices:seq<IInputGraphVertex>) =
                  v.IntermediateNodes.Clear()
                  //v.NonTerminalNodesStartedHere.Clear()
                  )
-    let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.Descriptors) |> Array.ofSeq
+    let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.GetValidDescriptors()) |> Array.ofSeq
     descriptorsToContinueFrom
     |> Array.iter (fun descriptor ->
         let removed = descriptor.GssVertex.HandledDescriptors.Remove descriptor
         assert removed
-        let removed = descriptor.InputPosition.Descriptors.Remove descriptor
-        assert removed
-        let removed = descriptor.RsmState.Descriptors.Remove descriptor
-        assert removed
+        //let removed = descriptor.InputPosition.Descriptors.Remove descriptor
+        //assert removed
+        //let removed = descriptor.RsmState.Descriptors.Remove descriptor
+        //assert removed
         )
     fun
         reachableVertices

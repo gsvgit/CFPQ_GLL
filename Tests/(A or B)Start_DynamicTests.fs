@@ -245,7 +245,8 @@ let ``(a|b)* replace A with B`` =
         runGLLAndCheckResultForManuallyCreatedGraph (reachableVertices, gss, matchedRanges) testName startVertices q expected
 
         v0.OutgoingEdges.Clear()
-        MatchedRanges.Invalidate v1.TerminalNodes.[v0].[terminalA]
+        let _,t = v1.TerminalNodes.[v0].[terminalA].TryGetTarget()
+        MatchedRanges.Invalidate t
         v0.OutgoingEdges.Add(terminalB, HashSet [|v1|])
 
         let verticesWithChanges = HashSet [|v0|]
@@ -279,8 +280,7 @@ let ``(a|b)* replace last A with B`` =
         let v0,v1,v2 = initialTwoEdgesGraph()
 
         let q,_ = rsm()
-
-
+        
         let startVertices = (HashSet [|v0|])
 
         let reachableVertices, gss, matchedRanges =
@@ -292,7 +292,8 @@ let ``(a|b)* replace last A with B`` =
         runGLLAndCheckResultForManuallyCreatedGraph (reachableVertices, gss, matchedRanges) testName startVertices q expected
 
         v1.OutgoingEdges.Clear()
-        MatchedRanges.Invalidate v2.TerminalNodes.[v1].[terminalA]
+        let _,t = v2.TerminalNodes.[v1].[terminalA].TryGetTarget()
+        MatchedRanges.Invalidate t
         v1.OutgoingEdges.Add(terminalB, HashSet [|v2|])
 
         let verticesWithChanges = HashSet [|v1|]
@@ -340,7 +341,8 @@ let ``(a|b)* replace first A with B`` =
 
         v0.OutgoingEdges.Clear()
         gss.ToDot("gss1.dot")
-        MatchedRanges.Invalidate v1.TerminalNodes.[v0].[terminalA]
+        let _,t = v1.TerminalNodes.[v0].[terminalA].TryGetTarget()
+        MatchedRanges.Invalidate t
         let removed = v1.TerminalNodes.[v0].Remove(terminalA)
         assert removed
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
@@ -375,10 +377,10 @@ let ``(a|b)* replace first A with B`` =
 
 let tests =
   testList "(a|b)* dynamic tests" [
-    //``(a|b)* replace A with B``
-    ``(a|b)* replace first A with B``
-   // ``(a|b)* replace last A with B``
-   // ``(a|b)* add A to end``
-   // ``(a|b)* add B to end``
-   // ``(a|b)* add branch with B to start``
+    ``(a|b)* replace A with B``
+    //``(a|b)* replace first A with B``
+    //``(a|b)* replace last A with B``
+    //``(a|b)* add A to end``
+    //``(a|b)* add B to end``
+    //``(a|b)* add branch with B to start``
   ]

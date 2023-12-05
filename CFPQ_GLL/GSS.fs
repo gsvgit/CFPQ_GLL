@@ -1,4 +1,5 @@
 module CFPQ_GLL.GSS
+open System
 open System.Collections.Generic
 open CFPQ_GLL.Common
 
@@ -57,13 +58,18 @@ type GSS () =
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue, currentGSSVertex.MinimalWeightOfLeftPart + weight) :> IGssVertex
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
         matchedRange.Node
-        |> Option.iter (fun n -> n.GssEdges.Add((newGSSVertex,newEdge)))         
+        |> Option.iter (fun n ->
+            let isAlive, n = n.TryGetTarget()
+            if isAlive && n.IsAlive
+            then n.GssEdges.Add((newGSSVertex,newEdge))
+            else failwith "An attempt to create GSS edge with invalid matched range." )         
 
         // There is no need to check GSS edges duplication.
         // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova
         // p.13: "There is at most one call to the create function with the same arguments.
         // Thus no check for duplicate GSS edges is needed."
         newGSSVertex.OutgoingEdges.Add newEdge
+        let count = newGSSVertex.Popped.RemoveAll (fun r -> r.IsAlive())
         newGSSVertex, newGSSVertex.Popped
 
     member this.Pop (currentDescriptor:Descriptor, matchedRange) =
@@ -77,7 +83,10 @@ type GSS () =
         result
 
     member this.AddDescriptorToHandled (descriptor:Descriptor) =
-        descriptor.InputPosition.Descriptors.Add descriptor
+        let weakRefToDescriptor = WeakReference<_> descriptor
+        let added = descriptor.InputPosition.Descriptors.Add weakRefToDescriptor
+        assert added
+        descriptor.RsmState.Descriptors.Add weakRefToDescriptor
         descriptor.GssVertex.HandledDescriptors.Add descriptor
         |> ignore
 

@@ -6,8 +6,13 @@ open CFPQ_GLL.Common
 open Microsoft.FSharp.Core
 open FSharpx.Collections
 
+let filterValidParents (parents:HashSet<WeakReference<#ISppfNode<'t>>>) =
+    let count = parents.RemoveWhere (fun n -> let isAlive,n = n.TryGetTarget() in isAlive && n.IsAlive)
+    parents |> Seq.map (fun n -> let _,n = n.TryGetTarget() in n)
+
 type TerminalNode (terminal: Char, graphRange: Range<LinearInputGraphVertexBase>, weight) =
-    let parents = ResizeArray<IRangeNode>()
+    let parents = HashSet<WeakReference<IRangeNode>>()
+    let mutable isAlive = true
     let mutable weight = weight
     member this.Terminal = terminal
     member this.LeftPosition = graphRange.StartPosition
@@ -18,21 +23,29 @@ type TerminalNode (terminal: Char, graphRange: Range<LinearInputGraphVertexBase>
         member this.Weight
             with get () = weight
             and set v = weight <- v
+        member this.GetValidParents () = filterValidParents parents
+        member this.IsAlive with get () = isAlive
+                            and set v = isAlive <- v
 
-and EpsilonNode (position:LinearInputGraphVertexBase, nonTerminalStartState:RsmState) =
-    let parents = ResizeArray<IRangeNode>()
-    member this.Position = position
+and EpsilonNode (position:IInputGraphVertex, nonTerminalStartState:IRsmState) =
+    let parents = HashSet<WeakReference<IRangeNode>>()
+    let mutable isAlive = true
+    member this.Position = position    
     member this.NonTerminalStartState = nonTerminalStartState
 
     interface IEpsilonNode with
         member this.Parents = parents
+        member this.GetValidParents () = filterValidParents parents
+        member this.IsAlive with get () = isAlive
+                            and set v = isAlive <- v
 
 and IntermediateNode (rsmState:RsmState
                        , inputPosition:LinearInputGraphVertexBase
                        , leftSubtree: IRangeNode
                        , rightSubtree: IRangeNode) =
-    let parents = ResizeArray<IRangeNode>()
     let mutable weight = leftSubtree.Weight + rightSubtree.Weight
+    let parents = HashSet<WeakReference<IRangeNode>>()
+    let mutable isAlive = true
     member this.RSMState = rsmState
     member this.InputPosition = inputPosition
     member this.LeftSubtree = leftSubtree
@@ -42,11 +55,15 @@ and IntermediateNode (rsmState:RsmState
         member this.Weight
             with get () = weight
             and set v = weight <- v
+        member this.GetValidParents () = filterValidParents parents
+        member this.IsAlive with get () = isAlive
+                            and set v = isAlive <- v
 
 and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeNode>) =
     let mutable weight =
         intermediateNodes |> Seq.fold (fun v n -> min v n.Weight) (Int32.MaxValue * 1<weight>)
     let parents = ResizeArray<INonRangeNode>()
+    let mutable isAlive = true
     let gssEdges = ResizeArray<IGssVertex*IGssEdge>()
 
     member this.InputStartPosition = matchedRange.InputRange.StartPosition
@@ -58,14 +75,18 @@ and RangeNode (matchedRange: MatchedRange, intermediateNodes: HashSet<INonRangeN
             with get () = weight
             and set v = weight <- v
         member this.Parents = parents
+        member this.GetValidParents () = filterValidParents parents
+        member this.IsAlive with get () = isAlive
+                            and set v = isAlive <- v
         member this.IntermediateNodes = intermediateNodes
         member this.GssEdges = gssEdges
 
 and NonTerminalNode (nonTerminalStartState: RsmState, graphRange: Range<LinearInputGraphVertexBase>, rangeNodes:ResizeArray<IRangeNode>) =
-    let parents = ResizeArray<IRangeNode>()
     let mutable weight =
         let res = rangeNodes |> ResizeArray.fold (fun v n -> min v n.Weight) (Int32.MaxValue * 1<weight>)
         assert (res < Int32.MaxValue * 1<weight>)
+    let mutable isAlive = true
+    let parents = HashSet<WeakReference<IRangeNode>>()
         res
     interface INonTerminalNode with
         member this.NonTerminalStartState = nonTerminalStartState
@@ -78,6 +99,9 @@ and NonTerminalNode (nonTerminalStartState: RsmState, graphRange: Range<LinearIn
                 assert (weight < Int32.MaxValue * 1<weight>)
                 weight <- v
         member this.Parents = parents
+        member this.GetValidParents () = filterValidParents parents
+        member this.IsAlive with get () = isAlive
+                            and set v = isAlive <- v
 
 and [<RequireQualifiedAccess>]NonRangeNode =
     | TerminalNode of ITerminalNode
@@ -98,6 +122,20 @@ and [<RequireQualifiedAccess>]NonRangeNode =
             | NonRangeNode.NonTerminalNode n -> n.Parents
             | NonRangeNode.IntermediateNode i -> i.Parents
             | NonRangeNode.EpsilonNode e -> e.Parents
+            
+        member this.GetValidParents () = filterValidParents (this:>INonRangeNode).Parents
+        member this.IsAlive with get () =
+                                match this with
+                                | NonRangeNode.TerminalNode t -> t.IsAlive
+                                | NonRangeNode.NonTerminalNode n -> n.IsAlive
+                                | NonRangeNode.IntermediateNode i -> i.IsAlive
+                                | NonRangeNode.EpsilonNode e -> e.IsAlive
+                            and set v =
+                                match this with
+                                | NonRangeNode.TerminalNode t -> t.IsAlive <- v
+                                | NonRangeNode.NonTerminalNode n -> n.IsAlive <- v
+                                | NonRangeNode.IntermediateNode i -> i.IsAlive <- v
+                                | NonRangeNode.EpsilonNode e -> e.IsAlive <- v
 
 type MatchedRanges () =
     static member private updateWeights (rangeNode:IRangeNode) =
@@ -116,7 +154,7 @@ type MatchedRanges () =
                     rangeNode.IntermediateNodes.RemoveWhere(fun n -> n.Weight > newWeight)
                     |> ignore
                     rangeNode.Weight <- newWeight
-                    rangeNode.Parents
+                    rangeNode.GetValidParents()
                     |> Seq.iter handleNonRangeNode
                 let removed = cycle.Remove rangeNode
                 assert removed
@@ -134,7 +172,7 @@ type MatchedRanges () =
             if oldWeight > newWeight
             then
                 node.Weight <- newWeight
-                node.Parents |> Seq.iter handleRangeNode
+                node.GetValidParents() |> Seq.iter handleRangeNode
 
         and handleIntermediateNode (node:IIntermediateNode) =
             let oldWeight = node.Weight
@@ -143,7 +181,7 @@ type MatchedRanges () =
             if oldWeight > newWeight
             then
                 node.Weight <- newWeight
-                node.Parents |> Seq.iter handleRangeNode
+                node.GetValidParents() |> Seq.iter handleRangeNode
 
         handleRangeNode rangeNode
 
@@ -210,12 +248,19 @@ type MatchedRanges () =
                     let newTerminalNode = TerminalNode(terminal,range,weight) :> ITerminalNode
                     nodes.Add(terminal, newTerminalNode)
                     newTerminalNode
+            let isAlive, terminalNode = if exists then terminalNode.TryGetTarget() else false, Unchecked.defaultof<_>
             else
-                let newTerminalNode = TerminalNode(terminal,range,weight) :> ITerminalNode
-                let d = Dictionary<_,_>()
-                d.Add(terminal, newTerminalNode)
-                terminalNodes.Add(range.StartPosition, d)
+                if (not isAlive) || (not terminalNode.IsAlive)
+                then nodes.Remove terminal |> ignore
+                let newTerminalNode = TerminalNode(terminal,range) :> ITerminalNode
+                nodes.Add(terminal, WeakReference<_> newTerminalNode)
                 newTerminalNode
+        else
+            let newTerminalNode = TerminalNode(terminal,range) :> ITerminalNode
+            let d = Dictionary<_,_>()
+            d.Add(terminal, WeakReference<_> newTerminalNode)
+            terminalNodes.Add(range.StartPosition, d)
+            newTerminalNode
 
         newNode
 
@@ -238,23 +283,23 @@ type MatchedRanges () =
                     res |> ResizeArray.filter (fun n -> n.Weight = curMinWeight)
 
             let node = NonTerminalNode(nonTerminalStartState, range, rangeNodes)
-            rangeNodes |> ResizeArray.iter (fun n -> n.Parents.Add (NonRangeNode.NonTerminalNode node))
+            rangeNodes |> ResizeArray.iter (fun n -> n.Parents.Add (WeakReference<_> <| NonRangeNode.NonTerminalNode node) |> ignore)
             nonTerminalStartState.NonTerminalNodes.Add node
             node :> INonTerminalNode
 
         if exists
         then
-            let exists, nonTerminalNode = nodes.TryGetValue nonTerminalStartState
+            let exists, nonTerminalNode = tryGetPossiblyWeakSppfNode nodes nonTerminalStartState
             if exists
             then nonTerminalNode
             else
                 let newNonTerminalNode = mkNewNonTerminal ()
-                nodes.Add(nonTerminalStartState, newNonTerminalNode)
+                nodes.Add(nonTerminalStartState, WeakReference<_> newNonTerminalNode)
                 newNonTerminalNode
         else
             let newNonTerminalNode = mkNewNonTerminal ()
             let d = Dictionary<_,_>()
-            d.Add(nonTerminalStartState, newNonTerminalNode)
+            d.Add(nonTerminalStartState, WeakReference<_> newNonTerminalNode)
             nonTerminalNodes.Add(range.EndPosition, d)
             newNonTerminalNode
 
@@ -288,32 +333,48 @@ type MatchedRanges () =
         | Some n ->
             let intermediateNodes = rightSubRange.Range.InputRange.EndPosition.IntermediateNodes
             let mkNode () =
+                let leftSubRangeNodeValue =
+                    match leftSubRange.Node with
+                    | None -> failwith "An attempt to access to node of range without node."
+                    | Some n ->
+                        let isAlive, n = n.TryGetTarget()
+                        if isAlive && n.IsAlive
+                        then n
+                        else failwith "An attempt ot access to invalidated node."
+                let rightSubRangeNodeValue =
+                    match rightSubRange.Node with
+                    | None -> failwith "An attempt to access to node of range without node."
+                    | Some n ->
+                        let isAlive, n = n.TryGetTarget()
+                        if isAlive && n.IsAlive
+                        then n
+                        else failwith "An attempt ot access to invalidated node."
                 let node =
                     IntermediateNode(
                         leftSubRange.Range.RSMRange.EndPosition
                         , leftSubRange.Range.InputRange.EndPosition
-                        , leftSubRange.Node.Value
-                        , rightSubRange.Node.Value
+                        , leftSubRangeNodeValue
+                        , rightSubRangeNodeValue
                     )
-                let n = NonRangeNode.IntermediateNode node
-                leftSubRange.Node.Value.Parents.Add n
-                rightSubRange.Node.Value.Parents.Add n
+                let n = NonRangeNode.IntermediateNode node |> WeakReference<INonRangeNode>
+                leftSubRangeNodeValue.Parents.Add n |> ignore
+                rightSubRangeNodeValue.Parents.Add n |> ignore
                 node :> IIntermediateNode
             let intermediateNode =
                 let exists, rightPart = intermediateNodes.TryGetValue leftSubRange.Range
                 if exists
                 then
-                    let exists, intermediateNode = rightPart.TryGetValue rightSubRange.Range
+                    let exists, intermediateNode = tryGetPossiblyWeakSppfNode rightPart rightSubRange.Range
                     if exists
                     then intermediateNode
                     else
                         let intermediateNode = mkNode()
-                        rightPart.Add(rightSubRange.Range, intermediateNode)
+                        rightPart.Add(rightSubRange.Range, WeakReference<_> intermediateNode)
                         intermediateNode
                 else
                     let intermediateNode = mkNode()
                     let d = Dictionary<_,_>()
-                    d.Add (rightSubRange.Range, intermediateNode)
+                    d.Add (rightSubRange.Range, WeakReference<_> intermediateNode)
                     intermediateNodes.Add(leftSubRange.Range, d)
                     intermediateNode
 
@@ -327,7 +388,8 @@ type MatchedRanges () =
 
     static member Invalidate (node:ITerminalNode) =
         let rec handleTerminalNode (terminalNode:ITerminalNode) =
-            terminalNode.Parents
+            node.IsAlive <- false
+            terminalNode.GetValidParents()
             |> Seq.iter (fun node ->
                 let removed = node.IntermediateNodes.Remove (NonRangeNode.TerminalNode terminalNode)
                 assert removed
@@ -337,15 +399,17 @@ type MatchedRanges () =
         and handleRangeNode (rangeNode: IRangeNode) =
             if rangeNode.IntermediateNodes.Count = 0
             then
+                rangeNode.IsAlive <- false
                 (rangeNode :?> RangeNode).InputEndPosition.RangeNodes.Clear()
                 //(rangeNode :?> RangeNode).InputStartPosition.NonTerminalNodesStartedHere.Clear()
                 for v,edge in rangeNode.GssEdges do
                     let removed = v.OutgoingEdges.Remove edge
                     //edge.GssVertex.HandledDescriptors.Clear()
                     assert removed                
-                rangeNode.Parents
-                |> Seq.iter (fun node -> handleNonRangeNode (node :?> NonRangeNode))
-            else MatchedRanges.updateWeights rangeNode
+                rangeNode.GetValidParents()
+                |> Seq.iter (fun node ->
+                    handleNonRangeNode (node :?> NonRangeNode) rangeNode)
+            else MatchedRanges.updateDistances rangeNode
 
         and handleNonRangeNode (nonRangeNode : NonRangeNode) nodeToRemove =
             match nonRangeNode with
@@ -359,10 +423,11 @@ type MatchedRanges () =
             | NonRangeNode.TerminalNode _ -> failwith "Terminal node can not be a parent."
 
         and handleIntermediateNode (intermediateNode: IIntermediateNode) =
+            intermediateNode.IsAlive <- false
             let _node = intermediateNode :?> IntermediateNode
             //(_node.RightSubtree:?> RangeNode).InputEndPosition.IntermediateNodes.Clear()
             //_node.InputPosition.IntermediateNodes.Clear() //  [_node.] Remove (intermediateNode :?> IntermediateNode)
-            intermediateNode.Parents
+            intermediateNode.GetValidParents()
             |> Seq.iter (fun node ->
                 let removed = node.IntermediateNodes.Remove (NonRangeNode.IntermediateNode intermediateNode)
                 assert removed
@@ -371,11 +436,12 @@ type MatchedRanges () =
         and handleNonTerminalNode (nonTerminalNode: INonTerminalNode) =
             if nonTerminalNode.RangeNodes.Count = 0
             then
+                nonTerminalNode.IsAlive <- false
                 let removed = nonTerminalNode.NonTerminalStartState.NonTerminalNodes.Remove nonTerminalNode
                 assert removed
                 let removed = nonTerminalNode.LeftPosition.NonTerminalNodesStartedHere.[nonTerminalNode.RightPosition].Remove nonTerminalNode.NonTerminalStartState
                 assert removed
-                nonTerminalNode.Parents
+                nonTerminalNode.GetValidParents()
                 |> Seq.iter (fun n ->
                         let removed = n.IntermediateNodes.Remove (NonRangeNode.NonTerminalNode nonTerminalNode)
                         assert removed
@@ -387,7 +453,7 @@ type MatchedRanges () =
                 if oldWeight > newWeight
                 then
                     node.Weight <- newWeight
-                    nonTerminalNode.Parents
+                    nonTerminalNode.GetValidParents()
                     |> Seq.iter MatchedRanges.updateWeights
 
         handleTerminalNode node
