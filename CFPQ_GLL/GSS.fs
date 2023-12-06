@@ -77,7 +77,7 @@ type GSS () =
         currentDescriptor.GssVertex.OutgoingEdges
 
     member this.IsThisDescriptorAlreadyHandled (descriptor:Descriptor) =
-        let count = descriptor.GssVertex.HandledDescriptors.RemoveWhere(fun d -> not (d.IsAlive && d.MatchedRange.IsAlive()))
+        let count = descriptor.GssVertex.HandledDescriptors.RemoveWhere(fun d -> not d.IsAlive)
         let exists, handledDescriptor = descriptor.GssVertex.HandledDescriptors.TryGetValue descriptor
         let result = exists && handledDescriptor.Weight <= descriptor.Weight
         result

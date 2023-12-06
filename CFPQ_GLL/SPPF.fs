@@ -18,6 +18,7 @@ type TerminalNode (terminal: Char, graphRange: Range<LinearInputGraphVertexBase>
     member this.LeftPosition = graphRange.StartPosition
     member this.RightPosition = graphRange.EndPosition
     member this.Range = graphRange
+    
     interface ITerminalNode with
         member this.Parents = parents
         member this.Weight
@@ -138,6 +139,17 @@ and [<RequireQualifiedAccess>]NonRangeNode =
                                 | NonRangeNode.EpsilonNode e -> e.IsAlive <- v
 
 type MatchedRanges () =
+    let epsilonNodes = Dictionary<_,_>()
+    member this.CreateEpsilonNode(inputPosition:IInputGraphVertex, nonTerminalStartState:IRsmState) =
+    
+        let exists, node = epsilonNodes.TryGetValue((inputPosition,nonTerminalStartState))
+        if exists
+        then node
+        else
+            let node = EpsilonNode (inputPosition, nonTerminalStartState)
+            epsilonNodes.Add((inputPosition, nonTerminalStartState),node)
+            node
+        
     static member private updateWeights (rangeNode:IRangeNode) =
         let cycle = HashSet<IRangeNode>()
         let rec handleRangeNode (rangeNode:IRangeNode) =

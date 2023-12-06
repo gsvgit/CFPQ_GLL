@@ -100,7 +100,9 @@ let private run
                     let newRangeNode =
                         if buildSppf
                         then
-                            let currentlyCreatedNode = EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
+                            
+                            let currentlyCreatedNode = matchedRanges.CreateEpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
+                             //EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
                             matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.EpsilonNode currentlyCreatedNode)
                         else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, newRangeNode)
@@ -289,14 +291,15 @@ let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertex s
     evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM) mode
 
 let onInputGraphChanged (changedVertices:seq<IInputGraphVertex>) =
-    changedVertices
-    |> Seq.iter (fun v ->
-                 v.IntermediateNodes.Clear()
+    //changedVertices
+    //|> Seq.iter (fun v ->
+                 //v.IntermediateNodes.Clear()
                  //v.NonTerminalNodesStartedHere.Clear()
-                 )
+    //             )
     let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.GetValidDescriptors()) |> Array.ofSeq
     descriptorsToContinueFrom
     |> Array.iter (fun descriptor ->
+        //descriptor.IsAlive <- false
         let removed = descriptor.GssVertex.HandledDescriptors.Remove descriptor
         assert removed
         //let removed = descriptor.InputPosition.Descriptors.Remove descriptor

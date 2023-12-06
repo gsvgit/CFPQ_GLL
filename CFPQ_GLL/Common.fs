@@ -41,7 +41,7 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
     member this.InputPosition = inputPosition
     member this.GssVertex = gssVertex
     member this.MatchedRange = matchedRange
-    member this.IsAlive with get () = isAlive
+    member this.IsAlive with get () = isAlive && this.MatchedRange.IsAlive()
                         and set v = isAlive <- v
     override this.GetHashCode() = hashCode
     override this.Equals (y:obj) =
