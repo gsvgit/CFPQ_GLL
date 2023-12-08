@@ -1,14 +1,11 @@
 module Tests.ErrorRecoveringTest
 
-
-open System
 open System.Collections.Generic
 open CFPQ_GLL.Common
 open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
 open CFPQ_GLL
 open Expecto
-open FSharpx.Collections
 open GLLTests
 open Tests.InputGraph
 open Tests.LinearGraphReader
@@ -184,7 +181,6 @@ let Golang = GllTestGroup ("Golang", GolangRSM.golangSrc)
 
 let SimpleGolang =
     let src () =
-        //
         let IntExpr = nt "IntExpr"
         let Statement = nt "Statement"
         let Block = nt "Block"
@@ -367,9 +363,9 @@ let regenerateTests (testGroup: GllTestGroup) =
 
 let regenerateAllTests () =
     initTestCases ()
-    testGroups |> List.iter (fun g -> g.RegenerateTests())
+    testGroups |> List.iter (_.RegenerateTests())
 
 let tests () =
     initTestCases ()
-    let tests = testGroups |> List.map (fun g -> g.TestList)
+    let tests = testGroups |> List.map (_.TestList)
     testList "Error recovering" tests |> testSequenced
