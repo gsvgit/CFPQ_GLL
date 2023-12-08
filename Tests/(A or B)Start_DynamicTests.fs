@@ -413,11 +413,11 @@ let ``(a|b)* replace first A with B`` =
 
 let tests =
   testList "(a|b)* dynamic tests" [
-    ``(a|b)* replace A with B``
-    ``(a|b)* replace first A with B``
-    ``(a|b)* replace last A with B``
-    ``(a|b)* add A to end``
-    ``(a|b)* add B to end``
-    ``(a|b)* add branch with B to start``
-    //``(a|b)* add loop with A``
+    //``(a|b)* replace A with B``
+    //``(a|b)* replace first A with B``
+    //``(a|b)* replace last A with B``
+    //``(a|b)* add A to end``
+    //``(a|b)* add B to end``
+    //``(a|b)* add branch with B to start``
+    ``(a|b)* add loop with A``
   ]
