@@ -91,8 +91,7 @@ and [<Struct>] TerminalEdgeTarget<'token when 'token: equality> =
     new (targetVertex) = {TargetVertex = targetVertex; Weight = 0<weight>}
     
 and IInputGraphVertex<'token when 'token: equality> =
-    abstract Id: int<inputGraphVertex>
-    //abstract OutgoingEdges: Dictionary<ITerminal<'token>, HashSet<IInputGraphVertex<'token>>>
+    abstract Id: int<inputGraphVertex>    
     abstract ForAllOutgoingEdges: Descriptor<'token> -> ('token -> TerminalEdgeTarget<'token> -> unit) -> (TerminalEdgeTarget<'token> -> unit) -> unit 
     abstract Descriptors: HashSet<WeakReference<Descriptor<'token>>>
     abstract GetValidDescriptors: unit -> seq<Descriptor<'token>>

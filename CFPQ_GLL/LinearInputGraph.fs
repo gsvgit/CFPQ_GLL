@@ -5,7 +5,7 @@ open System.Collections.Generic
 open CFPQ_GLL.Common
 
 type LinearInputGraphVertexBase<'token when 'token: equality> (id:int32<inputGraphVertex>, epsilon) =
-    let mutable outgoingEdge : Option<'token * TerminalEdgeTarget<'token>> = None
+    let mutable outgoingEdge : Option<ITerminal<'token> * TerminalEdgeTarget<'token>> = None
     let descriptors = HashSet<WeakReference<Descriptor<'token>>>()
     let terminalNodes = Dictionary<IInputGraphVertex<'token>, Dictionary<'token, WeakReference<ITerminalNode<'token>>>>()
     let nonTerminalNodes = Dictionary<IInputGraphVertex<'token>, Dictionary<IRsmState<'token>, WeakReference<INonTerminalNode<'token>>>>()
@@ -29,12 +29,12 @@ type LinearInputGraphVertexBase<'token when 'token: equality> (id:int32<inputGra
             let errorRecoveryEdges =
                 let errorRecoveryEdges = Dictionary()
                 let coveredByCurrentTerminal =
-                    let exists, s = currentDescriptor.RsmState.OutgoingTerminalEdges.TryGetValue currentTerminal
+                    let exists, s = currentDescriptor.RsmState.OutgoingTerminalEdges.TryGetValue currentTerminal.Token
                     if exists then s else HashSet<_>()
                 for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
                     let coveredByTerminal = HashSet(currentDescriptor.RsmState.OutgoingTerminalEdges[terminal])
                     coveredByTerminal.ExceptWith coveredByCurrentTerminal
-                    if terminal <> currentTerminal && coveredByTerminal.Count > 0
+                    if terminal <> currentTerminal.Token && coveredByTerminal.Count > 0
                     then
                         errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
                 errorRecoveryEdges.Add(epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
@@ -45,10 +45,9 @@ type LinearInputGraphVertexBase<'token when 'token: equality> (id:int32<inputGra
                     handleEpsilonEdge kvp.Value
                 else
                     handleTerminalEdge kvp.Key kvp.Value
-                    
-            let symbol, vertex = outgoingTerminalEdgeInGraph
-            assert (symbol <> epsilon)
-            handleTerminalEdge symbol vertex
+                                
+            assert (currentTerminal.Token <> epsilon)
+            handleTerminalEdge currentTerminal.Token targetVertex
 
         member this.Id = id        
         member this.Descriptors = descriptors

@@ -10,7 +10,7 @@ let filterValidParents (parents:ResizeArray<WeakReference<#ISppfNode<'t>>>) =
     let count = parents.RemoveAll (fun n -> let isAlive,n = n.TryGetTarget() in not (isAlive && n.IsAlive))
     parents |> Seq.map (fun n -> let _,n = n.TryGetTarget() in n)
 
-type TerminalNode<'token when 'token: equality> (terminal: ITerminal<'token>, graphRange: Range<IInputGraphVertex<'token>>, weight) =
+type TerminalNode<'token when 'token: equality> (terminal: 'token, graphRange: Range<IInputGraphVertex<'token>>, weight) =
     let parents = ResizeArray<WeakReference<IRangeNode<'token>>>()
     let mutable isAlive = true
     let mutable weight = weight
@@ -198,24 +198,24 @@ type MatchedRanges<'token when 'token: equality> (epsilon: 'token) =
 
         handleRangeNode rangeNode
 
-    member internal this.AddTerminalNode (range:Range<IInputGraphVertex<'token>>, terminal:ITerminal<'token>, weight) =
-        if terminal.Token = epsilon
+    member internal this.AddTerminalNode (range:Range<IInputGraphVertex<'token>>, terminal:'token, weight) =
+        if terminal = epsilon
         then ()
         let terminalNodes = range.EndPosition.TerminalNodes
         let exists, nodes = terminalNodes.TryGetValue range.StartPosition
         let newNode =
             if exists
             then
-                let exists, terminalNode = tryGetPossiblyWeakSppfNode nodes terminal.Token
+                let exists, terminalNode = tryGetPossiblyWeakSppfNode nodes terminal
                 if exists then terminalNode
                 else
                     let newTerminalNode = TerminalNode(terminal,range,weight) :> ITerminalNode<'token>
-                    nodes.Add(terminal.Token, WeakReference<_> newTerminalNode)
+                    nodes.Add(terminal, WeakReference<_> newTerminalNode)
                     newTerminalNode            
             else
                 let newTerminalNode = TerminalNode(terminal,range,weight) :> ITerminalNode<'token>
                 let d = Dictionary<_,_>()
-                d.Add(terminal.Token, WeakReference<_> newTerminalNode)
+                d.Add(terminal, WeakReference<_> newTerminalNode)
                 terminalNodes.Add(range.StartPosition, d)
                 newTerminalNode
 
@@ -459,7 +459,7 @@ type TriplesStoredSPPF<'inputVertex, 'token, 'terminalValue when 'inputVertex: e
         let weight = node.Weight
         let node = node :?> TerminalNode<'token>
         let currentId = nodesCount
-        nodes.Add(currentId, TriplesStoredSPPFNode.TerminalNode(getVertexId node.LeftPosition, node.Terminal.Token, getVertexId node.RightPosition, (node :> ITerminalNode<'token>).Weight))
+        nodes.Add(currentId, TriplesStoredSPPFNode.TerminalNode(getVertexId node.LeftPosition, node.Terminal, getVertexId node.RightPosition, (node :> ITerminalNode<'token>).Weight))
         addEdge parentId currentId weight
         nodesCount <- nodesCount + 1
 

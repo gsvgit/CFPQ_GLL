@@ -40,9 +40,9 @@ let logDescriptorCreatedByTerminal t (d: Descriptor<'token>) =
 
 
 let private run
-        (gss:GSS<_>)//(gss:GSS<'token>)
-        (matchedRanges:MatchedRanges<_>)//(matchedRanges:MatchedRanges<'token>)
-        (descriptorsToProcess: IDescriptorsStack<_>)//(descriptorsToProcess: IDescriptorsStack<'token>)
+        (gss:GSS<'token>)
+        (matchedRanges:MatchedRanges<'token>)
+        (descriptorsToProcess: IDescriptorsStack<'token>)
         (startVertex:IInputGraphVertex<'token>)
         (finalVertex:IInputGraphVertex<'token>)
         (query:RSM<'token>) (epsilon: 'token) mode =
