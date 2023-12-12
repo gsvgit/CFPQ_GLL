@@ -128,7 +128,7 @@ let many x = Many x
 let some x = Sequence (x, many x)
 let ( ** ) x y = Sequence (x,y)
 let opt x = Alternative(x, Epsilon)
-let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
+//let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
 let protect (x: RegexpWithLayoutConfig<'token>) = NoLayout x
 let (=>) lhs rhs =
     match lhs with
@@ -157,7 +157,7 @@ let addLayout regexp layoutSymbols =
             | Epsilon -> Regexp.Epsilon
         addLayout regexp
 
-let build layoutSymbols rules eof =
+let build layoutSymbols eof rules =
 
     let nonTerminalToStartState = Dictionary<_,_>()
     let addEdges = ResizeArray()

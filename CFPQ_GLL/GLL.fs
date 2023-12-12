@@ -264,7 +264,7 @@ let evalFromState
 let errorRecoveringEval<'inputVertex, 'token when 'inputVertex: equality and 'token: equality> finishVertex startVertex (query:RSM<'token>) mode (epsilon: 'token) =
     let gss = GSS()
     let matchedRanges = MatchedRanges(epsilon)
-    evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM<'token>) mode
+    evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM<'token>) epsilon mode
 
 let onInputGraphChanged (changedVertices:seq<IInputGraphVertex<'token>>) =
 

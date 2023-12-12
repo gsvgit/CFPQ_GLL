@@ -4,6 +4,7 @@ open System.IO
 open System.Text.RegularExpressions
 open CFPQ_GLL
 open CFPQ_GLL.Common
+open CFPQ_GLL.LinearInputGraph
 
 let private seed = 100
 let private rnd = System.Random(seed)
@@ -110,9 +111,9 @@ let generateBenchmarkData (sizes: int array) (errorCnts: int array) =
 type BenchmarkData = {
     Name: string
     Text: string
-    RSM: unit -> RSM.RSM
-    StartVertex: LinearInputGraphVertexBase
-    FinishVertex: LinearInputGraphVertexBase
+    RSM: unit -> RSM.RSM<Char>
+    StartVertex: LinearInputGraphVertexBase<Char>
+    FinishVertex: LinearInputGraphVertexBase<Char>
     Size: int
     Weight: int
     Errors: string list
@@ -135,14 +136,14 @@ let private getDataFromText (name: string, text: string) =
     let startVertex,mapping = graph.ToCfpqCoreGraph startV
     let finalVertex = mapping[finalV]
     let rsm = Tests.GolangRSM.golangRSM ()
-    let result, descriptorsCount = GLL.errorRecoveringEval finalVertex startVertex rsm GLL.AllPaths
+    let result, descriptorsCount = GLL.errorRecoveringEval finalVertex startVertex rsm GLL.AllPaths Char.Epsilon
 
     let weight =
         match result with
         | GLL.QueryResult.MatchedRanges _ ->
 
             let sppf = rsm.OriginalStartState.NonTerminalNodes.ToArray()
-            let root = sppf |> Array.filter (fun n -> startVertex = n.LeftPosition && finalVertex = n.RightPosition) |> Array.minBy(fun n -> n.Weight)
+            let root = sppf |> Array.filter (fun n -> (startVertex :> IInputGraphVertex<_>) = n.LeftPosition && (finalVertex :> IInputGraphVertex<_>) = n.RightPosition) |> Array.minBy(fun n -> n.Weight)
             root.Weight |> int
         | _ -> failwith "Result should be MatchedRanges"
 

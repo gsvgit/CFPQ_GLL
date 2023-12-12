@@ -1,6 +1,7 @@
 module Tests.InputGraph
 
 open System.Collections.Generic
+open CFPQ_GLL.LinearInputGraph
 open CFPQ_GLL.Common
 
 [<Measure>] type inputGraphTerminalEdge
@@ -32,6 +33,10 @@ type InputGraphVertexMutableContent =
     val OutgoingTerminalEdges : ResizeArray<InputGraphEdge>
     new (terminalEdges) = {OutgoingTerminalEdges = terminalEdges}
 
+type Terminal<'token  when 'token: equality> (token:'token) =
+    interface ITerminal<'token> with
+        member this.Token = token
+        
 type InputGraph (edges, enableErrorRecovering) =
     let vertices = System.Collections.Generic.Dictionary<int<inputGraphVertex>, InputGraphVertexMutableContent>()
 
@@ -84,14 +89,14 @@ type InputGraph (edges, enableErrorRecovering) =
     member this.ToCfpqCoreGraph (startVertex: int<inputGraphVertex>) =
         this.ToDot ("coreGraph.dot")
         let mutable firstFreeVertexId = 0
-        let verticesMapping = Dictionary<int<inputGraphVertex>, LinearInputGraphVertexBase>()
+        let verticesMapping = Dictionary<int<inputGraphVertex>, LinearInputGraphVertexBase<_>>()
         let getVertex vertexId =
             let exists, vertex = verticesMapping.TryGetValue vertexId
             let res =
                 if exists
                 then vertex
                 else
-                    let vertex = LinearInputGraphVertexBase(int vertexId)
+                    let vertex = LinearInputGraphVertexBase<_>(vertexId, Epsilon)
                     firstFreeVertexId <- firstFreeVertexId + 1
                     verticesMapping.Add(vertexId, vertex)
                     vertex
@@ -101,6 +106,6 @@ type InputGraph (edges, enableErrorRecovering) =
             let vertex = getVertex kvp.Key
             for edge in kvp.Value.OutgoingTerminalEdges do
                 let targetVertex = getVertex edge.TargetVertex
-                vertex.AddOutgoingEdge (edge.TerminalSymbol, TerminalEdgeTarget(targetVertex, edge.Weight))
+                vertex.AddOutgoingEdge (Terminal<_>(edge.TerminalSymbol), TerminalEdgeTarget(targetVertex, edge.Weight))
 
         newStartVertex,verticesMapping

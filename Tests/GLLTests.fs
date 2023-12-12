@@ -7,6 +7,7 @@ open CFPQ_GLL.RSM
 open CFPQ_GLL.SPPF
 open Expecto
 open Tests.InputGraph
+open CFPQ_GLL.LinearInputGraph
 
 
 let calculateActual root =
@@ -27,18 +28,18 @@ let calculateActual root =
 
 let private runGLLAndCheckResultForManuallyCreatedGraph
     evalFunction
-    (startVertex: LinearInputGraphVertexBase)
-    (finalVertex: LinearInputGraphVertexBase)
-    (q:RSM)
+    (startVertex: LinearInputGraphVertexBase<_>)
+    (finalVertex: LinearInputGraphVertexBase<_>)
+    (q:RSM<_>)
     (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx) =
 
-    let result, _ = evalFunction startVertex q AllPaths
+    let result, _ = evalFunction startVertex q AllPaths Epsilon
 
     match result with
     | QueryResult.MatchedRanges _ ->
 
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
-        let root = sppf |> Array.filter (fun n -> startVertex = n.LeftPosition && finalVertex = n.RightPosition) |> Array.minBy(fun n -> n.Weight)
+        let root = sppf |> Array.filter (fun n -> (startVertex :> IInputGraphVertex<_>) = n.LeftPosition && (finalVertex :> IInputGraphVertex<_>) = n.RightPosition) |> Array.minBy(fun n -> n.Weight)
 
         let epsilonCount, terminalCount, nonTerminalCount, rangeCount, intermediateCount, weight = calculateActual root
         Expect.equal epsilonCount epsilonCountEx "Epsilon nodes count should be equal"
@@ -51,8 +52,8 @@ let private runGLLAndCheckResultForManuallyCreatedGraph
     | _ -> failwith "Result should be MatchedRanges"
 
 
-let runErrorRecoveringGLLAndCheckResult (graph:InputGraph) startV finalV (q:RSM) (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx) =
-    let startVertex,mapping = graph.ToCfpqCoreGraph startV
+let runErrorRecoveringGLLAndCheckResult (graph:InputGraph) startV finalV (q:RSM<_>) (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx) =
+    let startVertex,(mapping:Dictionary<_,_>) = graph.ToCfpqCoreGraph startV
     let finalVertex = mapping[finalV]
     runGLLAndCheckResultForManuallyCreatedGraph (errorRecoveringEval finalVertex) startVertex finalVertex q (epsilonCountEx, terminalCountEx, nonTerminalCountEx, rangeCountEx, intermediateCountEx, weightEx)
 

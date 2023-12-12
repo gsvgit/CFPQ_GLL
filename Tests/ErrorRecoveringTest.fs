@@ -20,7 +20,7 @@ let reverseDict (dict: Dictionary<'a, 'b>) =
 
 let run
     (graph: InputGraph)
-    (q: RSM)
+    (q: RSM<_>)
     dotFileName
     =
     let startV = 0<inputGraphVertex>
@@ -29,13 +29,13 @@ let run
     let startVertices,mapping = graph.ToCfpqCoreGraph startV
     let finalVertices = mapping[finalV]
 
-    let result, cnt = GLL.errorRecoveringEval finalVertices startVertices q GLL.AllPaths
+    let result, cnt = GLL.errorRecoveringEval finalVertices startVertices q GLL.AllPaths Char.Epsilon
 
     match result with
     | GLL.QueryResult.MatchedRanges _ ->
         let sppf = q.OriginalStartState.NonTerminalNodes.ToArray()
-        let root = sppf |> Array.filter (fun n -> finalVertices = n.RightPosition && startVertices = n.LeftPosition) |> Array.minBy(fun n -> n.Weight)
-        let weights = sppf |> Array.filter (fun n -> finalVertices = n.RightPosition && startVertices = n.LeftPosition)  |> Array.map (fun n -> n.Weight) |> Array.sort |> Array.toList
+        let root = sppf |> Array.filter (fun n -> (finalVertices :> IInputGraphVertex<_>) = n.RightPosition && (startVertices :> IInputGraphVertex<_>) = n.LeftPosition) |> Array.minBy(fun n -> n.Weight)
+        let weights = sppf |> Array.filter (fun n -> (finalVertices  :> IInputGraphVertex<_>)= n.RightPosition && (startVertices :> IInputGraphVertex<_>) = n.LeftPosition)  |> Array.map (fun n -> n.Weight) |> Array.sort |> Array.toList
 
         let actual = TriplesStoredSPPF([|root|], Dictionary())
         actual.ToDot dotFileName
@@ -69,7 +69,7 @@ let generateTestList f (inputs: string seq) =
 
 type GllResult = int * int * int * int * int * int<weight>
 
-type GllTestGroup (name: string,  lazyRsm: unit -> RSM ) =
+type GllTestGroup (name: string,  lazyRsm: unit -> RSM<_>) =
     let testCases = Dictionary<string, GllResult>()
     member this.Name = name
     member this.LazyRsm = lazyRsm
@@ -86,6 +86,14 @@ type GllTestGroup (name: string,  lazyRsm: unit -> RSM ) =
         testCases.Keys |> Seq.toList |> List.iter (fun input -> printfn $"""    {this.GenerateTest input "test.dot"}""")
         printfn "]"
 
+let t = Char.Char >> t
+
+let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (Char.Char >> Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
+
+let space = Char.Char ' '
+
+let build = build [space] Char.EOF
+
 let BracketStarX  =
 
     let src () =
@@ -94,7 +102,7 @@ let BracketStarX  =
         [
             Lst => t '[' ** Elem
             Elem => t 'x' +|+ Lst
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("BracketStarX", src)
 
@@ -104,7 +112,7 @@ let CAStarBStar =
         let S = nt "S"
         [
             S => t 'c' ** many (t 'a') ** many (t 'b')
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("CAStarBStar", src)
 
@@ -114,7 +122,7 @@ let AB =
         let S = nt "S"
         [
             S => t 'a' ** t 'b'
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("AB", src)
 
@@ -124,7 +132,7 @@ let DyckLang =
         let S = nt "S"
         [
             S => Epsilon +|+ t '(' ** S ** t ')' ** S
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("DyckLang", src)
 
@@ -137,7 +145,7 @@ let Ambiguous =
                  +|+ S
                  +|+ S ** S
                  +|+ S ** S ** S
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("Ambiguous", src)
 
@@ -153,7 +161,7 @@ let MultiDyckLang =
             S1 => t '(' ** S ** t ')' ** S
             S2 => t '{' ** S ** t '}' ** S
             S3 => t '[' ** S ** t ']' ** S
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("MultiDyckLang", src)
 
@@ -163,7 +171,7 @@ let DyckLangByRegexp =
         let S = nt "S"
         [
             S => many(t '(' ** S ** t ')')
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("DyckLangByRegexp", src)
 
@@ -173,7 +181,7 @@ let MultiDyckLangByRegexp =
         let S = nt "S"
         [
             S => many (t '(' ** S ** t ')' +|+  t '{' ** S ** t '}' +|+ t '[' ** S ** t ']')
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("MultiDyckLangByRegexp", src)
 
@@ -190,7 +198,7 @@ let SimpleGolang =
             Block     => many Statement
             Statement => IntExpr ** t ';' +|+ t 'r' ** IntExpr ** t ';'
             IntExpr   => t '1' ** t '+' ** t '1' +|+ t '1'
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("SimpleGolang", src)
 
@@ -205,7 +213,7 @@ let ProgramLike =
             B => t '{' ** many S ** t '}'
             E => C ** t ';'
             C => literal "aa" ** t 'b' +|+ protect (t 'c' ** t ' ' ** t 'd')
-        ] |> build [' ']
+        ] |> build
 
     GllTestGroup ("ProgramLike", src)
 
@@ -363,9 +371,9 @@ let regenerateTests (testGroup: GllTestGroup) =
 
 let regenerateAllTests () =
     initTestCases ()
-    testGroups |> List.iter (_.RegenerateTests())
+    testGroups |> List.iter (fun group -> group.RegenerateTests())
 
 let tests () =
     initTestCases ()
-    let tests = testGroups |> List.map (_.TestList)
+    let tests = testGroups |> List.map (fun group -> group.TestList)
     testList "Error recovering" tests |> testSequenced

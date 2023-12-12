@@ -1,8 +1,12 @@
 module Tests.GolangRSM
 
+open CFPQ_GLL.Common
 open CFPQ_GLL.RsmBuilder
 
 let golangSrc () =
+    let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (Char.Char >> Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
+    let t = Char.Char >> t
+    
     let Num = nt "Num"
     let Var = nt "Var"
 
@@ -96,7 +100,7 @@ let golangSrc () =
                       +|+ For
                       +|+ While
                       +|+ returnLit ** IntExpr ** t ';'
-    ] |> build [' '; '\t'; '\n'; '\r']
+    ] |> build ([' '; '\t'; '\n'; '\r'] |> List.map Char.Char) Char.EOF
 
 let _ = golangSrc ()
 

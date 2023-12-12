@@ -9,7 +9,7 @@ let debug src input name =
     let query = src ()
     let graph = LinearGraphReader.mkLinearGraph id input
     graph.ToDot $"{name}_graph.dot"
-    (query :> RSM.RSM).ToDot $"{name}_rsm.dot"
+    (query :> RSM.RSM<_>).ToDot $"{name}_rsm.dot"
     ErrorRecoveringTest.run graph query $"{name}_sppf.dot" |> ignore
     ChangeTargetLevel GLL Info
 
