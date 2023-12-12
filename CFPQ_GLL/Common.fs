@@ -83,34 +83,7 @@ and IRsmState<'token when 'token: equality> =
 and IRsmBox<'token when 'token: equality> =
     abstract FinalStates: HashSet<IRsmState<'token>>
     abstract Nonterminal: INonterminal
-   
-(*
-and LinearInputGraphVertexBase (id:int32) =
-    let id = id
-    let mutable outgoingEdge : Option<Char * TerminalEdgeTarget> = None
-    let descriptors = HashSet<Descriptor<'token>>()
-    let terminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<Char, ITerminalNode<'token>>>()
-    let nonTerminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<IRsmState<'token>, INonTerminalNode<'token>>>()
-    let rangeNodes = Dictionary<MatchedRange<'token>, IRangeNode<'token>>()        
-    let intermediateNodes = Dictionary<MatchedRange<'token>, Dictionary<MatchedRange<'token>, IIntermediateNode<'token>>>()
-    override this.GetHashCode() = id
-    
-    member this.AddOutgoingEdge (terminal, target) =
-        match outgoingEdge with
-        | None -> outgoingEdge <- Some (terminal, target)
-        | Some x -> failwithf $"Edge exists: %A{x}"
-
-    member this.Id = id
-    member this.OutgoingEdge =
-        match outgoingEdge with
-        | Some v -> v
-        | None -> failwith "Unexpected end of input"
-    member this.Descriptors = descriptors
-    member this.TerminalNodes = terminalNodes
-    member this.NonTerminalNodesStartedHere = nonTerminalNodes
-    member this.RangeNodes = rangeNodes
-    member this.IntermediateNodes = intermediateNodes
-  *)  
+     
 and [<Struct>] TerminalEdgeTarget<'token when 'token: equality> =
     val TargetVertex: IInputGraphVertex<'token>
     val Weight: int<weight>
@@ -119,7 +92,8 @@ and [<Struct>] TerminalEdgeTarget<'token when 'token: equality> =
     
 and IInputGraphVertex<'token when 'token: equality> =
     abstract Id: int<inputGraphVertex>
-    abstract OutgoingEdges: Dictionary<ITerminal<'token>, HashSet<IInputGraphVertex<'token>>>
+    //abstract OutgoingEdges: Dictionary<ITerminal<'token>, HashSet<IInputGraphVertex<'token>>>
+    abstract ForAllOutgoingEdges: Descriptor<'token> -> ('token -> TerminalEdgeTarget<'token> -> unit) -> (TerminalEdgeTarget<'token> -> unit) -> unit 
     abstract Descriptors: HashSet<WeakReference<Descriptor<'token>>>
     abstract GetValidDescriptors: unit -> seq<Descriptor<'token>>
     abstract TerminalNodes: Dictionary<IInputGraphVertex<'token>, Dictionary<'token, WeakReference<ITerminalNode<'token>>>>

@@ -1,6 +1,5 @@
 module CFPQ_GLL.GLL
 
-open System
 open System.Collections.Generic
 open CFPQ_GLL.Common
 open CFPQ_GLL.RSM
@@ -25,7 +24,7 @@ let logDescriptorInfo (descriptor: Descriptor<'token>) =
         [
             $"\n{ppSpaces}Processing descriptor {descriptor.GetHashCode()}"
             $"Descriptor rsm state: {descriptor.RsmState.Box.Nonterminal.Name} with distance {descriptor.Weight}"
-            $"Descriptor graph edge: {fst descriptor.InputPosition.OutgoingEdge}"
+            //$"Descriptor graph edge: {fst descriptor.InputPosition.OutgoingEdges}"
             $"""Descriptor rsm terminals: {descriptor.RsmState.OutgoingTerminalEdges.Keys |> Seq.map string |> String.concat ", "}"""
             $"""Descriptor rsm nonterminals: {descriptor.RsmState.OutgoingNonTerminalEdges.Keys |> Seq.map (fun x -> x.Box.Nonterminal.Name) |> String.concat ", " } """
             $"Weight: %A{descriptor.Weight}"
@@ -41,9 +40,9 @@ let logDescriptorCreatedByTerminal t (d: Descriptor<'token>) =
 
 
 let private run
-        (gss:GSS<'token>)
-        (matchedRanges:MatchedRanges<'token>)
-        (descriptorsToProcess: IDescriptorsStack<'token>)
+        (gss:GSS<_>)//(gss:GSS<'token>)
+        (matchedRanges:MatchedRanges<_>)//(matchedRanges:MatchedRanges<'token>)
+        (descriptorsToProcess: IDescriptorsStack<_>)//(descriptorsToProcess: IDescriptorsStack<'token>)
         (startVertex:IInputGraphVertex<'token>)
         (finalVertex:IInputGraphVertex<'token>)
         (query:RSM<'token>) (epsilon: 'token) mode =
@@ -103,7 +102,6 @@ let private run
                         then
                             
                             let currentlyCreatedNode = matchedRanges.CreateEpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
-                             //EpsilonNode (currentDescriptor.InputPosition, currentDescriptor.GssVertex.RsmState)
                             matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.EpsilonNode currentlyCreatedNode)
                         else dummyRangeNode
                     MatchedRangeWithNode(matchedRange, newRangeNode)
@@ -138,8 +136,6 @@ let private run
                 d.IsFinal <- findCorrect
                 logDescriptorCreated d
                 addDescriptor d
-
-        let outgoingTerminalEdgeInGraph = currentDescriptor.InputPosition.OutgoingEdge
 
         let outgoingNonTerminalEdgesInRSM = currentDescriptor.RsmState.OutgoingNonTerminalEdges
         let outgoingTerminalEdgesInRSM = currentDescriptor.RsmState.OutgoingTerminalEdges
@@ -216,30 +212,9 @@ let private run
                 for state in targetStates do
                     handleTerminalEdge terminalSymbol targetVertex state
 
-        let errorRecoveryEdges =
-            let errorRecoveryEdges = Dictionary()
-            let currentTerminal,targetVertex = currentDescriptor.InputPosition.OutgoingEdge
-            let coveredByCurrentTerminal =
-                let exists, s = currentDescriptor.RsmState.OutgoingTerminalEdges.TryGetValue currentTerminal
-                if exists then s else HashSet<_>()
-            for terminal in currentDescriptor.RsmState.ErrorRecoveryLabels do
-                let coveredByTerminal = HashSet(currentDescriptor.RsmState.OutgoingTerminalEdges[terminal])
-                coveredByTerminal.ExceptWith coveredByCurrentTerminal
-                if terminal <> currentTerminal && coveredByTerminal.Count > 0
-                then
-                    errorRecoveryEdges.Add(terminal.Token, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
-            errorRecoveryEdges.Add(epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
-            errorRecoveryEdges
-
-        for kvp in errorRecoveryEdges do
-            if kvp.Key = epsilon then
-                handleEpsilonEdge kvp.Value
-            else
-                handleEdge kvp.Key kvp.Value
-
-        let symbol, vertex = outgoingTerminalEdgeInGraph
-        assert (symbol.Token <> epsilon)
-        handleEdge symbol vertex
+        currentDescriptor.InputPosition.ForAllOutgoingEdges currentDescriptor handleEdge handleEpsilonEdge
+        
+        
 
     let mutable cnt = 0
     let mutable _continue = true
@@ -292,11 +267,7 @@ let errorRecoveringEval<'inputVertex, 'token when 'inputVertex: equality and 'to
     evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM<'token>) mode
 
 let onInputGraphChanged (changedVertices:seq<IInputGraphVertex<'token>>) =
-    //changedVertices
-    //|> Seq.iter (fun v ->
-                 //v.IntermediateNodes.Clear()
-                 //v.NonTerminalNodesStartedHere.Clear()
-    //             )
+
     let descriptorsToContinueFrom = changedVertices |> Seq.collect (fun vertex -> vertex.GetValidDescriptors()) |> Array.ofSeq
     descriptorsToContinueFrom
     |> Array.iter (fun descriptor ->
