@@ -202,11 +202,11 @@ type MatchedRanges<'token when 'token: equality> (epsilon: 'token) =
         if terminal.Token = epsilon
         then ()
         let terminalNodes = range.EndPosition.TerminalNodes
-        let exists, nodes = tryGetPossiblyWeakSppfNode terminalNodes range.StartPosition
+        let exists, nodes = terminalNodes.TryGetValue range.StartPosition
         let newNode =
             if exists
             then
-                let exists, terminalNode = nodes.TryGetValue terminal.Token
+                let exists, terminalNode = tryGetPossiblyWeakSppfNode nodes terminal.Token
                 if exists then terminalNode
                 else
                     let newTerminalNode = TerminalNode(terminal,range,weight) :> ITerminalNode<'token>

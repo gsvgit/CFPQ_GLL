@@ -67,6 +67,7 @@ type Descriptor<'token when 'token: equality> (rsmState: IRsmState<'token>, inpu
         && (y :?> Descriptor<'token>).GssVertex = this.GssVertex
 
 and IRsmState<'token when 'token: equality> =
+    abstract ErrorRecoveryLabels: HashSet<'token>
     abstract OutgoingTerminalEdges : Dictionary<'token, HashSet<IRsmState<'token>>>
     abstract OutgoingNonTerminalEdges: Dictionary<IRsmState<'token>, HashSet<IRsmState<'token>>>
     abstract Descriptors: ResizeArray<WeakReference<Descriptor<'token>>>
@@ -159,8 +160,7 @@ and ISppfNode<'ParentType when 'ParentType: not struct> =
 and ITerminalNode<'token when 'token: equality> =
     inherit ISppfNode<IRangeNode<'token>>
     abstract Weight: int<weight> with get, set
-and IEpsilonNode<'token when 'token: equality> =
-    abstract Parents: ResizeArray<WeakReference<IRangeNode<'token>>>
+and IEpsilonNode<'token when 'token: equality> =    
     inherit ISppfNode<IRangeNode<'token>>
 and INonTerminalNode<'token when 'token: equality> =
     inherit ISppfNode<IRangeNode<'token>>

@@ -43,6 +43,8 @@ type TerminalEdgesStorage =
 
 type RsmState<'token when 'token: equality> (isStart: bool, isFinal: bool) =
     let id = getFirstFreeRsmStateId()
+    let errorRecoveryLabels = HashSet()
+    let coveredTargetStates = HashSet() 
     let descriptors = ResizeArray<WeakReference<Descriptor<'token>>>()
     let outgoingTerminalEdges = Dictionary<'token, HashSet<IRsmState<'token>>>()
     let outgoingNonTerminalEdges= Dictionary<IRsmState<'token>, HashSet<IRsmState<'token>>>()
@@ -51,6 +53,7 @@ type RsmState<'token when 'token: equality> (isStart: bool, isFinal: bool) =
     new () = RsmState(false,false)
 
     interface IRsmState<'token> with
+        member this.ErrorRecoveryLabels = errorRecoveryLabels
         member this.Id = id
         member this.OutgoingTerminalEdges = outgoingTerminalEdges
         member this.OutgoingNonTerminalEdges = outgoingNonTerminalEdges
@@ -62,6 +65,12 @@ type RsmState<'token when 'token: equality> (isStart: bool, isFinal: bool) =
         member this.IsFinal = isFinal
         member this.NonTerminalNodes = nonTerminalNodes
         member this.AddTerminalEdge (terminal, targetState) =
+            if coveredTargetStates.Contains targetState |> not
+            then
+                let added = errorRecoveryLabels.Add terminal
+                assert added
+                let added =  coveredTargetStates.Add targetState
+                assert added
             let exists,targetStates = (this:>IRsmState<'token>).OutgoingTerminalEdges.TryGetValue terminal
             if exists
             then

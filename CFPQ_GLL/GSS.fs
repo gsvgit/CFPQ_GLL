@@ -51,18 +51,21 @@ type GSS<'token when 'token: equality> () =
                          , inputPositionToContinue: IInputGraphVertex<'token>
                          , rsmStateToContinue: IRsmState<'token>
                          , matchedRange: MatchedRangeWithNode<'token>) =
+        let node =
+            matchedRange.Node
+            |> Option.map (fun n ->
+                let isAlive, n = n.TryGetTarget()
+                if isAlive && n.IsAlive
+                then n
+                else failwith "An attempt to create GSS edge with invalid matched range.")            
         let weight =
-            match matchedRange.Node with
+            match node with
             | Some n -> n.Weight
             | None -> 0<weight>
         let newGSSVertex = this.AddNewVertex (inputPositionToContinue, rsmStateToContinue, currentGSSVertex.MinimalWeightOfLeftPart + weight) :> IGssVertex<'token>
         let newEdge = GSSEdge(currentGSSVertex, rsmStateToReturn, matchedRange)
-        matchedRange.Node
-        |> Option.iter (fun n ->
-            let isAlive, n = n.TryGetTarget()
-            if isAlive && n.IsAlive
-            then n.GssEdges.Add((newGSSVertex,newEdge))
-            else failwith "An attempt to create GSS edge with invalid matched range." )         
+        node
+        |> Option.iter (fun n -> n.GssEdges.Add((newGSSVertex,newEdge)))         
 
         // There is no need to check GSS edges duplication.
         // "Faster, Practical GLL Parsing", Ali Afroozeh and Anastasia Izmaylova

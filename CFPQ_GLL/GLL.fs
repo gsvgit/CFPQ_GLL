@@ -69,7 +69,7 @@ let private run
                   , Unchecked.defaultof<RsmState<'token>>
                )
 
-    let dummyRangeNode = Unchecked.defaultof<IRangeNode<'token>>
+    let dummyRangeNode = Unchecked.defaultof<IRangeNode<_>>
 
     let makeIntermediateNode (leftSubRange: MatchedRangeWithNode<'token>) (rightSubRange: MatchedRangeWithNode<'token>) =
         if buildSppf
@@ -227,7 +227,7 @@ let private run
                 coveredByTerminal.ExceptWith coveredByCurrentTerminal
                 if terminal <> currentTerminal && coveredByTerminal.Count > 0
                 then
-                    errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
+                    errorRecoveryEdges.Add(terminal.Token, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
             errorRecoveryEdges.Add(epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
 
@@ -238,7 +238,7 @@ let private run
                 handleEdge kvp.Key kvp.Value
 
         let symbol, vertex = outgoingTerminalEdgeInGraph
-        assert (symbol <> epsilon)
+        assert (symbol.Token <> epsilon)
         handleEdge symbol vertex
 
     let mutable cnt = 0
@@ -309,7 +309,7 @@ let onInputGraphChanged (changedVertices:seq<IInputGraphVertex<'token>>) =
         //assert removed
         )
     fun
-        reachableVertices
+        //reachableVertices
         gss
         matchedRanges
         startVertices
@@ -317,10 +317,10 @@ let onInputGraphChanged (changedVertices:seq<IInputGraphVertex<'token>>) =
         mode
          ->
             run
-                reachableVertices
+                //reachableVertices
                 gss
                 matchedRanges
-                (Stack descriptorsToContinueFrom)
+                (DefaultDescriptorsStack descriptorsToContinueFrom)
                 startVertices
                 query
                 mode
