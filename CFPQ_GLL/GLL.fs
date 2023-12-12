@@ -1,5 +1,6 @@
 module CFPQ_GLL.GLL
 
+open System
 open System.Collections.Generic
 open CFPQ_GLL.Common
 open CFPQ_GLL.RSM
@@ -12,13 +13,13 @@ type Mode =
     | AllPaths
 
 [<RequireQualifiedAccess>]
-type QueryResult =
-    | ReachabilityFacts of Dictionary<LinearInputGraphVertexBase,HashSet<LinearInputGraphVertexBase>>
-    | MatchedRanges of MatchedRanges
+type QueryResult<'token when 'token: equality> =
+    | ReachabilityFacts of Dictionary<IInputGraphVertex<'token>,HashSet<IInputGraphVertex<'token>>>
+    | MatchedRanges of MatchedRanges<'token>
 
 
 let logGll logLevel = Logging.printLog Logging.GLL logLevel
-let logDescriptorInfo (descriptor: Descriptor) =
+let logDescriptorInfo (descriptor: Descriptor<'token>) =
     let ppSpaces = Logging.formatAsLog Logging.GLL "" |> String.length |> fun x -> String.replicate x " "
     let msg =
         [
@@ -32,20 +33,20 @@ let logDescriptorInfo (descriptor: Descriptor) =
         ] |> String.concat $"\n{ppSpaces}"
     logGll Logging.Trace $"{msg}"
 
-let logDescriptorCreated (d: Descriptor) =
+let logDescriptorCreated (d: Descriptor<'token>) =
     logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
 
-let logDescriptorCreatedByTerminal t (d: Descriptor) =
+let logDescriptorCreatedByTerminal t (d: Descriptor<'token>) =
     logGll Logging.Trace $"Adding descriptor {d.GetHashCode()} by terminal ( {t} ) with rsm state {d.RsmState.Box.Nonterminal.Name} with distance {d.Weight}"
 
 
 let private run
-        (gss:GSS)
-        (matchedRanges:MatchedRanges)
-        (descriptorsToProcess: IDescriptorsStack)
-        (startVertex:LinearInputGraphVertexBase)
-        (finalVertex:LinearInputGraphVertexBase)
-        (query:RSM) mode =
+        (gss:GSS<'token>)
+        (matchedRanges:MatchedRanges<'token>)
+        (descriptorsToProcess: IDescriptorsStack<'token>)
+        (startVertex:IInputGraphVertex<'token>)
+        (finalVertex:IInputGraphVertex<'token>)
+        (query:RSM<'token>) (epsilon: 'token) mode =
 
     let buildSppf =
         match mode with
@@ -55,22 +56,22 @@ let private run
     let mutable findCorrect = false
 
 
-    let inline addDescriptor (descriptor:Descriptor) =
+    let inline addDescriptor (descriptor:Descriptor<'token>) =
         if (not <| gss.IsThisDescriptorAlreadyHandled descriptor) || descriptor.IsFinal then
             descriptorsToProcess.Push descriptor
 
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<LinearInputGraphVertexBase>
-                  , Unchecked.defaultof<LinearInputGraphVertexBase>
-                  , Unchecked.defaultof<RsmState>
-                  , Unchecked.defaultof<RsmState>
+                    Unchecked.defaultof<IInputGraphVertex<'token>>
+                  , Unchecked.defaultof<IInputGraphVertex<'token>>
+                  , Unchecked.defaultof<RsmState<'token>>
+                  , Unchecked.defaultof<RsmState<'token>>
                )
 
-    let dummyRangeNode = Unchecked.defaultof<RangeNode>
+    let dummyRangeNode = Unchecked.defaultof<IRangeNode<'token>>
 
-    let makeIntermediateNode (leftSubRange: MatchedRangeWithNode) (rightSubRange: MatchedRangeWithNode) =
+    let makeIntermediateNode (leftSubRange: MatchedRangeWithNode<'token>) (rightSubRange: MatchedRangeWithNode<'token>) =
         if buildSppf
         then matchedRanges.AddIntermediateNode (leftSubRange, rightSubRange)
         else
@@ -81,7 +82,7 @@ let private run
             let rangeNode = dummyRangeNode
             MatchedRangeWithNode(newMatchedRange, rangeNode)
 
-    let handleDescriptor (currentDescriptor:Descriptor) =
+    let handleDescriptor (currentDescriptor:Descriptor<'token>) =
 
         gss.AddDescriptorToHandled currentDescriptor
 
@@ -124,7 +125,7 @@ let private run
                         let rangeNode =
                             if buildSppf
                             then
-                                let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
+                                let currentlyCreatedNode = matchedRanges.AddNonTerminalNode(Range<_>(currentDescriptor.GssVertex.InputPosition, currentDescriptor.InputPosition), currentDescriptor.GssVertex.RsmState)
                                 findCorrect <-
                                                (startVertex = currentlyCreatedNode.LeftPosition)
                                                && (finalVertex = currentlyCreatedNode.RightPosition)
@@ -176,7 +177,7 @@ let private run
                    logDescriptorCreated d
                    addDescriptor d
 
-        let handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget) (rsmTargetVertex: RsmState) =
+        let handleTerminalOrEpsilonEdge terminalSymbol (graphEdgeTarget:TerminalEdgeTarget<'token>) (rsmTargetVertex: IRsmState<'token>) =
             let graphTargetVertex = graphEdgeTarget.TargetVertex
 
             let newMatchedRange =
@@ -192,7 +193,7 @@ let private run
                         if buildSppf
                         then
                             let currentlyCreatedNode =
-                                 matchedRanges.AddTerminalNode(Range(currentDescriptor.InputPosition, graphTargetVertex), terminalSymbol,
+                                 matchedRanges.AddTerminalNode(Range<_>(currentDescriptor.InputPosition, graphTargetVertex), terminalSymbol,
                                        (graphEdgeTarget.Weight |> int |> LanguagePrimitives.Int32WithMeasure<_>))
                             matchedRanges.AddToMatchedRange(matchedRange, NonRangeNode.TerminalNode currentlyCreatedNode)
                         else dummyRangeNode
@@ -206,7 +207,7 @@ let private run
             handleTerminalOrEpsilonEdge terminalSymbol graphTargetVertex rsmTargetVertex
 
         let handleEpsilonEdge targetVertex =
-            handleTerminalOrEpsilonEdge Epsilon targetVertex currentDescriptor.RsmState
+            handleTerminalOrEpsilonEdge epsilon targetVertex currentDescriptor.RsmState
 
         let handleEdge terminalSymbol targetVertex =
             let exists, targetStates = outgoingTerminalEdgesInRSM.TryGetValue terminalSymbol
@@ -227,17 +228,17 @@ let private run
                 if terminal <> currentTerminal && coveredByTerminal.Count > 0
                 then
                     errorRecoveryEdges.Add(terminal, TerminalEdgeTarget(currentDescriptor.InputPosition, 1<weight>))
-            errorRecoveryEdges.Add(Epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
+            errorRecoveryEdges.Add(epsilon, TerminalEdgeTarget(targetVertex.TargetVertex, 1<weight>))
             errorRecoveryEdges
 
         for kvp in errorRecoveryEdges do
-            if kvp.Key = Epsilon then
+            if kvp.Key = epsilon then
                 handleEpsilonEdge kvp.Value
             else
                 handleEdge kvp.Key kvp.Value
 
         let symbol, vertex = outgoingTerminalEdgeInGraph
-        assert (symbol <> Epsilon)
+        assert (symbol <> epsilon)
         handleEdge symbol vertex
 
     let mutable cnt = 0
@@ -256,20 +257,20 @@ let private run
     ,cnt
 
 let evalFromState
-        (descriptorToProcess:IDescriptorsStack)
-        (gss:GSS)
-        (matchedRanges:MatchedRanges)
-        (startVertex:LinearInputGraphVertexBase)
-        (finalVertex:LinearInputGraphVertexBase)
-        (query:RSM) mode =
+        (descriptorToProcess:IDescriptorsStack<'token>)
+        (gss:GSS<'token>)
+        (matchedRanges:MatchedRanges<'token>)
+        (startVertex:IInputGraphVertex<'token>)
+        (finalVertex:IInputGraphVertex<'token>)
+        (query:RSM<'token>) mode =
 
     let emptyRange =
         MatchedRangeWithNode
             (
-                    Unchecked.defaultof<LinearInputGraphVertexBase>
-                  , Unchecked.defaultof<LinearInputGraphVertexBase>
-                  , Unchecked.defaultof<RsmState>
-                  , Unchecked.defaultof<RsmState>
+                    Unchecked.defaultof<IInputGraphVertex<'token>>
+                  , Unchecked.defaultof<IInputGraphVertex<'token>>
+                  , Unchecked.defaultof<RsmState<'token>>
+                  , Unchecked.defaultof<RsmState<'token>>
                )
     let gssVertex = gss.AddNewVertex(startVertex, query.StartState, 0<weight>)
     Descriptor(query.StartState, startVertex, gssVertex, emptyRange)
@@ -285,12 +286,12 @@ let evalFromState
         mode
 
 
-let errorRecoveringEval<'inputVertex when 'inputVertex: equality> finishVertex startVertex (query:RSM) mode =
+let errorRecoveringEval<'inputVertex, 'token when 'inputVertex: equality and 'token: equality> finishVertex startVertex (query:RSM<'token>) mode (epsilon: 'token) =
     let gss = GSS()
-    let matchedRanges = MatchedRanges()
-    evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM) mode
+    let matchedRanges = MatchedRanges(epsilon)
+    evalFromState (ErrorRecoveringDescriptorsStack()) gss matchedRanges startVertex finishVertex (query:RSM<'token>) mode
 
-let onInputGraphChanged (changedVertices:seq<IInputGraphVertex>) =
+let onInputGraphChanged (changedVertices:seq<IInputGraphVertex<'token>>) =
     //changedVertices
     //|> Seq.iter (fun v ->
                  //v.IntermediateNodes.Clear()

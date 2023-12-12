@@ -5,12 +5,12 @@ open CFPQ_GLL.Common
 open CFPQ_GLL.RSM
 open FSharpx.Collections
 
-type Symbol = Terminal of char | NonTerminal of string
-type Regexp =
-    | Symbol of Symbol
-    | Alternative of Regexp * Regexp
-    | Sequence of Regexp * Regexp
-    | Many of Regexp
+type Symbol<'token when 'token: equality> = Terminal of 'token | NonTerminal of string
+type Regexp<'token when 'token: equality> =
+    | Symbol of Symbol<'token>
+    | Alternative of Regexp<'token> * Regexp<'token>
+    | Sequence of Regexp<'token> * Regexp<'token>
+    | Many of Regexp<'token>
     | Empty
     | Epsilon
 
@@ -67,7 +67,7 @@ let buildRSMBox ntName regexp =
     let thisEdgesMustBeAddedLater = ResizeArray()
     let box = RSMBox(NonterminalBase ntName)
     let alphabet = HashSet (getAllSymbols regexp)
-    let stateToRsmState = Dictionary<_,RsmState>()
+    let stateToRsmState = Dictionary<_,IRsmState<'token>>()
     let getRsmState state isStart isFinal =
         if stateToRsmState.ContainsKey state
         then stateToRsmState[state]
@@ -91,23 +91,23 @@ let buildRSMBox ntName regexp =
                 let toRsmState = getRsmState newState false (nullable newState)
                 let fromRsmState = stateToRsmState[state]
                 match symbol with
-                | Terminal x -> fromRsmState.AddTerminalEdge (Char x, toRsmState)
+                | Terminal x -> fromRsmState.AddTerminalEdge (x, toRsmState)
                 | NonTerminal x ->
                     fun getNonTerminalStartState -> fromRsmState.AddNonTerminalEdge (getNonTerminalStartState x, toRsmState)
                     |> thisEdgesMustBeAddedLater.Add
 
     box, thisEdgesMustBeAddedLater
 
-type RegexpWithLayoutConfig =
-    | NoLayout of RegexpWithLayoutConfig
-    | Symbol of Symbol
-    | Alternative of RegexpWithLayoutConfig * RegexpWithLayoutConfig
-    | Sequence of RegexpWithLayoutConfig * RegexpWithLayoutConfig
-    | Many of RegexpWithLayoutConfig
+type RegexpWithLayoutConfig<'token when 'token: equality> =
+    | NoLayout of RegexpWithLayoutConfig<'token>
+    | Symbol of Symbol<'token>
+    | Alternative of RegexpWithLayoutConfig<'token> * RegexpWithLayoutConfig<'token>
+    | Sequence of RegexpWithLayoutConfig<'token> * RegexpWithLayoutConfig<'token>
+    | Many of RegexpWithLayoutConfig<'token>
     | Empty
     | Epsilon
 
-let rec private regexpId (regexp: RegexpWithLayoutConfig): Regexp =
+let rec private regexpId (regexp: RegexpWithLayoutConfig<'token>): Regexp<'token> =
     match regexp with
     | NoLayout x -> regexpId x
     | Symbol x -> Regexp.Symbol x
@@ -117,9 +117,9 @@ let rec private regexpId (regexp: RegexpWithLayoutConfig): Regexp =
     | Empty -> Regexp.Empty
     | Epsilon -> Regexp.Epsilon
 
-type Rule = Rule of string * RegexpWithLayoutConfig
+type Rule<'token when 'token: equality> = Rule of string * RegexpWithLayoutConfig<'token>
 
-type Grammar = Grammar of string * List<Rule>
+type Grammar<'token when 'token: equality> = Grammar of string * List<Rule<'token>>
 
 let t s = Symbol (Terminal s)
 let nt s = Symbol (NonTerminal s)
@@ -129,7 +129,7 @@ let some x = Sequence (x, many x)
 let ( ** ) x y = Sequence (x,y)
 let opt x = Alternative(x, Epsilon)
 let literal (x:string) = NoLayout (x.ToCharArray() |> Array.map (Terminal >> Symbol) |> Array.reduce (fun x y -> Sequence (x,y)))
-let protect (x: RegexpWithLayoutConfig) = NoLayout x
+let protect (x: RegexpWithLayoutConfig<'token>) = NoLayout x
 let (=>) lhs rhs =
     match lhs with
     | Symbol(NonTerminal s) -> Rule(s, rhs)
@@ -157,7 +157,7 @@ let addLayout regexp layoutSymbols =
             | Epsilon -> Regexp.Epsilon
         addLayout regexp
 
-let build layoutSymbols rules =
+let build layoutSymbols rules eof =
 
     let nonTerminalToStartState = Dictionary<_,_>()
     let addEdges = ResizeArray()
@@ -177,4 +177,4 @@ let build layoutSymbols rules =
 
     addEdges |> ResizeArray.iter (fun f -> f (fun x -> nonTerminalToStartState.[x]))
 
-    RSM(boxes, boxes[0])
+    RSM(boxes, boxes[0], eof)

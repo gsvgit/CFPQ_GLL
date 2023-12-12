@@ -32,24 +32,26 @@ type RSMTerminalEdge =
     new (state, terminalSymbol) = {State = state; TerminalSymbol = terminalSymbol}
 
 [<Struct>]
-type RSMNonTerminalEdge =
-    val State : IRsmState
-    val NonTerminalSymbolStartState : IRsmState
+type RSMNonTerminalEdge<'token,'terminalValue when 'token: equality> =
+    val State : IRsmState<'token>
+    val NonTerminalSymbolStartState : IRsmState<'token>
     new (state, nonTerminalSymbolStartState) = {State = state; NonTerminalSymbolStartState = nonTerminalSymbolStartState}
 
 type TerminalEdgesStorage =
     | Small of array<RSMTerminalEdge>
     | Big of Dictionary<int<terminalSymbol>,ResizeArray<int<rsmState>>>
 
-type RsmState (isStart: bool, isFinal: bool) =
-    let descriptors = ResizeArray<WeakReference<Descriptor>>()
-    let outgoingTerminalEdges = Dictionary<int<terminalSymbol>, HashSet<IRsmState>>()
-    let outgoingNonTerminalEdges= Dictionary<IRsmState, HashSet<IRsmState>>()
+type RsmState<'token when 'token: equality> (isStart: bool, isFinal: bool) =
+    let id = getFirstFreeRsmStateId()
+    let descriptors = ResizeArray<WeakReference<Descriptor<'token>>>()
+    let outgoingTerminalEdges = Dictionary<'token, HashSet<IRsmState<'token>>>()
+    let outgoingNonTerminalEdges= Dictionary<IRsmState<'token>, HashSet<IRsmState<'token>>>()
     let nonTerminalNodes = ResizeArray()
     let mutable rsmBox = None
     new () = RsmState(false,false)
 
-    interface IRsmState with
+    interface IRsmState<'token> with
+        member this.Id = id
         member this.OutgoingTerminalEdges = outgoingTerminalEdges
         member this.OutgoingNonTerminalEdges = outgoingNonTerminalEdges
         member this.Descriptors = descriptors
@@ -60,19 +62,19 @@ type RsmState (isStart: bool, isFinal: bool) =
         member this.IsFinal = isFinal
         member this.NonTerminalNodes = nonTerminalNodes
         member this.AddTerminalEdge (terminal, targetState) =
-            let exists,targetStates = (this:>IRsmState).OutgoingTerminalEdges.TryGetValue terminal
+            let exists,targetStates = (this:>IRsmState<'token>).OutgoingTerminalEdges.TryGetValue terminal
             if exists
             then
                 targetStates.Add targetState |> ignore
             else 
-                (this:>IRsmState).OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
+                (this:>IRsmState<'token>).OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
         member this.AddNonTerminalEdge (nonTerminal, targetState) =
-            let exists,targetStates = (this:>IRsmState).OutgoingNonTerminalEdges.TryGetValue nonTerminal
+            let exists,targetStates = (this:>IRsmState<'token>).OutgoingNonTerminalEdges.TryGetValue nonTerminal
             if exists
             then
                 targetStates.Add targetState |> ignore
             else 
-                (this:>IRsmState).OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])    
+                (this:>IRsmState<'token>).OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])    
         member this.Box
             with get () =
                     match rsmBox with
@@ -81,19 +83,19 @@ type RsmState (isStart: bool, isFinal: bool) =
             and set v = rsmBox <- Some v
 
 [<Struct>]
-type RSMVertexMutableContent =
+type RSMVertexMutableContent<'token,'terminalValue when 'token: equality> =
     val OutgoingTerminalEdges : ResizeArray<RSMTerminalEdge>
-    val OutgoingNonTerminalEdges: ResizeArray<RSMNonTerminalEdge>
+    val OutgoingNonTerminalEdges: ResizeArray<RSMNonTerminalEdge<'token,'terminalValue>>
     new (terminalEdges, nonTerminalEdges) =
         {
             OutgoingTerminalEdges = terminalEdges
             OutgoingNonTerminalEdges = nonTerminalEdges
         }
 
-type RSMBox() =
+type RSMBox<'token when 'token: equality>(nonTerminal:INonterminal) =
     let mutable startState = None
-    let finalStates = HashSet<RsmState>()
-    member this.AddState (state:RsmState) =
+    let finalStates = HashSet<IRsmState<'token>>()
+    member this.AddState (state:IRsmState<'token>) =
         state.Box <- this
         if state.IsFinal
         then
@@ -107,33 +109,33 @@ type RSMBox() =
             | None -> failwith "Rsm without start state."
             | Some s -> s
 
-    interface IRsmBox with
+    interface IRsmBox<'token> with
         member this.FinalStates = finalStates
         member this.Nonterminal = nonTerminal
 
-type RSM(boxes:array<RSMBox>, startBox:RSMBox) =
-    let startStateOfExtendedRSM = RsmState()
+type RSM<'token when 'token: equality>(boxes:array<RSMBox<'token>>, startBox:RSMBox<'token>, eof: 'token) =
+    let startStateOfExtendedRSM = RsmState() :> IRsmState<'token>
 
     do
         let originalStartState = startBox.StartState
-        let finalState = RsmState(false,true)
-        let intermediateState = RsmState()
+        let finalState = RsmState(false,true) :> IRsmState<'token>
+        let intermediateState = RsmState() :> IRsmState<'token>
         startStateOfExtendedRSM.AddNonTerminalEdge(originalStartState, intermediateState)
         // We doesn't use AddTerminalEdge because we don't want to add EOF to ErrorRecoveryLabels
-        intermediateState.OutgoingTerminalEdges.Add(EOF, HashSet[|finalState|])
+        intermediateState.OutgoingTerminalEdges.Add(eof, HashSet[|finalState|])
         let box = RSMBox(NonterminalBase "__Extended__")
         box.AddState startStateOfExtendedRSM
         box.AddState intermediateState
         box.AddState finalState
 
     member this.StartState = startStateOfExtendedRSM
-    member this.IsFinalStateForOriginalStartBox state = (startBox :> IRsmBox).FinalStates.Contains state
+    member this.IsFinalStateForOriginalStartBox state = (startBox :> IRsmBox<'token>).FinalStates.Contains state
     member this.OriginalStartState = startBox.StartState
 
     member this.ToDot filePath =        
         let visited = HashSet<_>()
         
-        let rec toDot (v: RsmState) =
+        let rec toDot (v: IRsmState<'token>) =
             if not <| visited.Contains v
             then
                 let added = visited.Add v

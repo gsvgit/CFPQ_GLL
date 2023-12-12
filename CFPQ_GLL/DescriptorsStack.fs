@@ -4,27 +4,27 @@ open System.Collections.Generic
 open CFPQ_GLL.Common
 open FSharpx.Collections
 
-type IDescriptorsStack =
-    abstract Push: Descriptor -> unit
-    abstract Pop: unit -> Descriptor
+type IDescriptorsStack<'token when 'token: equality> =
+    abstract Push: Descriptor<'token> -> unit
+    abstract Pop: unit -> Descriptor<'token>
     abstract IsEmpty: bool with get
 
 
-type DefaultDescriptorsStack (seq: Descriptor seq) =
+type DefaultDescriptorsStack<'token when 'token: equality> (seq: Descriptor<'token> seq) =
     let stack = Stack<_>(seq)
-    new () = DefaultDescriptorsStack(Seq.empty)
+    new () = DefaultDescriptorsStack<'token>(Seq.empty)
 
-    interface IDescriptorsStack with
+    interface IDescriptorsStack<'token> with
         member this.Push descriptor = stack.Push descriptor
         member this.Pop () = stack.Pop ()
         member this.IsEmpty with get () = stack.Count = 0
 
 
-type ErrorRecoveringDescriptorsStack () =
-    let defaultDescriptorsStack = Stack<Descriptor>()
-    let errorRecoveringDescriptorsStacks = SortedDictionary<int<weight>, Stack<Descriptor>>()
+type ErrorRecoveringDescriptorsStack<'token when 'token: equality> () =
+    let defaultDescriptorsStack = Stack<Descriptor<'token>>()
+    let errorRecoveringDescriptorsStacks = SortedDictionary<int<weight>, Stack<Descriptor<'token>>>()
 
-    interface IDescriptorsStack with
+    interface IDescriptorsStack<'token> with
         member this.Push descriptor =
             let pathWeight = descriptor.Weight
             if pathWeight = 0<weight> then defaultDescriptorsStack.Push descriptor

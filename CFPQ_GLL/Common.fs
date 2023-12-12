@@ -6,8 +6,10 @@ open System.Collections.Generic
 [<Measure>] type terminalSymbol
 [<Measure>] type weight
 [<Measure>] type rsmStateId
-
 [<Measure>] type inputGraphVertex
+
+type ITerminal<'token when 'token: equality> =
+    abstract Token: 'token
 
 type Char =
     Char of char | EOF | Epsilon 
@@ -29,13 +31,15 @@ let getFirstFreeRsmStateId =
         let res = cnt
         cnt <- cnt + 1<rsmStateId>
         res
-type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, gssVertex: IGssVertex, matchedRange: MatchedRangeWithNode) =    
+type Descriptor<'token when 'token: equality> (rsmState: IRsmState<'token>, inputPosition: IInputGraphVertex<'token>, gssVertex: IGssVertex<'token>, matchedRange: MatchedRangeWithNode<'token>) =    
     let hashCode =
         let mutable hash = 17
         hash <- hash * 23 + rsmState.GetHashCode()
         hash <- hash * 23 + inputPosition.GetHashCode()
         hash <- hash * 23 + gssVertex.GetHashCode()
         hash
+    
+    let mutable isAlive = true
     member val IsFinal = false with get, set
     member this.RsmState = rsmState
     member this.InputPosition = inputPosition
@@ -43,80 +47,51 @@ type Descriptor (rsmState: RsmState, inputPosition: LinearInputGraphVertexBase, 
     member this.MatchedRange = matchedRange
     member this.IsAlive with get () = isAlive && this.MatchedRange.IsAlive()
                         and set v = isAlive <- v
+     member this.Weight
+        with get() =
+            let treeWeight =
+                match this.MatchedRange.Node with
+                | Some n ->
+                    let isAlive, n = n.TryGetTarget()
+                    if isAlive && n.IsAlive
+                    then n.Weight
+                    else failwith "An attempt to get weight of invalid descriptor"
+                | None -> 0<weight>
+                
+            this.GssVertex.MinimalWeightOfLeftPart + treeWeight                        
     override this.GetHashCode() = hashCode
     override this.Equals (y:obj) =
-        y :? Descriptor
-        && (y :?> Descriptor).RsmState = this.RsmState
-        && (y :?> Descriptor).InputPosition = this.InputPosition
-        && (y :?> Descriptor).GssVertex = this.GssVertex
+        y :? Descriptor<'token>
+        && (y :?> Descriptor<'token>).RsmState = this.RsmState
+        && (y :?> Descriptor<'token>).InputPosition = this.InputPosition
+        && (y :?> Descriptor<'token>).GssVertex = this.GssVertex
 
-and IRsmState =
-    abstract OutgoingTerminalEdges : Dictionary<int<terminalSymbol>,HashSet<IRsmState>>
-    abstract OutgoingNonTerminalEdges: Dictionary<IRsmState, HashSet<IRsmState>>
-    abstract Descriptors: ResizeArray<WeakReference<Descriptor>>
-    abstract GetValidDescriptors: unit -> seq<Descriptor>
+and IRsmState<'token when 'token: equality> =
+    abstract OutgoingTerminalEdges : Dictionary<'token, HashSet<IRsmState<'token>>>
+    abstract OutgoingNonTerminalEdges: Dictionary<IRsmState<'token>, HashSet<IRsmState<'token>>>
+    abstract Descriptors: ResizeArray<WeakReference<Descriptor<'token>>>
+    abstract GetValidDescriptors: unit -> seq<Descriptor<'token>>
     abstract IsFinal: bool
     abstract IsStart: bool
-    abstract Box: IRsmBox with get, set
-    abstract NonTerminalNodes: ResizeArray<INonTerminalNode>  
-    abstract AddTerminalEdge: int<terminalSymbol>*IRsmState -> unit
-    abstract AddNonTerminalEdge: IRsmState*IRsmState -> unit
-and RsmState (isStart: bool, isFinal: bool) =
-    let id = getFirstFreeRsmStateId()
-    let errorRecoveryLabels = HashSet()
-    let coveredTargetStates = HashSet()    
-    let outgoingTerminalEdges = Dictionary<Char, HashSet<RsmState>>()
-    let outgoingNonTerminalEdges= Dictionary<RsmState, HashSet<RsmState>>()
-    let nonTerminalNodes = ResizeArray<INonTerminalNode>()
-    let mutable rsmBox : Option<IRsmBox> = None
-    new () = RsmState(false,false)
+    abstract Box: IRsmBox<'token> with get, set
+    abstract NonTerminalNodes: ResizeArray<INonTerminalNode<'token>>  
+    abstract AddTerminalEdge: 'token * IRsmState<'token> -> unit
+    abstract AddNonTerminalEdge: IRsmState<'token> * IRsmState<'token> -> unit
+    abstract Id: int<rsmStateId>
     
-    member this.Id = id
-    member this.ErrorRecoveryLabels = errorRecoveryLabels
-    member this.OutgoingTerminalEdges = outgoingTerminalEdges
-    member this.OutgoingNonTerminalEdges = outgoingNonTerminalEdges    
-    member this.IsStart = isStart
-    member this.IsFinal = isFinal
-    member this.NonTerminalNodes = nonTerminalNodes
-    member this.AddTerminalEdge (terminal, targetState) =
-        if coveredTargetStates.Contains targetState |> not
-        then
-            let added = errorRecoveryLabels.Add terminal
-            assert added
-            let added =  coveredTargetStates.Add targetState
-            assert added
-        let exists,targetStates = this.OutgoingTerminalEdges.TryGetValue terminal
-        if exists
-        then
-            targetStates.Add targetState |> ignore
-        else 
-            this.OutgoingTerminalEdges.Add(terminal, HashSet [|targetState|])
-    member this.AddNonTerminalEdge (nonTerminal, targetState) =
-        let exists,targetStates = (this).OutgoingNonTerminalEdges.TryGetValue nonTerminal
-        if exists
-        then
-            targetStates.Add targetState |> ignore
-        else 
-            this.OutgoingNonTerminalEdges.Add(nonTerminal, HashSet [|targetState|])    
-    member this.Box
-        with get () =
-                match rsmBox with
-                | None -> failwith "Rsm state without rsm box."
-                | Some b -> b
-        and set v = rsmBox <- Some v
-
-and IRsmBox =
-    abstract FinalStates: HashSet<RsmState>
+and IRsmBox<'token when 'token: equality> =
+    abstract FinalStates: HashSet<IRsmState<'token>>
     abstract Nonterminal: INonterminal
    
+(*
 and LinearInputGraphVertexBase (id:int32) =
     let id = id
     let mutable outgoingEdge : Option<Char * TerminalEdgeTarget> = None
-    let descriptors = HashSet<Descriptor>()
-    let terminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<Char, ITerminalNode>>()
-    let nonTerminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<RsmState, INonTerminalNode>>()
-    let rangeNodes = Dictionary<MatchedRange, IRangeNode>()        
-    let intermediateNodes = Dictionary<MatchedRange, Dictionary<MatchedRange, IIntermediateNode>>()
+    let descriptors = HashSet<Descriptor<'token>>()
+    let terminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<Char, ITerminalNode<'token>>>()
+    let nonTerminalNodes = Dictionary<LinearInputGraphVertexBase, Dictionary<IRsmState<'token>, INonTerminalNode<'token>>>()
+    let rangeNodes = Dictionary<MatchedRange<'token>, IRangeNode<'token>>()        
+    let intermediateNodes = Dictionary<MatchedRange<'token>, Dictionary<MatchedRange<'token>, IIntermediateNode<'token>>>()
     override this.GetHashCode() = id
     
     member this.AddOutgoingEdge (terminal, target) =
@@ -134,95 +109,91 @@ and LinearInputGraphVertexBase (id:int32) =
     member this.NonTerminalNodesStartedHere = nonTerminalNodes
     member this.RangeNodes = rangeNodes
     member this.IntermediateNodes = intermediateNodes
-    
-and [<Struct>] TerminalEdgeTarget =
-    val TargetVertex: LinearInputGraphVertexBase
+  *)  
+and [<Struct>] TerminalEdgeTarget<'token when 'token: equality> =
+    val TargetVertex: IInputGraphVertex<'token>
     val Weight: int<weight>
     new (targetVertex, weight) = {TargetVertex = targetVertex; Weight = weight}
     new (targetVertex) = {TargetVertex = targetVertex; Weight = 0<weight>}
-and IInputGraphVertex =
-    abstract OutgoingEdges: Dictionary<int<terminalSymbol>, HashSet<IInputGraphVertex>>
-    abstract Descriptors: HashSet<WeakReference<Descriptor>>
-    abstract GetValidDescriptors: unit -> seq<Descriptor>
-    abstract TerminalNodes: Dictionary<IInputGraphVertex, Dictionary<int<terminalSymbol>, WeakReference<ITerminalNode>>>
-    abstract NonTerminalNodesStartedHere: Dictionary<IInputGraphVertex, Dictionary<IRsmState, WeakReference<INonTerminalNode>>>
-    //abstract NonTerminalNodesWithStartHere: HashSet<IInputGraphVertex * INonTerminalNode>
-    abstract RangeNodes: Dictionary<MatchedRange, WeakReference<IRangeNode>>
-    abstract IntermediateNodes: Dictionary<MatchedRange, Dictionary<MatchedRange, WeakReference<IIntermediateNode>>>
+    
+and IInputGraphVertex<'token when 'token: equality> =
+    abstract Id: int<inputGraphVertex>
+    abstract OutgoingEdges: Dictionary<ITerminal<'token>, HashSet<IInputGraphVertex<'token>>>
+    abstract Descriptors: HashSet<WeakReference<Descriptor<'token>>>
+    abstract GetValidDescriptors: unit -> seq<Descriptor<'token>>
+    abstract TerminalNodes: Dictionary<IInputGraphVertex<'token>, Dictionary<'token, WeakReference<ITerminalNode<'token>>>>
+    abstract NonTerminalNodesStartedHere: Dictionary<IInputGraphVertex<'token>, Dictionary<IRsmState<'token>, WeakReference<INonTerminalNode<'token>>>>    
+    abstract RangeNodes: Dictionary<MatchedRange<'token>, WeakReference<IRangeNode<'token>>>
+    abstract IntermediateNodes: Dictionary<MatchedRange<'token>, Dictionary<MatchedRange<'token>, WeakReference<IIntermediateNode<'token>>>>
 
 and [<Struct>] Range<'position> =
     val StartPosition: 'position
     val EndPosition: 'position
     new (startPosition, endPosition) = {StartPosition = startPosition; EndPosition = endPosition}
 
-and [<Struct>] MatchedRange =
-    val InputRange : Range<LinearInputGraphVertexBase>
-    val RSMRange : Range<RsmState>
+and [<Struct>] MatchedRange<'token when 'token: equality> =
+    val InputRange : Range<IInputGraphVertex<'token>>
+    val RSMRange : Range<IRsmState<'token>>
     new (inputRange, rsmRange) = {InputRange = inputRange; RSMRange = rsmRange}
     new (inputFrom, inputTo, rsmFrom, rsmTo) = {InputRange = Range<_>(inputFrom, inputTo); RSMRange = Range<_>(rsmFrom, rsmTo)}
 
-and [<Struct>] MatchedRangeWithNode =
-    val Range : MatchedRange
-    val Node: Option<WeakReference<IRangeNode>>
-    new (range, rangeNode) = {Range = range; Node = rangeNode |> WeakReference<_> |> Some}
-    new (inputRange, rsmRange, rangeNode) = {Range = MatchedRange(inputRange, rsmRange); Node = rangeNode}
-    new (inputFrom, inputTo, rsmFrom, rsmTo, rangeNode) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); Node = rangeNode}
-    new (inputFrom, inputTo, rsmFrom, rsmTo) = {Range = MatchedRange(inputFrom, inputTo, rsmFrom, rsmTo); Node = None}
-    
+and [<Struct>] MatchedRangeWithNode<'token when 'token: equality> =
+    val Range : MatchedRange<'token>
+    val Node: Option<WeakReference<IRangeNode<'token>>>
     member this.IsAlive() =
         match this.Node with
         | None -> true
         | Some n ->
             let valid,n = n.TryGetTarget()
             valid && n.IsAlive
-
+    new (range, rangeNode) = {Range = range; Node = rangeNode |> WeakReference<IRangeNode<'token>> |> Some}
+    new (inputRange, rsmRange, rangeNode) = {Range = MatchedRange<'token>(inputRange, rsmRange); Node = rangeNode}
+    new (inputFrom, inputTo, rsmFrom, rsmTo, rangeNode) = {Range = MatchedRange<'token>(inputFrom, inputTo, rsmFrom, rsmTo); Node = rangeNode}
+    new (inputFrom, inputTo, rsmFrom, rsmTo) = {Range = MatchedRange<'token>(inputFrom, inputTo, rsmFrom, rsmTo); Node = None}
+    
 and ISppfNode<'ParentType when 'ParentType: not struct> =
     abstract IsAlive: bool with get, set
-    abstract Parents: HashSet<WeakReference<'ParentType>>
+    abstract Parents: ResizeArray<WeakReference<'ParentType>>
     abstract GetValidParents: unit -> seq<'ParentType>
     
-and ITerminalNode =
-    inherit ISppfNode<IRangeNode>
-    abstract Parents: ResizeArray<IRangeNode>
-and IEpsilonNode =
-    abstract Parents: ResizeArray<IRangeNode>
-    inherit ISppfNode<IRangeNode>
-and INonTerminalNode =
-    inherit ISppfNode<IRangeNode>
+and ITerminalNode<'token when 'token: equality> =
+    inherit ISppfNode<IRangeNode<'token>>
     abstract Weight: int<weight> with get, set
-    abstract Parents: ResizeArray<IRangeNode>
-    abstract RangeNodes: ResizeArray<IRangeNode>
-    abstract LeftPosition : LinearInputGraphVertexBase
-    abstract RightPosition : LinearInputGraphVertexBase
-    abstract NonTerminalStartState : RsmState
-and IIntermediateNode =
-    inherit ISppfNode<IRangeNode>
-    abstract Parents: ResizeArray<IRangeNode>
+and IEpsilonNode<'token when 'token: equality> =
+    abstract Parents: ResizeArray<WeakReference<IRangeNode<'token>>>
+    inherit ISppfNode<IRangeNode<'token>>
+and INonTerminalNode<'token when 'token: equality> =
+    inherit ISppfNode<IRangeNode<'token>>
+    abstract Weight: int<weight> with get, set    
+    abstract RangeNodes: ResizeArray<IRangeNode<'token>>
+    abstract LeftPosition : IInputGraphVertex<'token>
+    abstract RightPosition : IInputGraphVertex<'token>
+    abstract NonTerminalStartState : IRsmState<'token>
+and IIntermediateNode<'token when 'token: equality> =
+    inherit ISppfNode<IRangeNode<'token>>    
     abstract Weight: int<weight> with get, set
-and IRangeNode =
-    inherit ISppfNode<INonRangeNode>
-    abstract Parents: ResizeArray<INonRangeNode>
+and IRangeNode<'token when 'token: equality> =
+    inherit ISppfNode<INonRangeNode<'token>>    
     abstract Weight: int<weight> with get, set
-    abstract IntermediateNodes: HashSet<INonRangeNode>
-    abstract GssEdges: ResizeArray<IGssVertex*IGssEdge>
+    abstract IntermediateNodes: HashSet<INonRangeNode<'token>>
+    abstract GssEdges: ResizeArray<IGssVertex<'token> * IGssEdge<'token>>
     
-and IGssEdge =
-    abstract RsmState: RsmState
-    abstract GssVertex: IGssVertex
-    abstract MatchedRange: MatchedRangeWithNode
+and IGssEdge<'token when 'token: equality> =
+    abstract RsmState: IRsmState<'token>
+    abstract GssVertex: IGssVertex<'token>
+    abstract MatchedRange: MatchedRangeWithNode<'token>
 
-and IGssVertex =
+and IGssVertex<'token when 'token: equality> =
     abstract MinimalWeightOfLeftPart: int<weight> with get, set
-    abstract InputPosition: LinearInputGraphVertexBase
-    abstract RsmState: RsmState
-    abstract OutgoingEdges: ResizeArray<IGssEdge>
-    abstract Popped: ResizeArray<MatchedRangeWithNode>
-    abstract HandledDescriptors: HashSet<Descriptor>
+    abstract InputPosition: IInputGraphVertex<'token>
+    abstract RsmState: IRsmState<'token>
+    abstract OutgoingEdges: ResizeArray<IGssEdge<'token>>
+    abstract Popped: ResizeArray<MatchedRangeWithNode<'token>>
+    abstract HandledDescriptors: HashSet<Descriptor<'token>>
 
-and INonRangeNode =
-    inherit ISppfNode<IRangeNode>
-    abstract Weight: int<weight>
-    abstract Parents: ResizeArray<IRangeNode>
+and INonRangeNode<'token when 'token: equality> =
+    inherit ISppfNode<IRangeNode<'token>>
+    abstract Weight: int<weight>    
 
 
 let tryGetPossiblyWeakSppfNode (dict:Dictionary<'key,WeakReference<#ISppfNode<'t>>>) (key:'key) =
