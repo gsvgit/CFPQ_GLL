@@ -44,7 +44,8 @@ let simpleLoopRSMForDyckLanguage =
               RSM.TerminalEdge(2<rsmState>,1<terminalSymbol>,0<rsmState>)
             |])
     RSM([|box|],box)
-    
+
+
 let tests =  
     
   testList "GLL CFPQ Tests with SPPF" [
@@ -85,6 +86,200 @@ let tests =
           (nodes,edges)
         runGLLAndCheckResult graph startV q expected
     
+    testCase "Easy example"<| fun () ->
+        let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, 0<terminalSymbol>, 1<inputGraphVertex>)
+                                 TerminalEdge(1<inputGraphVertex>, 0<terminalSymbol>, 2<inputGraphVertex>)
+                               |])
+        let startV = [|0<inputGraphVertex>|]
+        let q =
+          let box = 
+              RSMBox (
+                0<rsmState>,
+                HashSet([0<rsmState>; 3<rsmState>]),
+                [|
+                  RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                  RSM.NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                  RSM.TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)
+                |]
+              )
+          RSM([|box|],box)
+
+        let expected =
+          let nodes = Dictionary<_,_>()
+          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 0<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(1, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>,0<rsmState>))
+          nodes.Add(2, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 2<inputGraphVertex>,0<rsmState>,3<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>,2<rsmState>))
+          nodes.Add(4, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 1<inputGraphVertex>,0<rsmState>,2<rsmState>))
+          nodes.Add(5, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>,1<rsmState>))
+          nodes.Add(6, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 1<inputGraphVertex>,0<rsmState>,1<rsmState>))
+          nodes.Add(7, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>,0<terminalSymbol>, 1<inputGraphVertex>))
+          nodes.Add(8, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 1<inputGraphVertex>,1<rsmState>,2<rsmState>))
+          nodes.Add(9, TriplesStoredSPPFNode.NonTerminalNode (1<inputGraphVertex>,0<rsmState>, 1<inputGraphVertex>))
+          nodes.Add(10, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 1<inputGraphVertex>,0<rsmState>,0<rsmState>))
+          nodes.Add(11, TriplesStoredSPPFNode.EpsilonNode (1<inputGraphVertex>,0<rsmState>))
+          nodes.Add(12, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 2<inputGraphVertex>,2<rsmState>,3<rsmState>))
+          nodes.Add(13, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>,0<terminalSymbol>, 2<inputGraphVertex>))
+          let edges = ResizeArray<_>([|(0,1); (2,3); (3,4); (4,5); (5,6); (6,7); (5,8); (8,9); (9,10); (10,11); (3,12); (12,13)|])
+          (nodes,edges)
+        runGLLAndCheckResult graph startV q expected
+
+    testCase "Cubic tiny example"<| fun () ->
+        let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, 0<terminalSymbol>, 1<inputGraphVertex>)
+                                 TerminalEdge(1<inputGraphVertex>, 0<terminalSymbol>, 2<inputGraphVertex>)
+                               |])
+        let startV = [|0<inputGraphVertex>|]
+        let q =
+          let box = 
+              RSMBox (
+                0<rsmState>,
+                HashSet([0<rsmState>; 4<rsmState>]),
+                [|
+                  RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                  RSM.NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                  RSM.TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)
+                  RSM.NonTerminalEdge(3<rsmState>,0<rsmState>,4<rsmState>)
+                |]
+              )
+          RSM([|box|],box)
+        let expected =
+          let nodes = Dictionary<_,_>()
+          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 0<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(1, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>, 0<rsmState>))
+          nodes.Add(2, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 4<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>, 3<rsmState>))
+          nodes.Add(4, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 3<rsmState>))
+          nodes.Add(5, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>, 2<rsmState>))
+          nodes.Add(6, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 1<inputGraphVertex>, 0<rsmState>, 2<rsmState>))
+          nodes.Add(7, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>, 1<rsmState>))
+          nodes.Add(8, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 1<inputGraphVertex>, 0<rsmState>, 1<rsmState>))
+          nodes.Add(9, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>, 0<terminalSymbol>, 1<inputGraphVertex>))
+          nodes.Add(10, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 1<inputGraphVertex>, 1<rsmState>, 2<rsmState>))
+          nodes.Add(11, TriplesStoredSPPFNode.NonTerminalNode (1<inputGraphVertex>, 0<rsmState>, 1<inputGraphVertex>))
+          nodes.Add(12, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 1<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(13, TriplesStoredSPPFNode.EpsilonNode (1<inputGraphVertex>, 0<rsmState>))
+          nodes.Add(14, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 2<inputGraphVertex>, 2<rsmState>, 3<rsmState>))
+          nodes.Add(15, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>, 0<terminalSymbol>, 2<inputGraphVertex>))
+          nodes.Add(16, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 2<inputGraphVertex>, 3<rsmState>, 4<rsmState>))
+          nodes.Add(17, TriplesStoredSPPFNode.NonTerminalNode (2<inputGraphVertex>, 0<rsmState>, 2<inputGraphVertex>))
+          nodes.Add(18, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(19, TriplesStoredSPPFNode.EpsilonNode (2<inputGraphVertex>, 0<rsmState>))
+          let edges = ResizeArray<_>([|(0,1);
+            (2,3); (3,4); (4,5); (5,6); (6,7); (7,8); (8,9);
+            (7,10); (10,11); (11,12); (12,13);
+            (5, 14); (14, 15);
+            (3, 16); (16, 17); (17, 18); (18, 19)|])
+          (nodes,edges)
+        runGLLAndCheckResult graph startV q expected
+
+
+    testCase "Cubic small example"<| fun () ->
+        let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, 0<terminalSymbol>, 1<inputGraphVertex>)
+                                 TerminalEdge(1<inputGraphVertex>, 0<terminalSymbol>, 2<inputGraphVertex>)
+                                 TerminalEdge(2<inputGraphVertex>, 0<terminalSymbol>, 3<inputGraphVertex>)
+                                 TerminalEdge(3<inputGraphVertex>, 0<terminalSymbol>, 4<inputGraphVertex>)
+                               |])
+        let startV = [|0<inputGraphVertex>|]
+        let q =
+          let box = 
+              RSMBox (
+                0<rsmState>,
+                HashSet([0<rsmState>; 4<rsmState>]),
+                [|
+                  RSM.TerminalEdge(0<rsmState>,0<terminalSymbol>,1<rsmState>)
+                  RSM.NonTerminalEdge(1<rsmState>,0<rsmState>,2<rsmState>)
+                  RSM.TerminalEdge(2<rsmState>,0<terminalSymbol>,3<rsmState>)
+                  RSM.NonTerminalEdge(3<rsmState>,0<rsmState>,4<rsmState>)
+                |]
+              )
+          RSM([|box|],box)
+        let expected =
+          let nodes = Dictionary<_,_>()
+          nodes.Add(0, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 0<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(1, TriplesStoredSPPFNode.EpsilonNode (0<inputGraphVertex>, 0<rsmState>))
+          nodes.Add(2, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 4<inputGraphVertex>, 0<rsmState>, 4<rsmState>))
+          nodes.Add(3, TriplesStoredSPPFNode.IntermediateNode (4<inputGraphVertex>, 3<rsmState>))
+          nodes.Add(4, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 4<inputGraphVertex>, 0<rsmState>, 3<rsmState>))
+          nodes.Add(5, TriplesStoredSPPFNode.IntermediateNode (3<inputGraphVertex>, 2<rsmState>))
+          nodes.Add(6, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 3<inputGraphVertex>, 0<rsmState>, 2<rsmState>))
+          nodes.Add(7, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>, 1<rsmState>))
+          nodes.Add(8, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 1<inputGraphVertex>, 0<rsmState>, 1<rsmState>))
+          nodes.Add(9, TriplesStoredSPPFNode.TerminalNode (0<inputGraphVertex>, 0<terminalSymbol>, 1<inputGraphVertex>))
+          nodes.Add(10, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 3<inputGraphVertex>, 1<rsmState>, 2<rsmState>))
+          nodes.Add(11, TriplesStoredSPPFNode.NonTerminalNode (1<inputGraphVertex>, 0<rsmState>, 3<inputGraphVertex>))
+          nodes.Add(12, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 3<inputGraphVertex>, 0<rsmState>, 4<rsmState>))
+          nodes.Add(13, TriplesStoredSPPFNode.IntermediateNode (3<inputGraphVertex>, 3<rsmState>))
+          nodes.Add(14, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 3<inputGraphVertex>, 0<rsmState>, 3<rsmState>))
+          nodes.Add(15, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>, 2<rsmState>))
+          nodes.Add(16, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 2<rsmState>))
+          nodes.Add(17, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>, 1<rsmState>))
+          nodes.Add(18, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 1<rsmState>))
+          nodes.Add(19, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>, 0<terminalSymbol>, 2<inputGraphVertex>))
+          nodes.Add(20, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 2<inputGraphVertex>, 1<rsmState>, 2<rsmState>))
+          nodes.Add(21, TriplesStoredSPPFNode.NonTerminalNode (2<inputGraphVertex>, 0<rsmState>, 2<inputGraphVertex>))
+          nodes.Add(22, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(23, TriplesStoredSPPFNode.EpsilonNode (2<inputGraphVertex>, 0<rsmState>))
+          nodes.Add(24, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 3<inputGraphVertex>, 2<rsmState>, 3<rsmState>))
+          nodes.Add(25, TriplesStoredSPPFNode.TerminalNode (2<inputGraphVertex>, 0<terminalSymbol>, 3<inputGraphVertex>))
+          nodes.Add(26, TriplesStoredSPPFNode.RangeNode (3<inputGraphVertex>, 3<inputGraphVertex>, 3<rsmState>, 4<rsmState>))
+          nodes.Add(27, TriplesStoredSPPFNode.NonTerminalNode (3<inputGraphVertex>, 0<rsmState>, 3<inputGraphVertex>))
+          nodes.Add(28, TriplesStoredSPPFNode.RangeNode (3<inputGraphVertex>, 3<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(29, TriplesStoredSPPFNode.EpsilonNode (3<inputGraphVertex>, 0<rsmState>))
+          nodes.Add(30, TriplesStoredSPPFNode.RangeNode (3<inputGraphVertex>, 4<inputGraphVertex>, 2<rsmState>, 3<rsmState>))
+          nodes.Add(31, TriplesStoredSPPFNode.TerminalNode (3<inputGraphVertex>, 0<terminalSymbol>, 4<inputGraphVertex>))
+          nodes.Add(32, TriplesStoredSPPFNode.RangeNode (4<inputGraphVertex>, 4<inputGraphVertex>, 3<rsmState>, 4<rsmState>))
+          nodes.Add(33, TriplesStoredSPPFNode.NonTerminalNode (4<inputGraphVertex>, 0<rsmState>, 4<inputGraphVertex>))
+          nodes.Add(34, TriplesStoredSPPFNode.RangeNode (4<inputGraphVertex>, 4<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(35, TriplesStoredSPPFNode.EpsilonNode (4<inputGraphVertex>, 0<rsmState>))
+          nodes.Add(36, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>, 3<rsmState>))
+          nodes.Add(37, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 3<rsmState>))
+          nodes.Add(38, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>, 2<rsmState>))
+          nodes.Add(39, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 1<inputGraphVertex>, 0<rsmState>, 2<rsmState>))
+          nodes.Add(40, TriplesStoredSPPFNode.IntermediateNode (1<inputGraphVertex>, 1<rsmState>))
+          nodes.Add(41, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 1<inputGraphVertex>, 1<rsmState>, 2<rsmState>))
+          nodes.Add(42, TriplesStoredSPPFNode.NonTerminalNode (1<inputGraphVertex>, 0<rsmState>, 1<inputGraphVertex>))
+          nodes.Add(43, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 1<inputGraphVertex>, 0<rsmState>, 0<rsmState>))
+          nodes.Add(44, TriplesStoredSPPFNode.EpsilonNode (1<inputGraphVertex>, 0<rsmState>))
+          nodes.Add(45, TriplesStoredSPPFNode.RangeNode (1<inputGraphVertex>, 2<inputGraphVertex>, 2<rsmState>, 3<rsmState>))
+          nodes.Add(46, TriplesStoredSPPFNode.TerminalNode (1<inputGraphVertex>, 0<terminalSymbol>, 2<inputGraphVertex>))
+          nodes.Add(47, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 4<inputGraphVertex>, 3<rsmState>, 4<rsmState>))
+          nodes.Add(48, TriplesStoredSPPFNode.NonTerminalNode (2<inputGraphVertex>, 0<rsmState>, 4<inputGraphVertex>))
+          nodes.Add(49, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 4<inputGraphVertex>, 0<rsmState>, 4<rsmState>))
+          nodes.Add(50, TriplesStoredSPPFNode.IntermediateNode (4<inputGraphVertex>, 3<rsmState>))
+          nodes.Add(51, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 4<inputGraphVertex>, 0<rsmState>, 3<rsmState>))
+          nodes.Add(52, TriplesStoredSPPFNode.IntermediateNode (3<inputGraphVertex>, 2<rsmState>))
+          nodes.Add(53, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 3<inputGraphVertex>, 0<rsmState>, 2<rsmState>))
+          nodes.Add(54, TriplesStoredSPPFNode.IntermediateNode (3<inputGraphVertex>, 1<rsmState>))
+          nodes.Add(55, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 3<inputGraphVertex>, 0<rsmState>, 1<rsmState>))
+          nodes.Add(56, TriplesStoredSPPFNode.TerminalNode (2<inputGraphVertex>, 0<terminalSymbol>, 3<inputGraphVertex>))
+          nodes.Add(57, TriplesStoredSPPFNode.RangeNode (3<inputGraphVertex>, 3<inputGraphVertex>, 1<rsmState>, 2<rsmState>))
+          nodes.Add(58, TriplesStoredSPPFNode.NonTerminalNode (3<inputGraphVertex>, 0<rsmState>, 3<inputGraphVertex>))
+          nodes.Add(59, TriplesStoredSPPFNode.RangeNode (0<inputGraphVertex>, 2<inputGraphVertex>, 0<rsmState>, 4<rsmState>))
+          nodes.Add(60, TriplesStoredSPPFNode.IntermediateNode (2<inputGraphVertex>, 3<rsmState>))
+          nodes.Add(61, TriplesStoredSPPFNode.RangeNode (2<inputGraphVertex>, 2<inputGraphVertex>, 3<rsmState>, 4<rsmState>))
+          nodes.Add(62, TriplesStoredSPPFNode.NonTerminalNode (2<inputGraphVertex>, 0<rsmState>, 2<inputGraphVertex>))
+          let edges = ResizeArray<_>([|(0,1);
+            (2,3); (3,4); (4,5); (5,6); (6,7); (7,8); (8,9);
+            (7,10); (10,11); (11,12); (12,13); (13,14); (14,15); (15,16); (16,17); (17,18); (18,19);
+            (17,20); (20,21); (21,22); (22,23);
+            (15,24); (24,25);
+            (13,26); (26,27); (27,28); (28,29);
+            (5,30); (30,31);
+            (3,32); (32,33); (33,34); (34,35);
+            (2,36); (36,37); (37,38); (38,39); (39,40); (40,8);
+            (40,41); (41,42); (42,43); (43,44);
+            (38,45); (45,46);
+            (36,47); (47,48); (48,49); (49,50); (50,51); (51,52); (52,53); (53,54); (54,55); (55,56);
+            (54,57); (57,58); (58,28);
+            (52,30);
+            (50,32);
+            (59,60); (60,37);
+            (60,61); (61,62); (62,22)|])
+          (nodes,edges)
+        runGLLAndCheckResult graph startV q expected
+
+
+
     testCase "Minimal worst case, simple loop RSM for Dyck language" <| fun () ->
         let graph = InputGraph([|TerminalEdge(0<inputGraphVertex>, 0<terminalSymbol>, 0<inputGraphVertex>)                             
                                  TerminalEdge(0<inputGraphVertex>, 1<terminalSymbol>, 1<inputGraphVertex>)

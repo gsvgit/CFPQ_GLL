@@ -33,7 +33,18 @@ let go() =
  
 [<EntryPoint>]
 let main argv =    
-    Tests.runTestsWithCLIArgs [] [||] (testList "all tests" [Tests.GLLTests.tests])
+  let allTests = testList "all tests" [Tests.GLLTests.tests]
+  
+  if argv |> Array.contains "--list-tests" then
+      printfn "Available tests:"
+      allTests
+      |> Test.toTestCodeList
+      |> List.iter (fun test ->
+          let fullPath = String.concat "/" test.name
+          printfn "%s" fullPath)
+      0
+  else
+    Tests.runTestsWithCLIArgs [] [||] allTests
     //go ()
         
     
